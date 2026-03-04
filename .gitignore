@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# VSCode
+.vscode/
+
+# build
+build/
+dist/
+
+# PyInstaller
+*.spec
+
+# config
+config.json
+users.json
