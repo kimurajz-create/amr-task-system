@@ -266,6 +266,32 @@ def get_mission_groups_id_cmb():
 
 ##################################Mission_queue############################################
 
+# 取得當下mission_queue的"id"
+def get_mission_queue_max_id():
+    url = f"{MIR_IP}/api/v2.0.0/mission_queue"
+    headers = get_auth_headers()
+    response = requests.get(url,headers = headers)
+    if response.status_code == 200:
+        mission_queue_list = response.json() 
+        return max(item["id"] for item in mission_queue_list if "id" in item)
+    else:
+        print(f"❌ 無法取得mission_queue列表: {response.text}")
+
+# 取得當下mission_queue的"id"的state
+def get_mission_queue_max_id_state():
+    max_id = get_mission_queue_max_id()
+    url = f"{MIR_IP}/api/v2.0.0/mission_queue/{max_id}"
+    headers = get_auth_headers()
+    response = requests.get(url,headers = headers)
+    if response.status_code == 200:
+        mission_data = response.json() 
+        return mission_data['state']
+    else:
+        print(f"❌ 無法取得mission_queue列表: {response.text}")
+    
+
+
+
 
 # 發送移動命令(透過任務id、地圖id當參數，搭配dashboard那邊的Mission設定移動任務才行)
 def move_to_position(mission_id,position_uuid):
@@ -290,11 +316,13 @@ def move_to_position_multi_var(start_uuid,goal_uuid,mission_id):
         "mission_id": mission_id,
         "parameters": [{"id": "target", "value": start_uuid},{"id": "target_2", "value": goal_uuid}]
     }
-    print(mission_data) 
+    print(f"任務參數:{mission_data}") 
     headers = get_auth_headers()
     response = requests.post(url, json=mission_data, headers=headers)
     if response.status_code == 201:
         print(f"成功發送移動至 {goal_uuid} 的指令")
+        mission_queue_max_id = get_mission_queue_max_id()
+        print(f"MiR Dashboard mission_queue_max_id 編號:{mission_queue_max_id}")
     else:
         print(f"移動失敗: {response.text}")
 
@@ -457,9 +485,9 @@ def run_combo_location(map_marker):
 # 執行任務(地圖)地圖名字要注意!!!!Critical
 def run_combo_location_multi_var(start,goal,mission):
         point_uuid_start = get_mission_point_uuid(start)
-        point_uuid_goal = get_mission_point_uuid(goal)
+        point_uuid_goal = get_mission_point_uuid(goal)       
         mission_id = get_mission_id(f"{mission}")
-        print(point_uuid_start,point_uuid_goal,mission_id)
+        print(f"起點uuid:{point_uuid_start},終點uuid:{point_uuid_goal},任務id:{mission_id}")
         move_to_position_multi_var(point_uuid_start,point_uuid_goal,mission_id)
         
    

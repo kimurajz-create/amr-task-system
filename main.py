@@ -1419,8 +1419,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception as e:
             self.label_Status_1.setText("錯誤")
 
-    # 詢問車子狀態
+    # 詢問車子資料庫是否有執行的任務，並用MiR API確認底層車子任務是否完成
     def query_mir_status_db(self):
+       
         executing_task_data = self.task_db_manager.get_currently_executing_task()
         # 檢查是否有正在執行的任務
         if not executing_task_data:
@@ -1431,12 +1432,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         start_point = executing_task_data['start_point']
         target_point = executing_task_data['target_point']
 
+        max_id_state = functions.get_mission_queue_max_id_state()
+        max_mission_id  = functions.get_mission_queue_max_id()
+        print(f"max_id_state: {max_id_state}, max_mission_id: {max_mission_id}") 
+
         state_ID = functions.check_MiR_status_state_ID()
 
-        if state_ID == 3:
+        if max_id_state == "Done":
             self.is_AMR_idle=True
-            self.task_db_manager.update_task_status(task_id, new_status="Completed")
-            print(f"✅ 任務 ID {task_id} 已由機器人完成，狀態更新為 Completed。")
+            # self.task_db_manager.update_task_status(task_id, new_status="Completed")
+            # print(f"✅ 任務 ID {task_id} 已由機器人完成，狀態更新為 Completed。")
             self.add_notification_item("完成", f"{task_id} 任務完成: 從 {start_point} 前往 {target_point}")
 
         # 刷新 UI 任務列表
@@ -1449,6 +1454,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # elif state_ID == 12: 
         #     self.task_db_manager.update_task_status(task_id, new_status="Error")
         #     print(f"❌ 任務 ID {task_id} 執行失敗，狀態更新為 Error。")
+
+            
 
             
 
@@ -1574,7 +1581,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
     # 按鈕(回去充電站)
     def on_start_chargestation_clicked(self):
-
         # 嘗試從字典中獲取充電站的英文代碼
         # 如果找不到 "充電樁" 這個 Key，就回傳 None
         charge_code = MIR_LOCATION_MAP.get(CHARGING_STATION_NAME)

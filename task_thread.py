@@ -44,7 +44,8 @@ class TaskThread(QThread):
         self.log_message.emit("✅ 任務排程執行緒已啟動。")
 
         while self.is_running:
-            # 1. 從資料庫獲取任務
+            self.log_message.emit("🔁 準備抓取下一筆 Pending 任務...")
+            # 1. 從資料庫獲取當前最優先任務
             priority_tasks = self.db_manager.get_highest_priority_task()
             
             if not priority_tasks:
@@ -95,7 +96,7 @@ class TaskThread(QThread):
                 time.sleep(1) # 避免連續出錯
                 continue # 跳到下一個迴圈，檢查新任務
 
-            # 4. 等待任務完成
+            # 4. 等待任務完成 (is_AMR_idle = False 時就會一直卡在這個 while 裡 sleep，直到別的地方把它改成 True 才會跳出，代表任務被判定完成。)
             self.log_message.emit("⏳ 等待 MiR 完成任務...")
             while not self.main_window.is_AMR_idle:
                 time.sleep(0.5) # 降低等待頻率以節省資源
@@ -111,7 +112,7 @@ class TaskThread(QThread):
                 self.log_message.emit(f"🛑 任務 ID:{mir_code_id} 被手動中斷，退出排程。")
                 break # 立即跳出最外層的 while self.is_running 迴圈
             
-            # 檢查低電量
+            # 檢查低電量 20%
             if self.main_window.is_low_battery:
                 self.log_message.emit("⚠️ 電量過低，下一個任務為強制充電。")
                 charge_code = self.MIR_LOCATION_MAP.get(self.CHARGING_STATION_NAME)
