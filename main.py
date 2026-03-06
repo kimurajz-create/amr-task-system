@@ -1121,15 +1121,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         start_place = self.cmb_location2.currentText()
         destination = self.cmb_location.currentText()
         mission_content = self.cmb_mission.currentText()
-        
+
+        ROOM_ID_MAP = {
+            "華陀會議室": "OR01",
+            "演講廳_02": "OR02",
+            "演講廳_01": "OR03",
+            "沙發3": "OR05",
+            "沙發2": "OR06",
+            "沙發1": "OR07",
+            "櫃台": "OR08",
+
+            "充電樁": "OR09",
+            "電梯橋": "OR10",
+
+            "車架位置(華陀)": "OR11",
+            "車架位置(演講廳_02)": "OR12",
+            "車架位置(演講廳_01)": "OR13",
+            "車架位置(沙發3)": "OR14",
+            "車架位置(沙發2)": "OR15",
+            "車架位置(沙發1)": "OR16",
+            "車架位置(櫃台)": "OR17",
+        }
+
+        room_id = ROOM_ID_MAP.get(destination)
+            
         # 檢查欄位是否為空
         if not start_place or not destination or not  mission_content :
             print("請填寫所有欄位！")
             return
         
         # 呼叫 TaskDBManager 寫入 DB
-        # DB 會自動處理 sequence (排隊順序) 和 id (流水號)
-        new_id = self.task_db_manager.add_new_task(start_place, destination, mission_content)
+        # DB 會自動處理 sequence (排隊順序) 和 id (流水號) 
+        # room_id=room_id keyword argument（關鍵字參數）
+        new_id = self.task_db_manager.add_new_task(start_place, destination, mission_content,room_id=room_id)
         print("new_id", new_id)
 
         if new_id:
@@ -1137,7 +1161,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.cmb_location2.setCurrentIndex(0)
             self.cmb_location.setCurrentIndex(0)
             self.cmb_mission.setCurrentIndex(0)
-        
+                   
             # 刷新表格，顯示新任務
             self.refresh_task_list()
         else:

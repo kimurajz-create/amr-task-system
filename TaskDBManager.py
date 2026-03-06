@@ -99,15 +99,16 @@ class TaskDBManager:
         if room_id:
             insert_query = """
             INSERT INTO tasks 
-            (sequence, start_point, target_point, mission_content)
-            VALUES (%s, %s, %s, %s)
+            (sequence, start_point, target_point, mission_content, room_id)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING id; -- 返回新增任務的 ID (可選) 這是 PostgreSQL (Postgres) 資料庫特有的強大功能
             """
             params = (
                 next_sequence,  # 來自步驟 1 計算出來的數值
                 start_point, 
                 target_point, 
-                content
+                content,
+                room_id
             )
         else:
             insert_query = """
