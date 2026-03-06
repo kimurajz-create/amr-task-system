@@ -82,7 +82,7 @@ class TaskDBManager:
 
     # --- 核心任務排程功能 (供 PySide6 GUI 使用) ---
     #-------------------------------------新增系列---------------------------------------------#
-    def add_new_task(self, start_point: str, target_point: str, content: str = ""):
+    def add_new_task(self, start_point: str, target_point: str, content: str = "", room_id:str | None = None):
         """
         新增一個任務到佇列中， sequence 會自動設為目前的最後一個。
         """
@@ -96,18 +96,28 @@ class TaskDBManager:
         # 2. 插入新任務
         # 注意: 我們只傳入 sequence, start_point, target_point, mission_content
         # 其他欄位 (id, status, mir_command_sent, created_at) 會使用資料庫的 DEFAULT 值
-        insert_query = """
-        INSERT INTO tasks 
-        (sequence, start_point, target_point, mission_content)
-        VALUES (%s, %s, %s, %s)
-        RETURNING id; -- 返回新增任務的 ID (可選) 這是 PostgreSQL (Postgres) 資料庫特有的強大功能
-        """
-        params = (
-            next_sequence,  # 來自步驟 1 計算出來的數值
-            start_point, 
-            target_point, 
-            content
-        )
+        if room_id:
+            insert_query = """
+            INSERT INTO tasks 
+            (sequence, start_point, target_point, mission_content)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id; -- 返回新增任務的 ID (可選) 這是 PostgreSQL (Postgres) 資料庫特有的強大功能
+            """
+            params = (
+                next_sequence,  # 來自步驟 1 計算出來的數值
+                start_point, 
+                target_point, 
+                content
+            )
+        else:
+            insert_query = """
+            INSERT INTO tasks 
+            (sequence, start_point, target_point, mission_content)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id;
+            """
+            params = (next_sequence, start_point, target_point, content)
+
         # 💥 關鍵修正 A: 呼叫 _execute_query 時，設定 fetch=True 來獲取 RETURNING 的結果
         # 💥 關鍵修正 B: 將回傳值賦給 rows 變數
         rows = self._execute_query(insert_query, params, fetch=True, commit=True)
@@ -220,7 +230,7 @@ class TaskDBManager:
         用於填充 GUI 的 QTableWidget (實現「掛號清單」)。
         """
         query = """
-        SELECT id, sequence, start_point, target_point, mission_content, status
+        SELECT id, sequence, start_point, target_point, mission_content, status, room_id, mq_id
         FROM tasks 
         WHERE status IN ('Pending', 'Executing') 
         ORDER BY sequence ASC;
@@ -230,7 +240,7 @@ class TaskDBManager:
     
     def get_currently_executing_task(self):
         query = """
-        SELECT id, sequence, start_point, target_point, mission_content, status
+        SELECT id, sequence, start_point, target_point, mission_content, status, mq_id, room_id
         FROM tasks 
         WHERE status = 'Executing'
         ORDER BY sequence ASC
@@ -254,6 +264,14 @@ class TaskDBManager:
 
     #-------------------------------------更新系列---------------------------------------------#
 
+    def update_task_mq_id(self, task_id: int, mq_id: int):
+        query = "UPDATE tasks SET mq_id = %s WHERE id = %s;"
+        params = (mq_id, task_id)
+        self._execute_query(query, params, commit=True)
+        print(f"✅ 任務 ID {task_id} 已綁定 mq_id={mq_id}")
+
+
+    
     def update_task_status(self, task_id: int, new_status: str, command_sent: bool = None):
         """
         更新特定任務的狀態 (例如從 Pending 變成 Executing 或 Completed)。

@@ -84,8 +84,26 @@ class TaskThread(QThread):
             # 3. 發送任務指令
             # (省略充電判斷邏輯，直接發送任務)
             if mir_code and mir_code_s and mir_code_d:
+                before_max_id = self.functions.get_mission_queue_max_id()
                 self.functions.run_combo_location_multi_var(mir_code_s, mir_code_d, mir_code)
+
+
+                after_max_id = None
+                for _ in range(10):  # 10次 * 0.3s = 3秒
+                    time.sleep(0.3)
+                    cur = self.functions.get_mission_queue_max_id()
+                    if cur is not None and before_max_id is not None and cur > before_max_id:
+                        after_max_id = cur
+                        break
+                
+                # 先標記這筆任務已送出，避免因為 mq_id 一時抓不到而重送
                 self.db_manager.update_task_status(mir_code_id, new_status="Executing", command_sent=True)
+
+                if after_max_id is not None:
+                    self.db_manager.update_task_mq_id(mir_code_id, after_max_id)
+                else:
+                    self.log_message.emit("⚠️ mission_queue id 沒有變大，mq_id 綁定失敗（可能送任務失敗或 queue 更新較慢）")
+
                 
                 # ⭐ 關鍵修正點：AMR 狀態設為忙碌 (False)
                 self.main_window.is_AMR_idle = False 
@@ -102,10 +120,17 @@ class TaskThread(QThread):
                 time.sleep(0.5) # 降低等待頻率以節省資源
 
             # 5. 任務完成後的處理
-            self.db_manager.update_task_status(mir_code_id, new_status="Completed")
-            self.finished_task.emit(mir_code_id) # 通知主介面更新清單
-            self.log_message.emit(f"✅ 任務 ID:{mir_code_id} 已完成。")
-            
+            current = self.db_manager.get_currently_executing_task()
+
+            if current and current["id"] == mir_code_id:
+                # 代表還在 Executing（正常完成）
+                self.db_manager.update_task_status(mir_code_id, new_status="Completed")
+                self.finished_task.emit(mir_code_id)
+                self.log_message.emit(f"✅ 任務 ID:{mir_code_id} 已完成。")
+            else:
+                # 代表可能已被 main.py 改成 Aborted / 其他狀態
+                self.log_message.emit(f"⚠️ 任務 ID:{mir_code_id} 非 Executing（可能已取消），不寫入 Completed。")
+
             # 💥 關鍵修正：確保跳出阻塞後，立即檢查中斷旗標
             if not self.is_running:
                 # 這是手動中斷，不應該設為 Completed

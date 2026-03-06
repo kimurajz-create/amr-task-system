@@ -1431,33 +1431,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         task_id = executing_task_data['id']
         start_point = executing_task_data['start_point']
         target_point = executing_task_data['target_point']
+        mq_id = executing_task_data.get('mq_id')  # ✅ 取出你綁定的 mq_id
 
-        max_id_state = functions.get_mission_queue_max_id_state()
-        max_mission_id  = functions.get_mission_queue_max_id()
-        print(f"max_id_state: {max_id_state}, max_mission_id: {max_mission_id}") 
+        if not mq_id:
+            # 補綁 mq_id：如果 mission_queue 有新 id，就補回 DB
+            latest_mq_id = functions.get_mission_queue_max_id()
+            if latest_mq_id:
+                self.task_db_manager.update_task_mq_id(task_id, latest_mq_id)
+                mq_id = latest_mq_id
+            else:
+                return
 
-        state_ID = functions.check_MiR_status_state_ID()
+        state = functions.get_mission_queue_id_state(mq_id)  # ✅ 查指定 mq_id 的 state
 
-        if max_id_state == "Done":
+        # mission_queue 的 id 以及 state
+        # max_id_state = functions.get_mission_queue_max_id_state()
+        # max_mission_id  = functions.get_mission_queue_max_id()
+        # print(f"max_id_state: {max_id_state}, max_mission_id: {max_mission_id}") 
+
+        if  state == "Done":
             self.is_AMR_idle=True
-            # self.task_db_manager.update_task_status(task_id, new_status="Completed")
-            # print(f"✅ 任務 ID {task_id} 已由機器人完成，狀態更新為 Completed。")
             self.add_notification_item("完成", f"{task_id} 任務完成: 從 {start_point} 前往 {target_point}")
+
+        elif state == "Aborted":
+            self.task_db_manager.update_task_status(task_id, new_status="Aborted")
+            self.is_AMR_idle = True
+            self.add_notification_item("取消", f"{task_id} 任務被取消/中止: 從 {start_point} 前往 {target_point}")
 
         # 刷新 UI 任務列表
         self.refresh_task_list() 
-        
-        # 接著自動執行下一個任務 (可選，如果你想自動連續跑)
-        # self.on_map_location_clicked() 
-            
-        # [可選] 如果你需要處理錯誤狀態 (例如 state_ID == 12)
-        # elif state_ID == 12: 
-        #     self.task_db_manager.update_task_status(task_id, new_status="Error")
-        #     print(f"❌ 任務 ID {task_id} 執行失敗，狀態更新為 Error。")
-
-            
-
-            
 
     # 自動詢問Sent robot to車子狀態
     def query_mir_status(self):

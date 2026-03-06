@@ -275,7 +275,7 @@ def get_mission_queue_max_id():
         mission_queue_list = response.json() 
         return max(item["id"] for item in mission_queue_list if "id" in item)
     else:
-        print(f"❌ 無法取得mission_queue列表: {response.text}")
+        print(f"❌ 無法取得mission_queue列表_01: {response.text}")
 
 # 取得當下mission_queue的"id"的state
 def get_mission_queue_max_id_state():
@@ -287,9 +287,18 @@ def get_mission_queue_max_id_state():
         mission_data = response.json() 
         return mission_data['state']
     else:
-        print(f"❌ 無法取得mission_queue列表: {response.text}")
+        print(f"❌ 無法取得mission_queue列表_02: {response.text}")
     
-
+# 取得已知mission_queue的"id"的state
+def get_mission_queue_id_state(mission_queue_id):
+    url = f"{MIR_IP}/api/v2.0.0/mission_queue/{mission_queue_id}"
+    headers = get_auth_headers()
+    response = requests.get(url,headers = headers)
+    if response.status_code == 200:
+        mission_data = response.json() 
+        return mission_data['state']
+    else:
+        print(f"❌ 無法取得mission_queue列表_03: {response.text}")
 
 
 
