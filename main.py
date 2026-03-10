@@ -98,6 +98,31 @@ LOCATION_TO_MARKER = {
     "車架位置(櫃台)": "label_rp_7",
 }
 
+
+# 暫時定義:公司的marker想像成醫院手術室marker賦予其room_id
+ROOM_ID_MAP = {
+    "華陀會議室": "OR01",
+    "演講廳_02": "OR02",
+    "演講廳_01": "OR03",
+    "沙發3": "OR05",
+    "沙發2": "OR06",
+    "沙發1": "OR07",
+    "櫃台": "OR08",
+
+    "充電樁": "OR09",
+    "電梯橋": "OR10",
+
+    "車架位置(華陀)": "OR11",
+    "車架位置(演講廳_02)": "OR12",
+    "車架位置(演講廳_01)": "OR13",
+    "車架位置(沙發3)": "OR14",
+    "車架位置(沙發2)": "OR15",
+    "車架位置(沙發1)": "OR16",
+    "車架位置(櫃台)": "OR17",
+}
+
+
+
 # 圖上停車格：定義顏色樣式
 STYLE_DEFAULT = "border: none; background-color: #33B1FF;" # 預設樣式
 STYLE_EXECUTING = "border: none; background-color: green;"
@@ -533,6 +558,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.CHARGING_STATION_NAME = CHARGING_STATION_NAME
         self.USER_LOCATION_MAP = USER_LOCATION_MAP
         self.USER_MISSION_GROUP_MAP = USER_MISSION_GROUP_MAP
+        self.ROOM_ID_MAP = ROOM_ID_MAP
 
         # 初始化 MiR 函數
         # 將您已經導入的 functions 模組，作為一個屬性(attribute)賦值給 MainWindow 實例 (self)
@@ -1088,72 +1114,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super().closeEvent(event)
 
     #######################postgresql資料庫#######################
-    # 在DB新增任務
-    # def on_add_new_mission_clicked(self):
-
-    #     start_place = self.cmb_location2.currentText()
-    #     destination = self.cmb_location.currentText()
-    #     mission_content = self.cmb_mission.currentText()
-        
-    #     # 檢查欄位是否為空
-    #     if not start_place or not destination or not  mission_content :
-    #         print("請填寫所有欄位！")
-    #         return
-        
-    #     # 呼叫 TaskDBManager 寫入 DB
-    #     # DB 會自動處理 sequence (排隊順序) 和 id (流水號)
-    #     new_id = self.task_db_manager.add_new_task(start_place, destination, mission_content)
-    #     print("new_id", new_id)
-
-    #     if new_id:
-    #         print(f"✅ 新增任務成功，DB ID: {new_id}")
-    #         self.cmb_location2.setCurrentIndex(0)
-    #         self.cmb_location.setCurrentIndex(0)
-    #         self.cmb_mission.setCurrentIndex(0)
-        
-    #         # 刷新表格，顯示新任務
-    #         self.refresh_task_list()
-    #     else:
-    #         print("❌ 寫入資料庫失敗。") 
-
     # 新增任務按鈕
     def on_add_new_mission_clicked(self):
         start_place = self.cmb_location2.currentText()
         destination = self.cmb_location.currentText()
         mission_content = self.cmb_mission.currentText()
 
-        ROOM_ID_MAP = {
-            "華陀會議室": "OR01",
-            "演講廳_02": "OR02",
-            "演講廳_01": "OR03",
-            "沙發3": "OR05",
-            "沙發2": "OR06",
-            "沙發1": "OR07",
-            "櫃台": "OR08",
-
-            "充電樁": "OR09",
-            "電梯橋": "OR10",
-
-            "車架位置(華陀)": "OR11",
-            "車架位置(演講廳_02)": "OR12",
-            "車架位置(演講廳_01)": "OR13",
-            "車架位置(沙發3)": "OR14",
-            "車架位置(沙發2)": "OR15",
-            "車架位置(沙發1)": "OR16",
-            "車架位置(櫃台)": "OR17",
-        }
-
-        room_id = ROOM_ID_MAP.get(destination)
-            
-        # 檢查欄位是否為空
-        if not start_place or not destination or not  mission_content :
-            print("請填寫所有欄位！")
-            return
-        
-        # 呼叫 TaskDBManager 寫入 DB
-        # DB 會自動處理 sequence (排隊順序) 和 id (流水號) 
-        # room_id=room_id keyword argument（關鍵字參數）
-        new_id = self.task_db_manager.add_new_task(start_place, destination, mission_content,room_id=room_id)
+        new_id = self.create_new_db_task(start_place, destination, mission_content)
         print("new_id", new_id)
 
         if new_id:
@@ -1161,11 +1128,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.cmb_location2.setCurrentIndex(0)
             self.cmb_location.setCurrentIndex(0)
             self.cmb_mission.setCurrentIndex(0)
-                   
             # 刷新表格，顯示新任務
             self.refresh_task_list()
         else:
             print("❌ 寫入資料庫失敗。") 
+
+
+    # 新增一個共用function
+    def create_new_db_task(self, start_place, destination, mission_content):
+        """
+        共用的新增任務邏輯：
+        依 destination 對應 room_id，並寫入 DB
+        """
+        room_id = self.ROOM_ID_MAP.get(destination)
+
+        if not start_place or not destination or not mission_content:
+            print("請填寫所有欄位！")
+            return None
+
+        # 呼叫 TaskDBManager 寫入 DB
+        # DB 會自動處理 sequence (排隊順序) 和 id (流水號)
+        # room_id=room_id keyword argument（關鍵字參數）
+        new_id = self.task_db_manager.add_new_task(
+            start_place,
+            destination,
+            mission_content,
+            room_id=room_id
+        )
+        return new_id
 
     # 新增loop任務
     def add_test_batch_missions(self):
