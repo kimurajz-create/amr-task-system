@@ -34,7 +34,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def __init__(self):
         super().__init__()
-
+        self.db_error = False   # ⭐ 加這行
         self.setupUi(self)
         self.setWindowTitle("台中國軍醫 MiR")
 
