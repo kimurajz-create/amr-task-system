@@ -387,7 +387,7 @@ font-size: 16px; </string>
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>181</width>
+      <width>101</width>
       <height>21</height>
      </rect>
     </property>
@@ -415,6 +415,24 @@ font-size: 13px; </string>
     </property>
     <property name="readOnly">
      <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lbl_env">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>10</y>
+      <width>101</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>16</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>內環</string>
     </property>
    </widget>
   </widget>

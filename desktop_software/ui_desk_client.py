@@ -179,7 +179,7 @@ class Ui_MainWindow(object):
         self.label_2.setAlignment(Qt.AlignCenter)
         self.label_5 = QLabel(self.centralwidget)
         self.label_5.setObjectName(u"label_5")
-        self.label_5.setGeometry(QRect(10, 10, 181, 21))
+        self.label_5.setGeometry(QRect(10, 10, 101, 21))
         font1 = QFont()
         font1.setPointSize(16)
         self.label_5.setFont(font1)
@@ -189,6 +189,10 @@ class Ui_MainWindow(object):
         self.txt_log.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
 "font-size: 13px; ")
         self.txt_log.setReadOnly(True)
+        self.lbl_env = QLabel(self.centralwidget)
+        self.lbl_env.setObjectName(u"lbl_env")
+        self.lbl_env.setGeometry(QRect(120, 10, 101, 21))
+        self.lbl_env.setFont(font1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -216,5 +220,6 @@ class Ui_MainWindow(object):
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"\u76ee\u7684\u5730", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u8d77\u9ede", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"\u624b\u8853\u5ba407", None))
+        self.lbl_env.setText(QCoreApplication.translate("MainWindow", u"\u5167\u74b0", None))
     # retranslateUi
 

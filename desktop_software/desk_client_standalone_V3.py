@@ -24,7 +24,9 @@ from desktop_config import (
     REQUIRED_MISSION_CODES,
     ROOM_ID_MAP,
     POLL_INTERVAL,
-    room_id
+    room_id,
+    ENV,
+    EXPECTED_DB_HOST
 )
 
 import ui_desk_client
@@ -34,6 +36,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def __init__(self):
         super().__init__()
+
+        self.env = ENV  # ⭐ 這就是你的環境
+        self.check_env_safety()
+
         self.db_error = False   # ⭐ 加這行
         self.setupUi(self)
         self.setWindowTitle("台中國軍醫 MiR")
@@ -76,6 +82,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.btn_delete_task_db.clicked.connect(self.on_delete_task_db_clicked)
 
 
+    # ===== 通知區 =====
     def show_notify(self, title, message):
 
         self.lbl_notify_title.setText(title)
@@ -235,6 +242,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.txt_log.append(f"[{now}] {text}")
     
 
+    # ====== 每 n 秒查一次 ======
     def poll_room_status(self):
 
         try:
@@ -309,6 +317,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             self.last_notified_task_id = current_task_id
 
+    # 寫內外環防呆 function 
+    def check_env_safety(self):
+        db_host = DB_CONFIG["host"]
+
+        if db_host in ["localhost"]:
+            print("⚠️ Local DB，跳過環境檢查")
+            return
+
+        expected_host = EXPECTED_DB_HOST.get(self.env)
+
+        if expected_host and db_host != expected_host:
+            QMessageBox.critical(
+                None,
+                "錯誤",
+                f"❌ {self.env} 環境 DB 設定錯誤\n目前: {db_host}\n應該: {expected_host}"
+            )
+            sys.exit()
 
 if __name__ == "__main__":
 
