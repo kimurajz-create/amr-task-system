@@ -139,6 +139,19 @@ class Ui_MainWindow(object):
         self.txt_delete_task_id = QLineEdit(self.groupBox)
         self.txt_delete_task_id.setObjectName(u"txt_delete_task_id")
         self.txt_delete_task_id.setGeometry(QRect(50, 350, 61, 20))
+        self.txt_delete_task_id.setStyleSheet(u"QLineEdit {\n"
+"    border: 1px solid #3a3a3a;\n"
+"    border-radius: 1px;\n"
+"    padding: 1px;\n"
+"    background-color: #1e1e1e;\n"
+"    color: white;\n"
+"    font-size: 14px;\n"
+"}\n"
+"\n"
+"QLineEdit:focus {\n"
+"    border: 1px solid #4da3ff;\n"
+"    background-color: #262626;\n"
+"}")
         self.cmb_end_point = QComboBox(self.groupBox)
         self.cmb_end_point.setObjectName(u"cmb_end_point")
         self.cmb_end_point.setGeometry(QRect(50, 150, 141, 22))
@@ -185,7 +198,7 @@ class Ui_MainWindow(object):
         self.label_5.setFont(font1)
         self.txt_log = QTextEdit(self.centralwidget)
         self.txt_log.setObjectName(u"txt_log")
-        self.txt_log.setGeometry(QRect(10, 480, 771, 51))
+        self.txt_log.setGeometry(QRect(10, 500, 771, 51))
         self.txt_log.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
 "font-size: 13px; ")
         self.txt_log.setReadOnly(True)
@@ -193,6 +206,18 @@ class Ui_MainWindow(object):
         self.lbl_env.setObjectName(u"lbl_env")
         self.lbl_env.setGeometry(QRect(120, 10, 101, 21))
         self.lbl_env.setFont(font1)
+        self.lbl_status_v1 = QLabel(self.centralwidget)
+        self.lbl_status_v1.setObjectName(u"lbl_status_v1")
+        self.lbl_status_v1.setGeometry(QRect(530, 460, 111, 20))
+        self.lbl_status_v1.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
+"font-size: 16px; ")
+        self.lbl_status_v1.setAlignment(Qt.AlignCenter)
+        self.lbl_status_v2 = QLabel(self.centralwidget)
+        self.lbl_status_v2.setObjectName(u"lbl_status_v2")
+        self.lbl_status_v2.setGeometry(QRect(650, 460, 111, 20))
+        self.lbl_status_v2.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
+"font-size: 16px; ")
+        self.lbl_status_v2.setAlignment(Qt.AlignCenter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -221,5 +246,7 @@ class Ui_MainWindow(object):
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u8d77\u9ede", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"\u624b\u8853\u5ba407", None))
         self.lbl_env.setText(QCoreApplication.translate("MainWindow", u"\u5167\u74b0", None))
+        self.lbl_status_v1.setText("")
+        self.lbl_status_v2.setText("")
     # retranslateUi
 

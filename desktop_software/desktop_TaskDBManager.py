@@ -34,7 +34,10 @@ class TaskDBManager:
             # 嘗試重新連線 (增強健壯性)
             if not self.connect():
                 print("錯誤: 資料庫連線無效。")
-                return [] if fetch else None
+                raise Exception("DB connect failed")
+                # 如果是查詢（fetch=True）→ 回傳空列表 []
+                # 如果是寫入（fetch=False）→ 回傳 None
+                # return [] if fetch else None
             
         try:
             #核心: 這是真正執行 SQL 語法的地方，遊標(cursor)是資料庫中執行命令和獲取結果的介面。
@@ -57,7 +60,7 @@ class TaskDBManager:
                 pass
              # ⭐ 關鍵：標記連線失效
             self.conn = None
-            return [] if fetch else None
+            raise e
         
     # =========================
     # 新增任務

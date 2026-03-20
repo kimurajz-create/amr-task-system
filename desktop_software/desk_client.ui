@@ -291,6 +291,21 @@ QComboBox QAbstractItemView {
         <height>20</height>
        </rect>
       </property>
+      <property name="styleSheet">
+       <string notr="true">QLineEdit {
+    border: 1px solid #3a3a3a;
+    border-radius: 1px;
+    padding: 1px;
+    background-color: #1e1e1e;
+    color: white;
+    font-size: 14px;
+}
+
+QLineEdit:focus {
+    border: 1px solid #4da3ff;
+    background-color: #262626;
+}</string>
+      </property>
      </widget>
      <widget class="QComboBox" name="cmb_end_point">
       <property name="geometry">
@@ -404,7 +419,7 @@ font-size: 16px; </string>
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>480</y>
+      <y>500</y>
       <width>771</width>
       <height>51</height>
      </rect>
@@ -433,6 +448,46 @@ font-size: 13px; </string>
     </property>
     <property name="text">
      <string>內環</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lbl_status_v1">
+    <property name="geometry">
+     <rect>
+      <x>530</x>
+      <y>460</y>
+      <width>111</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">color: white;                  /* 白字 */
+font-size: 16px; </string>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="lbl_status_v2">
+    <property name="geometry">
+     <rect>
+      <x>650</x>
+      <y>460</y>
+      <width>111</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">color: white;                  /* 白字 */
+font-size: 16px; </string>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
     </property>
    </widget>
   </widget>

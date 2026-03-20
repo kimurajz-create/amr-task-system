@@ -50,13 +50,20 @@ def get_auth_headers():
 
 # 確認MiR API 連線確認狀態 
 def check_api_status():
-    url = f"{MIR_IP}/api/v2.0.0/status"
-    headers = get_auth_headers()
-    response = requests.get(url,headers=headers)
-    if response.status_code == 200:
-        print(f"API 回應成功: {response.status_code},{response.text}")
-    else:
-        print(f"API 錯誤: {response.status_code}, {response.text}")
+    try:
+        url = f"{MIR_IP}/api/v2.0.0/status"
+        headers = get_auth_headers()
+
+        response = requests.get(url, headers=headers, timeout=2)
+
+        if response.status_code != 200:
+            raise Exception(f"API error: {response.status_code}")
+
+        return response.json()
+
+    except Exception as e:
+        print("❌ API exception:", e)
+        raise e   # ⭐ 一定要丟出去
 
 # 確認MiR API 連線確認狀態 
 def check_api_status_v2():
