@@ -192,7 +192,7 @@ class Ui_MainWindow(object):
         self.label_2.setAlignment(Qt.AlignCenter)
         self.label_5 = QLabel(self.centralwidget)
         self.label_5.setObjectName(u"label_5")
-        self.label_5.setGeometry(QRect(10, 10, 101, 21))
+        self.label_5.setGeometry(QRect(20, 20, 101, 21))
         font1 = QFont()
         font1.setPointSize(16)
         self.label_5.setFont(font1)
@@ -202,10 +202,6 @@ class Ui_MainWindow(object):
         self.txt_log.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
 "font-size: 13px; ")
         self.txt_log.setReadOnly(True)
-        self.lbl_env = QLabel(self.centralwidget)
-        self.lbl_env.setObjectName(u"lbl_env")
-        self.lbl_env.setGeometry(QRect(120, 10, 101, 21))
-        self.lbl_env.setFont(font1)
         self.lbl_status_v1 = QLabel(self.centralwidget)
         self.lbl_status_v1.setObjectName(u"lbl_status_v1")
         self.lbl_status_v1.setGeometry(QRect(530, 460, 111, 20))
@@ -218,6 +214,20 @@ class Ui_MainWindow(object):
         self.lbl_status_v2.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
 "font-size: 16px; ")
         self.lbl_status_v2.setAlignment(Qt.AlignCenter)
+        self.cmb_env = QComboBox(self.centralwidget)
+        self.cmb_env.addItem("")
+        self.cmb_env.addItem("")
+        self.cmb_env.setObjectName(u"cmb_env")
+        self.cmb_env.setGeometry(QRect(120, 20, 111, 21))
+        self.cmb_env.setStyleSheet(u"QComboBox {\n"
+"    color: white;                  /* \u767d\u5b57 */\n"
+"    font-size: 16px;               /* \u5b57\u9ad4\u5927\u5c0f */\n"
+"	background-color:#393939;\n"
+"}\n"
+"\n"
+"QComboBox QAbstractItemView {\n"
+"    background-color: #1E70BF;     /* \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 */\n"
+"}")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -245,8 +255,10 @@ class Ui_MainWindow(object):
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"\u76ee\u7684\u5730", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"\u8d77\u9ede", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"\u624b\u8853\u5ba407", None))
-        self.lbl_env.setText(QCoreApplication.translate("MainWindow", u"\u5167\u74b0", None))
         self.lbl_status_v1.setText("")
         self.lbl_status_v2.setText("")
+        self.cmb_env.setItemText(0, QCoreApplication.translate("MainWindow", u"\u5167\u74b0", None))
+        self.cmb_env.setItemText(1, QCoreApplication.translate("MainWindow", u"\u5916\u74b0", None))
+
     # retranslateUi
 

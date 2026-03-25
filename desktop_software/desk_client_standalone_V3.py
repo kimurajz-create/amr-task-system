@@ -30,6 +30,9 @@
 
 ============================================================
 """
+import winsound
+import os
+import json
 import re
 import functions
 from desktop_TaskDBManager import TaskDBManager ,create_new_db_task
@@ -57,11 +60,8 @@ from desktop_config import (
     USER_LOCATION_MAP,
     USER_MISSION_GROUP_MAP,
     REQUIRED_MISSION_CODES,
-    ROOM_ID_MAP,
     POLL_INTERVAL,
     room_id,
-    ENV,
-    EXPECTED_DB_HOST
 )
 
 import ui_desk_client
@@ -105,9 +105,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
 
-        self.env = ENV  # ⭐ 這就是你的環境
-        self.check_env_safety()
+        # self.env = ENV  # ⭐ 這就是你的環境
+        # self.check_env_safety()
+        self.startup_check()
 
+        self.CONFIG_MAP = {
+            "內環": "inner.json",
+            "外環": "outer.json"
+        }
+        self.is_first_load = True
         self.db_error = False   # ⭐ 加這行
         self.api_error = False  # ⭐ 加這行
         self.setupUi(self)
@@ -134,26 +140,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 設定 MiR IP
         functions.MIR_IP = functions.load_ip()
 
-        # 初始化 DB
-        self.db_manager = TaskDBManager(DB_CONFIG)
-        if not self.db_manager.connect():
-            QMessageBox.critical(self, "錯誤", "無法連線到 PostgreSQL，請檢查 DB_CONFIG。")
-
         # 啟動時先顯示等待畫面
         self.hide_notify()
 
         # polling timer
         self.poll_timer = QTimer(self)
         self.poll_timer.timeout.connect(self.poll_room_status)
-        self.poll_timer.start(POLL_INTERVAL)  # 每 N 秒查一次
 
         # ===== 下達任務區 =====
         # signals
         self.btn_add_task_db.clicked.connect(self.on_create_task_db_clicked)
         self.btn_delete_task_db.clicked.connect(self.on_delete_task_db_clicked)
-        # 延遲 100 毫秒後只執行一次 self.init_data（通常用在 UI 初始化完成後再跑邏輯），先把畫面抓出來，再去抓資料避免卡頓
-        QTimer.singleShot(100, self.init_data)
+        # 延遲 50 毫秒後只執行一次 self.init_data（通常用在 UI 初始化完成後再跑邏輯），先把畫面抓出來，再去抓資料避免卡頓
+        QTimer.singleShot(50, self.init_data)
 
+        # ===== 環境切換 =====
+        # 當使用者改變下拉選單時，自動呼叫 on_env_changed
+        # 程式啟動時，先用目前選項手動執行一次（初始化環境）
+        self.cmb_env.currentTextChanged.connect(self.on_env_changed)
+        self.on_env_changed(self.cmb_env.currentText())
 
     # ===== 通知區 =====
     def show_notify(self, title, message):
@@ -202,11 +207,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         combo_data_list = []
         # 用於檢查重複的中文名稱，以確保每個地理位置只出現一次
         unique_user_names = set() 
-        
+        location_map = self.config.get("USER_LOCATION_MAP", {})
         if mir_codes_list:
             for mir_code in mir_codes_list:
                 # 名稱轉換，查找中文名稱，如果找不到，就顯示原始的英文代碼
-                user_name = USER_LOCATION_MAP.get(mir_code, mir_code)
+                user_name = location_map.get(mir_code, mir_code)
                 # --- 關鍵去重邏輯 ---
                 if user_name not in unique_user_names:
                     unique_user_names.add(user_name)
@@ -267,18 +272,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # print("--- 字典 Key 對應診斷 ---")
         # print("MiR 傳回的代碼列表:", mir_codes_list)
-
+        mission_map = self.config.get("USER_MISSION_GROUP_MAP", {})
+        required_mission_map = self.config.get("REQUIRED_MISSION_CODES", {})
         if mir_codes_list:
             for mir_code in mir_codes_list:
 
                 # 【篩選步驟】：只處理你想要的兩種任務代碼
-                if mir_code in REQUIRED_MISSION_CODES:
+                if mir_code in required_mission_map:
 
                     # 1. 翻譯：使用你的字典來獲取中文名稱 (Value)
                     # 字典名稱.get(Key,Default Value)。
                     # A (第一個參數)，Python 會嘗試將這個值作為 Key 去字典裡查找；B (第二個參數)，如果找不到 Key 的值，則返回這個預設值
-                    user_name = USER_MISSION_GROUP_MAP.get(mir_code, mir_code)
-                    
+                    user_name = mission_map.get(mir_code, mir_code)
                     # 2. 載入 ComboBox (加蓋)
                     # 顯示給使用者看中文 (user_name)，隱藏 MiR 英文代碼 (mir_code)
                     self.cmb_mission.addItem(user_name, mir_code)
@@ -399,12 +404,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.log(f"⚠️ Worker 錯誤: {err}")
 
     def get_task_data(self):
+        room_id = self.config["ROOM_ID"]
         return self.db_manager.get_latest_task_for_room(room_id)
 
 
     # ====== 處理任務結果 ======
     def handle_task_result(self, task):
 
+        room_id = self.config["ROOM_ID"]
         # debug worker 數量狂疊加會當掉
         # self.log(f"目前 worker 數量: {len(self.workers)}")  # ⭐ 放這
 
@@ -441,6 +448,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if current_status == "Completed" and current_task_id != self.last_notified_task_id:
             self.show_notify("🚗 車輛到達", f"手術室 {room_id} 請卸貨")
             self.log(f"🔔 車已到達：{room_id}")
+
+           
+            if self.config["SOUND"]["ENABLE"]:
+                winsound.Beep(
+                    self.config["SOUND"]["FREQUENCY"],
+                    self.config["SOUND"]["DURATION"]
+                )
+
             self.last_notified_task_id = current_task_id
 
         if current_status == "Aborted" and current_task_id != self.last_notified_task_id:
@@ -479,10 +494,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     
 
-        
-
-
-
+    
 
     # 檢查 host 是否合法
     def is_valid_host(self, host):
@@ -494,27 +506,74 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except:
             return False
 
+    # 下拉式選單切換環境
+    def on_env_changed(self, text):
+
+        # ⭐ 先防呆（避免 KeyError）
+        if text not in self.CONFIG_MAP:
+            QMessageBox.critical(self, "錯誤", f"未知環境: {text}")
+            return
+
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(BASE_DIR, "configs", self.CONFIG_MAP[text])
+
+         # ⭐ 檔案存在檢查
+        if not os.path.exists(config_path):
+            QMessageBox.critical(self, "錯誤", f"找不到設定檔: {config_path}")
+            return
+
+        with open(config_path, "r", encoding="utf-8") as f:
+            self.config = json.load(f)
+
+        self.env = text   # ⭐ 很重要（給下面用）
+
+        # ⭐ 切換前清掉舊 DB（建議）
+        if hasattr(self, "db_manager"):
+            try:
+                self.db_manager.close()
+            except:
+                pass
+
+        self.db_manager = TaskDBManager(self.config["DB_CONFIG"])
+        if not self.db_manager.connect():
+            QMessageBox.critical(self, "錯誤", "無法連線到 PostgreSQL，請檢查 DB_CONFIG。")
+            return
+
+        print(f"切換到 {text}")
+        # print("MIR_IP:", self.config["MIR_IP"])
+        # print("SOUND:", self.config["SOUND"]["FREQUENCY"])
+
+         # ⭐ 第一次不顯示
+        if not self.is_first_load:
+            QMessageBox.information(self, "環境切換", f"已切換到 {text}")
+
+        self.is_first_load = False
+
+        # ⭐ 加這行（切換時檢查）
+        self.check_env_safety()
+        self.load_map_positions(self.fetch_map_data())
+        self.load_mission_groups_positions(self.fetch_mission_data())
+        # 避免舊 timer 還在跑 + 新 timer 再跑 ❌
+        self.poll_timer.stop()
+        self.poll_timer.start(self.config["POLL_INTERVAL"])
+
 
     # 寫內外環防呆 function 
     def check_env_safety(self):
-        db_host = DB_CONFIG["host"]
+        db_host = self.config["DB_CONFIG"]["host"]   # ⭐ 改這裡
 
-         # ⭐ 第1層：格式檢查（通用）
         if not self.is_valid_host(db_host):
-            QMessageBox.critical(
-                None,
-                "錯誤",
-                f"❌ DB host 格式錯誤: {db_host}"
-            )
-            sys.exit()
+            QMessageBox.critical(None, "錯誤", f"❌ DB host 格式錯誤: {db_host}")
+            return False
 
-        # ⭐ 第2層：local 特例
         if db_host in ["localhost", "127.0.0.1"]:
             print("⚠️ Local DB，跳過環境檢查")
-            return
+            return True
 
-        # ⭐ 第3層：環境驗證（這才是你原本的重點）
-        expected_host = EXPECTED_DB_HOST.get(self.env)
+        # 取得環境對應的 DB host
+        expected_map = self.config.get("EXPECTED_DB_HOST", {})
+         # ENV 告訴你「現在是哪個環境」，ENV 告訴你「現在是哪個環境」
+        expected_host = expected_map.get(self.config.get("ENV"))
 
         if expected_host and db_host != expected_host:
             QMessageBox.critical(
@@ -522,10 +581,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 "錯誤",
                 f"❌ {self.env} 環境 DB 設定錯誤\n目前: {db_host}\n應該: {expected_host}"
             )
+            return False
+
+        return True
+
+
+    # 開機檢查
+    def startup_check(self):
+
+        if getattr(sys, 'frozen', False):
+            BASE_DIR = os.path.dirname(sys.executable)
+        else:
+            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+        CONFIG_DIR = os.path.join(BASE_DIR, "configs")
+
+        if not os.path.exists(CONFIG_DIR):
+            QMessageBox.critical(self, "錯誤", "❌ 找不到 configs 資料夾")
             sys.exit()
 
-
-
+        if not os.listdir(CONFIG_DIR):
+            QMessageBox.critical(self, "錯誤", "❌ 沒有任何 config 檔案")
+            sys.exit()
 
 
 

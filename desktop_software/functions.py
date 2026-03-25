@@ -8,8 +8,22 @@ from datetime import datetime
 import pytz
 import json
 import os
+import sys
 
-CONFIG_PATH = "config.json"
+
+# 判斷是否為打包後執行（exe）
+# 若是 exe，使用執行檔所在目錄
+# 若是開發環境，使用 .py 檔所在目錄
+# 檢查執行環境，並且回傳對應的 BASE_DIR
+# 記憶方法 sys.frozen = True → exe；沒有 → .py
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 設定 config 檔路徑（統一用絕對路徑，避免打包後找不到）
+CONFIG_PATH = os.path.join(BASE_DIR, "configs", "inner.json")
+
 MIR_IP = ""  # 請替換成你的 MiR AMR IP http://10.11.202.251
 Full_IP = ""
 API_USER = "Distributor"
@@ -54,7 +68,7 @@ def check_api_status():
         url = f"{MIR_IP}/api/v2.0.0/status"
         headers = get_auth_headers()
 
-        response = requests.get(url, headers=headers, timeout=2)
+        response = requests.get(url, headers=headers, timeout=5)
 
         if response.status_code != 200:
             raise Exception(f"API error: {response.status_code}")

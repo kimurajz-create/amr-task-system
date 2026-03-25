@@ -400,8 +400,8 @@ font-size: 16px; </string>
    <widget class="QLabel" name="label_5">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>10</y>
+      <x>20</x>
+      <y>20</y>
       <width>101</width>
       <height>21</height>
      </rect>
@@ -430,24 +430,6 @@ font-size: 13px; </string>
     </property>
     <property name="readOnly">
      <bool>true</bool>
-    </property>
-   </widget>
-   <widget class="QLabel" name="lbl_env">
-    <property name="geometry">
-     <rect>
-      <x>120</x>
-      <y>10</y>
-      <width>101</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>16</pointsize>
-     </font>
-    </property>
-    <property name="text">
-     <string>內環</string>
     </property>
    </widget>
    <widget class="QLabel" name="lbl_status_v1">
@@ -489,6 +471,37 @@ font-size: 16px; </string>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
     </property>
+   </widget>
+   <widget class="QComboBox" name="cmb_env">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>20</y>
+      <width>111</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QComboBox {
+    color: white;                  /* 白字 */
+    font-size: 16px;               /* 字體大小 */
+	background-color:#393939;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+}</string>
+    </property>
+    <item>
+     <property name="text">
+      <string>內環</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>外環</string>
+     </property>
+    </item>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">

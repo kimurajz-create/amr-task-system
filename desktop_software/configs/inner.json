@@ -1,0 +1,77 @@
+{
+  "ENV": "INNER",
+
+  "SOUND": {
+  "ENABLE": true,
+  "FREQUENCY": 1000,
+  "DURATION": 500
+  },
+
+  "MIR_IP": "http://10.11.202.251",
+  "ROOM_ID": "OR01",
+  "POLL_INTERVAL": 8000,
+
+  "DB_CONFIG": {
+    "user": "postgres",
+    "host": "localhost",
+    "database": "military_mir250_project",
+    "password": "123456",
+    "port": 5432
+  },
+
+  "EXPECTED_DB_HOST": {
+    "INNER": "10.11.202.86",
+    "OUTER": "10.11.203.50"
+  },
+
+  "ROOM_ID_MAP": {
+    "華陀會議室": "OR01",
+    "演講廳_02": "OR02",
+    "演講廳_01": "OR03",
+    "沙發3": "OR05",
+    "沙發2": "OR06",
+    "沙發1": "OR07",
+    "櫃台": "OR08",
+    "充電樁": "OR09",
+    "電梯橋": "OR10"
+  },
+
+  "USER_LOCATION_MAP": {
+    "LbV2_Robot position Hua": "華陀會議室",
+    "LbV2_Robot position lecture hall 02": "演講廳_02",
+    "LbV2_Robot position lecture hall 01": "演講廳_01",
+    "LbV2_Robot position Sofa3": "沙發3",
+    "LbV2_Robot position Sofa2": "沙發2",
+    "LbV2_Robot position Sofa1": "沙發1",
+    "LbV2_Robot position Reception V2": "櫃台",
+
+    "LbV2_MiR Charge 48V V2": "充電樁",
+    "LbV2_Robot position Elv  Bridge Map": "電梯橋",
+
+    "LbV2_Shelf position Hua": "車架位置(華陀)",
+    "LbV2_Shelf position lecture hall 02": "車架位置(演講廳_02)",
+    "LbV2_Shelf position lecture hall 01": "車架位置(演講廳_01)",
+    "LbV2_Shelf position Sofa3": "車架位置(沙發3)",
+    "LbV2_Shelf position Sofa2": "車架位置(沙發2)",
+    "LbV2_Shelf position Sofa1": "車架位置(沙發1)",
+    "LbV2_Shelf position Reception V2": "車架位置(櫃台)"
+  },
+
+  "USER_MISSION_GROUP_MAP": {
+    "ACE_Elv_0625": "電梯",
+    "Lobby Demo Reception to lecture hall 01": "Demo_櫃台到演講廳_01並返回櫃台",
+    "Lobby Demo Reception to lecture hall 02": "Demo_櫃台到演講廳_02並返回櫃台",
+    "Lobby Demo Reception to Sofa1": "Demo_櫃台到沙發1並返回櫃台",
+    "Lobby Demo Reception to Sofa2": "Demo_櫃台到沙發2並返回櫃台",
+    "Lobby Demo Reception to Sofa3": "Demo_櫃台到沙發3並返回櫃台",
+    "Lobby Demo Seminar Presentation Jordan": "Demo_櫃台出發大廳繞一圈",
+
+    "Lobby Demo Cart Transport": "Demo_載貨運輸",
+    "Lobby Demo Empty Cart Transport": "Demo_空車運輸"
+  },
+
+  "REQUIRED_MISSION_CODES": [
+    "Lobby Demo Cart Transport",
+    "Lobby Demo Empty Cart Transport"
+  ]
+}
