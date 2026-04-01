@@ -1,5 +1,5 @@
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timedelta
 from psycopg2.extras import execute_values
 class TaskDBManager:
     """
@@ -10,6 +10,8 @@ class TaskDBManager:
         # 你的資料庫連線設定
         self.db_config = db_config
         self.conn = None
+        # 用於跟踪心跳時間戳是否更新（檢測離線）
+        self.room_heartbeat_cache = {}  # {'OR01': {'last_ts': timestamp, 'no_update_count': 0}, ...}
 
     # --- 資料庫連線與關閉 ---
     def connect(self):
@@ -328,6 +330,85 @@ class TaskDBManager:
         params = (task_id,)
         self._execute_query(query, params, commit=True)
         print(f"✅ 任務 ID {task_id} 已刪除。")
+
+
+    #-------------------------------------房間心跳監控系列---------------------------------------------#
+    
+    def get_all_rooms_online_status(self):
+        """
+        查詢所有房間的在線/離線狀態。
+        判定邏輯：檢查心跳時間戳是否持續更新
+        - 時間戳持續不變 2 次查詢（~20秒）→ 離線
+        - 時間戳有新更新 → 在線
+        
+        好處：完全規避時間不同步問題，只看有沒有新心跳
+        
+        回傳:
+            List[Dict]: 每個字典包含：
+                - room_id: 房間 ID
+                - last_heartbeat: 最後一次心跳時間
+                - is_online: 是否在線 (True/False)
+                - time_since_heartbeat: None（已不used）
+        """
+        query = """
+        SELECT room_id, last_heartbeat, error_status
+        FROM room_heartbeat
+        ORDER BY room_id;
+        """
+        results = self._execute_query(query, fetch=True)
+        
+        if not results:
+            print("⚠️ 沒有找到任何房間的心跳記錄")
+            return []
+        
+        # 將結果轉換為包含在線狀態的格式
+        rooms_status = []
+        for row in results:
+            room_id = row['room_id']
+            current_ts = row['last_heartbeat']
+            error_status = row.get('error_status')  # 異常狀態（可能是 None、'DB異常'、'API異常' 等）
+            
+            # 跟踪時間戳是否更新（不管秒數差多少）
+            if room_id not in self.room_heartbeat_cache:
+                # 首次記錄該房間
+                self.room_heartbeat_cache[room_id] = {
+                    'last_ts': current_ts,
+                    'no_update_count': 0
+                }
+                is_online = True  # 首次出現視為在線
+            else:
+                cached = self.room_heartbeat_cache[room_id]
+                if current_ts == cached['last_ts']:
+                    # 時間戳沒變，計數 +1
+                    cached['no_update_count'] += 1
+                    # 連續 2 次沒有更新（約 20 秒），判定為離線
+                    is_online = cached['no_update_count'] < 2
+                else:
+                    # 時間戳有變，說明有新心跳，重置
+                    cached['last_ts'] = current_ts
+                    cached['no_update_count'] = 0
+                    is_online = True
+            
+            # 判斷異常優先級: 異常 > 離線 > 在線
+            if error_status:  # 如果有異常標記
+                status_str = f"🟠({error_status})"
+            elif is_online:
+                status_str = "🟢 線上"
+            else:
+                status_str = "🔴 離線"
+            
+            # 🔍 DEBUG
+            # print(f"DEBUG: {room_id} | 最後心跳: {current_ts} | 無更新次數: {self.room_heartbeat_cache[room_id]['no_update_count']} | {status_str}")
+            
+            rooms_status.append({
+                'room_id': room_id,
+                'last_heartbeat': current_ts,
+                'is_online': is_online,
+                'error_status': error_status,  # 新增異常狀態
+                'time_since_heartbeat': None
+            })
+        
+        return rooms_status
 
 
 

@@ -607,12 +607,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.fast_timer.start(0.3 * 1000) # 秒
 
             # ----------------------------------------
-            # 2. 慢速定時器 (Slow Polling) - 例如 5 秒
-            # 用於即時性要求低的資訊：電量、歷史資料
+            # 2. 慢速定時器 (Slow Polling) - 例如 10 秒
+            # 用於即時性要求低的資訊：電量、歷史資料、房間心跳
             # ----------------------------------------
             self.slow_timer = QTimer(self)
             # 連接需要慢速更新的函式
             self.slow_timer.timeout.connect(self.query_battery_status)
+            self.slow_timer.timeout.connect(self.update_room_heartbeat_status)  # 房間心跳監控
             # self.slow_timer.timeout.connect(self.query_his_data)
             # 啟動慢速定時器
             self.slow_timer.start(10 * 1000) # 10 秒
@@ -1538,6 +1539,95 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             # print("沒有錯誤，不需要送出資料") 0923
             pass
+
+    # ================================房間心跳監控================================
+    def update_room_heartbeat_status(self):
+        """
+        定期查詢房間心跳狀態，並更新 GUI 標籤的顏色
+        綠色 (線上): 距離最後心跳 < 10 秒
+        紅色 (離線): 距離最後心跳 >= 10 秒
+        """
+        try:
+            # 查詢所有房間的在線狀態
+            all_rooms = self.task_db_manager.get_all_rooms_online_status()
+            
+            # 標籤對應的房間 ID (可根據實際情況擴展到 13 間)
+            room_label_map = {
+                'OR01': 'lbl_OR_Heartbeat_1',
+                'OR02': 'lbl_OR_Heartbeat_2',
+                'OR03': 'lbl_OR_Heartbeat_3',
+                'OR04': 'lbl_OR_Heartbeat_4',
+                'OR05': 'lbl_OR_Heartbeat_5',
+                'OR06': 'lbl_OR_Heartbeat_6',
+                'OR07': 'lbl_OR_Heartbeat_7',
+                'OR08': 'lbl_OR_Heartbeat_8',
+                'OR09': 'lbl_OR_Heartbeat_9',
+                'OR10': 'lbl_OR_Heartbeat_10',
+                'OR11': 'lbl_OR_Heartbeat_11',
+                'OR12': 'lbl_OR_Heartbeat_12',
+                'OR13': 'lbl_OR_Heartbeat_13',
+            }
+            
+            # 更新 GUI 標籤
+            for room in all_rooms:
+                room_id = room['room_id']
+                is_online = room['is_online']
+                error_status = room.get('error_status')  # 獲取異常狀態
+                
+                # 如果房間 ID 存在於標籤映射中，更新對應的標籤
+                if room_id in room_label_map:
+                    label_name = room_label_map[room_id]
+                    
+                    # 嘗試取得標籤物件
+                    # 使用 getattr 來動態取得屬性（UI 標籤）
+                    try:
+                        label = getattr(self, label_name, None)
+                        if label:
+                            # 從房間 ID 提取房間號 (例如 'OR01' → '01')
+                            room_number = room_id[2:] if room_id.startswith('OR') else room_id
+                            
+                            # 設定標籤的樣式（背景白色，用文字和邊框顏色表示狀態）
+                            # 優先級: 異常 > 離線 > 在線
+                            if error_status:  # 異常 - 橙色
+                                label.setStyleSheet(
+                                    "color: #fd7e14; "  # 橙色文字
+                                    "font-size: 16px; "
+                                    "background-color: white; "  # 白色背景
+                                    "border: 2px solid #fd7e14; "
+                                    "border-radius: 5px; "
+                                    "padding: 4px;"
+                                )
+                                # label.setText(f"{room_number} 🟠 {error_status}")
+                                label.setText(f"{room_number} 🟠 異常")
+                            elif is_online:  # 在線 - 綠色
+                                label.setStyleSheet(
+                                    "color: #28a745; "  # 綠色文字
+                                    "font-size: 16px; "
+                                    "background-color: white; "  # 白色背景
+                                    "border: 2px solid #28a745; "
+                                    "border-radius: 5px; "
+                                    "padding: 4px;"
+                                )
+                                label.setText(f"{room_number} 🟢 線上")
+                            else:  # 離線 - 紅色
+                                label.setStyleSheet(
+                                    "color: #dc3545; "  # 紅色文字
+                                    "font-size: 16px; "
+                                    "background-color: white; "  # 白色背景
+                                    "border: 2px solid #dc3545; "
+                                    "border-radius: 5px; "
+                                    "padding: 4px;"
+                                )
+                                label.setText(f"{room_number} 🔴 離線")
+                        else:
+                            # 標籤不存在，可能是還沒有添加到 UI 中
+                            pass
+                    except AttributeError:
+                        # 標籤還未在 UI 中定義，跳過
+                        pass
+                        
+        except Exception as e:
+            print(f"❌ 更新房間心跳狀態失敗: {e}")
 
     ##################################按鈕############################################
 
