@@ -384,6 +384,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         worker_api.start()
 
+        # ===== 房間心跳更新（新增 ⭐）=====
+        worker_heartbeat = DBWorker(self.update_heartbeat)
+        worker_heartbeat.finished.connect(self.handle_heartbeat_result)
+        worker_heartbeat.error.connect(self.handle_heartbeat_error)
+
+        self.workers.append(worker_heartbeat)
+
+        worker_heartbeat.finished.connect(lambda: self._cleanup_poll_worker(worker_heartbeat))
+        worker_heartbeat.error.connect(lambda: self._cleanup_poll_worker(worker_heartbeat))
+
+        worker_heartbeat.start()
+
     def _cleanup_poll_worker(self, worker):
         """
         polling 專用 cleanup
@@ -406,6 +418,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def get_task_data(self):
         room_id = self.config["ROOM_ID"]
         return self.db_manager.get_latest_task_for_room(room_id)
+    
 
 
     # ====== 處理任務結果 ======
@@ -417,6 +430,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if self.db_error:
             self.log("✅ 資料庫連線已恢復")
+            self.db_manager.clear_room_error(room_id)  # ⭐ 新增：清除異常狀態
             self.db_error = False
 
         self.lbl_status_v1.setText("🟢 DB 正常")
@@ -470,6 +484,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.db_error:
             self.log("⚠️ 資料庫連線異常，請確認網路")
             print("DB error:", err)
+            self.db_manager.mark_room_error(self.config["ROOM_ID"], "DB_ERROR")  # ⭐ 新增
             self.db_error = True    
         self.lbl_status_v1.setText("🔴 DB 異常")
 
@@ -479,22 +494,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.api_error:
             self.log("⚠️ API異常，請確認網路")
             print("API error:", err)
+            self.db_manager.mark_room_error(self.config["ROOM_ID"], "API_ERROR")  # ⭐ 新增
             self.api_error = True    
         self.lbl_status_v2.setText("🔴 API 異常")
 
     
     
     def check_status_result(self, task):
-         
         if self.api_error:
             self.log("✅ API連線已恢復")
+            self.db_manager.clear_room_error(self.config["ROOM_ID"])  # ⭐ 新增：清除異常狀態
             self.api_error = False
 
         self.lbl_status_v2.setText("🟢 API 正常")
 
-    
+    def update_heartbeat(self):
+        """背景執行緒中運行的方法 - 更新房間心跳"""
+        room_id = self.config["ROOM_ID"]
+        self.db_manager.update_room_heartbeat(room_id)
+        return f"✅ {room_id} 心跳已更新"
 
-    
+    def handle_heartbeat_result(self, result):
+        """接收心跳更新結果 - 心跳成功表示 DB 正常，清除異常狀態"""
+        # 如果有異常標記，清除它（因為心跳成功 = DB 連接正常）
+        try:
+            self.db_manager.clear_room_error(self.config["ROOM_ID"])
+        except:
+            pass  # 忽略清除失敗，不影響心跳
+
+    def handle_heartbeat_error(self, err):
+        """處理心跳更新錯誤"""
+        self.log(f"❌ 心跳更新失敗: {err}")
 
     # 檢查 host 是否合法
     def is_valid_host(self, host):
@@ -514,8 +544,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(self, "錯誤", f"未知環境: {text}")
             return
 
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(BASE_DIR, "configs", self.CONFIG_MAP[text])
+        # 判斷是不是 exe
+        if getattr(sys, 'frozen', False):
+            # ✅ exe模式 → 用 exe 的資料夾
+            BASE_DIR = os.path.dirname(sys.executable)
+        else:
+            # ✅ 開發模式 → 用原始程式資料夾
+            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+        CONFIG_DIR = "configs"
+            
+        config_path = os.path.join(BASE_DIR,CONFIG_DIR, self.CONFIG_MAP[text])
 
          # ⭐ 檔案存在檢查
         if not os.path.exists(config_path):

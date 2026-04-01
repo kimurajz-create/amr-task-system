@@ -68,7 +68,7 @@ def check_api_status():
         url = f"{MIR_IP}/api/v2.0.0/status"
         headers = get_auth_headers()
 
-        response = requests.get(url, headers=headers, timeout=5)
+        response = requests.get(url, headers=headers, timeout=15)
 
         if response.status_code != 200:
             raise Exception(f"API error: {response.status_code}")

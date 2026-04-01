@@ -116,6 +116,54 @@ class TaskDBManager:
         self._execute_query(query, params, commit=True)
         print(f"✅ 任務 ID {task_id} 已刪除。")
 
+    # =========================
+    # 房間心跳更新
+    # =========================
+    def update_room_heartbeat(self, room_id):
+        query = """
+        INSERT INTO room_heartbeat (room_id, last_heartbeat)
+        VALUES (%s, NOW())
+        ON CONFLICT (room_id)
+        DO UPDATE SET last_heartbeat = NOW();
+        """
+        params = (room_id,)
+        self._execute_query(query, params, commit=True)
+        # print(f"✅ 房間 {room_id} 心跳已更新。")
+
+    # =========================
+    # 標記房間異常狀態
+    # =========================
+    def mark_room_error(self, room_id, error_type):
+        """標記房間異常狀態（DB/API 故障）"""
+        query = """
+        INSERT INTO room_heartbeat (room_id, error_status, last_heartbeat)
+        VALUES (%s, %s, NOW())
+        ON CONFLICT (room_id)
+        DO UPDATE SET error_status = %s, last_heartbeat = NOW();
+        """
+        params = (room_id, error_type, error_type)
+        try:
+            self._execute_query(query, params, commit=True)
+            print(f"✅ 房間 {room_id} 標記為 {error_type}")
+        except Exception as e:
+            print(f"❌ 標記房間異常失敗: {e}")
+
+    # =========================
+    # 清除房間異常狀態
+    # =========================
+    def clear_room_error(self, room_id):
+        """清除房間異常狀態（DB/API 恢復）"""
+        query = """
+        UPDATE room_heartbeat 
+        SET error_status = NULL, last_heartbeat = NOW()
+        WHERE room_id = %s;
+        """
+        params = (room_id,)
+        try:
+            self._execute_query(query, params, commit=True)
+            # print(f"✅ 房間 {room_id} 異常已清除")
+        except Exception as e:
+            pass  # 靜默處理，不洗版
 
 
 # =========================
