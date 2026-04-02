@@ -105,6 +105,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
 
+        '''
+        ===== 系統啟動流程 =====
+        MainWindow init
+            ↓
+        on_env_changed() 被呼叫（初始化環境）
+            ↓
+        poll_timer.start(...) ← ⭐ 在這裡啟動
+            ↓
+        每 N 秒 → poll_room_status()
+        '''
+
         # self.env = ENV  # ⭐ 這就是你的環境
         # self.check_env_safety()
         self.startup_check()
@@ -143,6 +154,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 啟動時先顯示等待畫面
         self.hide_notify()
 
+        
+        
         # polling timer
         self.poll_timer = QTimer(self)
         self.poll_timer.timeout.connect(self.poll_room_status)
@@ -247,11 +260,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.cmb_start_point.setCompleter(completer1) 
                 self.cmb_end_point.setCompleter(completer2)
 
-    # 確認MiR狀態
-    def check_mir_status(self):
-        return functions.check_api_status()
+  
+  
 
 
+    def get_room_error_from_db(self):
+        return self.db_manager.get_room_error("MASTER")
 
 
     # 取得分類後的每個地圖名稱
@@ -358,24 +372,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         if self.polling_busy:
             return
-
+        
         self.polling_busy = True
 
+        # ===== DB polling =====
         worker = DBWorker(self.get_task_data)
         worker.finished.connect(self.handle_task_result)
         worker.error.connect(self.handle_task_error)
-
         self.workers.append(worker)
-
         worker.finished.connect(lambda: self._cleanup_poll_worker(worker))
         worker.error.connect(lambda: self._cleanup_poll_worker(worker))
-
         worker.start()
 
         # ===== API polling（新增 ⭐）=====
-        worker_api = DBWorker(self.check_mir_status)
-        worker_api.finished.connect(self.check_status_result)
-        worker_api.error.connect(self.check_status_error)
+
+        worker_api = DBWorker(self.get_room_error_from_db)
+        worker_api.finished.connect(self.update_api_light)
+        worker_api.error.connect(self.handle_api_error)
 
         self.workers.append(worker_api)
 
@@ -419,8 +432,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         room_id = self.config["ROOM_ID"]
         return self.db_manager.get_latest_task_for_room(room_id)
     
-
-
     # ====== 處理任務結果 ======
     def handle_task_result(self, task):
 
@@ -478,8 +489,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.last_notified_task_id = current_task_id    
     
     
-
-
     def handle_task_error(self, err):
         if not self.db_error:
             self.log("⚠️ 資料庫連線異常，請確認網路")
@@ -490,23 +499,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
 
-    def check_status_error(self, err):
-        if not self.api_error:
-            self.log("⚠️ API異常，請確認網路")
-            print("API error:", err)
-            self.db_manager.mark_room_error(self.config["ROOM_ID"], "API_ERROR")  # ⭐ 新增
-            self.api_error = True    
+    def update_api_light(self, status):
+        if status == "API_ERROR":
+            self.lbl_status_v2.setText("🔴 API 異常")
+        else:
+            self.lbl_status_v2.setText("🟢 API 正常")
+
+
+    def handle_api_error(self, err):
+        self.log("⚠️ DB查詢失敗")
+        print("DB error:", err)
         self.lbl_status_v2.setText("🔴 API 異常")
 
-    
-    
-    def check_status_result(self, task):
-        if self.api_error:
-            self.log("✅ API連線已恢復")
-            self.db_manager.clear_room_error(self.config["ROOM_ID"])  # ⭐ 新增：清除異常狀態
-            self.api_error = False
 
-        self.lbl_status_v2.setText("🟢 API 正常")
+
+
+
 
     def update_heartbeat(self):
         """背景執行緒中運行的方法 - 更新房間心跳"""
@@ -536,7 +544,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except:
             return False
 
-    # 下拉式選單切換環境
+    # ===== 環境切換 =====
+    # 功能：
+    # - 載入 config（INNER / OUTER）
+    # - 切換 DB 連線（不同主控）
+    # - 重新啟動 polling timer
+    # - 重新載入 map / mission（目前仍用 API）
     def on_env_changed(self, text):
 
         # ⭐ 先防呆（避免 KeyError）
@@ -594,6 +607,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.load_mission_groups_positions(self.fetch_mission_data())
         # 避免舊 timer 還在跑 + 新 timer 再跑 ❌
         self.poll_timer.stop()
+        # 開始新的 timer
         self.poll_timer.start(self.config["POLL_INTERVAL"])
 
 

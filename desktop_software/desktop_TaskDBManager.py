@@ -102,9 +102,7 @@ class TaskDBManager:
         ORDER BY mq_id DESC NULLS LAST,id DESC
         LIMIT 1
         """
-
         result = self._execute_query(query, (room_id,), fetch=True)
-
         return result[0] if result else None
 
     # =========================
@@ -165,6 +163,30 @@ class TaskDBManager:
         except Exception as e:
             pass  # 靜默處理，不洗版
 
+    
+    # =========================
+    # 回傳Master API狀態
+    # =========================
+    def get_room_error(self, room_id):
+        query ="""
+          SELECT error_status
+          FROM room_heartbeat
+          WHERE room_id = %s
+        """
+        params = (room_id,)
+        try:
+            result = self._execute_query(query, params, fetch=True)
+            if not result:
+                return None
+
+            row = result[0]
+
+            # ⭐ 跟你其他 function 風格一致（安全寫法）
+            return row["error_status"] if isinstance(row, dict) else row[0]
+
+        except Exception as e:
+            print(f"❌ 查詢房間異常狀態失敗: {e}")
+            return None
 
 # =========================
 #    建立任務 helper
