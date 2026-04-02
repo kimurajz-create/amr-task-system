@@ -37,6 +37,9 @@ from ui_main import Ui_MainWindow
 from ui_login_window import Ui_Form_LoginWindow
 from ui_admin_panel import Ui_Form_AdminPanel
 
+# 引入 PySide6 的 QThread 和 Signal
+from PySide6.QtCore import QThread, Signal
+
 # ----------------------------------------------------------------------
 # 1. 數據層：定義 MiR 英文代碼與中文名稱的對應關係
 # 這是你的「翻譯字典」英翻中，工程語言轉user語言
@@ -144,6 +147,39 @@ MIR_LOCATION_MAP = {v: k for k, v in USER_LOCATION_MAP.items()}
 MIR_MISSION_GROUP_MAP = {v: k for k, v in USER_MISSION_GROUP_MAP.items()}
 
 CHARGING_STATION_NAME = "充電樁"
+
+# ------------將「耗時操作」丟到背景 thread 執行----------
+class DBWorker(QThread):
+    """
+    通用 Worker（背景執行緒）
+
+    用途：
+    - 將「耗時操作」丟到背景 thread 執行
+    - 避免 UI 卡死
+
+    參數：
+    - func：要執行的函式（API / DB）
+    - args：函式參數
+
+    回傳：
+    - finished.emit(result)
+    - error.emit(error_message)
+    """
+
+    finished = Signal(object)
+    error = Signal(str)
+
+    def __init__(self, func, *args):
+        super().__init__()
+        self.func = func
+        self.args = args
+        
+    def run(self):
+        try:
+            result = self.func(*self.args)
+            self.finished.emit(result)
+        except Exception as e:
+            self.error.emit(str(e))
 
 # -----------------登入管理系統class----------------------------------
 # ------------------ 設定 ------------------ #
@@ -502,6 +538,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 6. 應用 QSS 樣式
         self.apply_qss_styles()
 
+        # ===== thread check api 狀態控制 =====
+        self.api_error = False     # ⭐ 是否目前是 API 錯誤狀態（避免重複寫 DB）
+        self.workers = []          # ⭐ 存所有 thread（避免被 Python 回收 → crash）
+        self.polling_busy = False  # ⭐ 防止 polling 還沒結束又啟動
+        self.active_workers = 0    # ⭐ 記錄目前有幾個 thread 在跑（這版是1但保險留著）
+
         ########################################儲存 Manager 實例，以便後續的方法可以使用################################
         self.user_db_manager = user_db_manager
         self.task_db_manager = task_db_manager # <-- 這是您需要的！
@@ -594,6 +636,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 暫時隱藏frame 0923
         self.frame_temp.hide()
 
+        # polling timer
+        self.poll_timer = QTimer(self)
+        self.poll_timer.timeout.connect(self.poll_room_status)
+        self.poll_timer.start(5000)  # ⭐ 建議 3~5 秒（避免打爆 API）
+
         if self.is_online:
             # ----------------------------------------
             # 1. 快速定時器 (Fast Polling) - 例如 300ms
@@ -614,7 +661,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # 連接需要慢速更新的函式
             self.slow_timer.timeout.connect(self.query_battery_status)
             self.slow_timer.timeout.connect(self.update_room_heartbeat_status)  # 房間心跳監控
-            # self.slow_timer.timeout.connect(self.query_his_data)
+            
+            # self.slow_timer.timeout.connect(self.monitor_or_mir_api_status)
             # 啟動慢速定時器
             self.slow_timer.start(10 * 1000) # 10 秒
 
@@ -971,6 +1019,75 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.close()
         # 在這裡實現登出的邏輯
         print("使用者已登出")
+
+
+    # ====== 每 n 秒查一次 API 狀態記錄下來給手術室桌機軟體確認用======
+    def poll_room_status(self):
+        # ⭐ 如果上一輪還沒跑完 → 直接跳過（避免 thread 疊加）
+        if self.polling_busy:
+            return
+
+        self.polling_busy = True
+        self.active_workers = 0  # ⭐ 每輪 reset
+
+         # ===== API 健康檢查（丟到背景 thread）=====
+        worker_api = DBWorker(self.check_api_status_worker)
+
+         # ⭐ 設定 thread 行為（成功 / 失敗 / 清理）
+        self._setup_worker(worker_api, self.api_ok, self.api_error_handler)
+
+    # API 呼叫（背景執行，不碰 UI）
+    def check_api_status_worker(self):
+        functions.check_api_status_v3()
+
+    
+    def api_ok(self):
+        print("✅ API 正常")
+
+        # ⭐ 不管狀態，直接嘗試清（DB 自己判斷有沒有）
+        self.task_db_manager.clear_room_error("MASTER")
+
+        self.api_error = False
+
+
+    def api_error_handler(self):
+        print("❌ API 異常")
+
+        # ⭐ 只有「第一次錯誤」才寫 DB（避免狂寫）
+        if not self.api_error:
+            self.task_db_manager.mark_room_error("MASTER", "API_ERROR")
+            self.api_error = True
+
+    def _setup_worker(self, worker, success_cb, error_cb):
+        self.active_workers += 1 # ⭐ 記錄目前有幾個 worker 在跑
+
+        # ===== 成功 / 失敗 callback =====
+        worker.finished.connect(success_cb)
+        worker.error.connect(error_cb)
+
+        # ⭐ 防止 thread 被 Python 回收（超重要）
+        self.workers.append(worker)
+
+        # ===== 收尾（不論成功或失敗都會清理）=====
+        worker.finished.connect(lambda: self._cleanup_poll_worker(worker))
+        worker.error.connect(lambda: self._cleanup_poll_worker(worker))
+
+        worker.start() # ⭐ 啟動 thread
+    
+    def _cleanup_poll_worker(self, worker):
+        # ⭐ 從列表移除（避免記憶體累積）
+        if worker in self.workers:
+            self.workers.remove(worker)
+
+        self.active_workers -= 1
+
+        # ⭐ 所有 worker 都結束 → 才允許下一輪 polling
+        if self.active_workers == 0:
+            self.polling_busy = False
+        
+
+
+
 
     # ----------------------------------------------------
     # ⭐ 處理 TaskThread 訊號的 Slot (最小功能版) ⭐
@@ -1629,8 +1746,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception as e:
             print(f"❌ 更新房間心跳狀態失敗: {e}")
 
-    ##################################按鈕############################################
 
+    # ================================ API 狀態監視 =================
+    def monitor_or_mir_api_status(self):
+        try:
+            functions.check_api_status_v3()
+            # 如果之前有 API 錯誤狀態，現在恢復了，就清除 DB 中的錯誤標記
+            if self.api_error:
+                self.task_db_manager.clear_room_error("MASTER")
+                self.api_error = False
+        except Exception:
+            # 如果 API 錯誤狀態，就在 DB 中標記
+            if not self.api_error:
+                self.task_db_manager.mark_room_error("MASTER", "API_ERROR")
+                self.api_error = True
+
+
+    
+    
+    ##################################按鈕############################################
     # 按鈕(取得等待任務名字) #暫時停用
     def on_get_pending_mssion_clicked(self):
         pm_names = functions.get_pending_mission_names()
@@ -2321,6 +2455,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             event.accept()
         else:
             super().mouseReleaseEvent(event)
+
+
+
 
 # main.py (程式進入點)
 

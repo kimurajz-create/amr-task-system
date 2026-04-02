@@ -410,7 +410,40 @@ class TaskDBManager:
         
         return rooms_status
 
+    # =========================
+    # 標記房間異常狀態
+    # =========================
+    def mark_room_error(self, room_id, error_type):
+        """標記房間異常狀態（DB/API 故障）"""
+        query = """
+        INSERT INTO room_heartbeat (room_id, error_status, last_heartbeat)
+        VALUES (%s, %s, NOW())
+        ON CONFLICT (room_id)
+        DO UPDATE SET error_status = %s, last_heartbeat = NOW();
+        """
+        params = (room_id, error_type, error_type)
+        try:
+            self._execute_query(query, params, commit=True)
+            print(f"✅ 房間 {room_id} 標記為 {error_type}")
+        except Exception as e:
+            print(f"❌ 標記房間異常失敗: {e}")
 
+    # =========================
+    # 清除房間異常狀態
+    # =========================
+    def clear_room_error(self, room_id):
+        """清除房間異常狀態（DB/API 恢復）"""
+        query = """
+        UPDATE room_heartbeat 
+        SET error_status = NULL, last_heartbeat = NOW()
+        WHERE room_id = %s;
+        """
+        params = (room_id,)
+        try:
+            self._execute_query(query, params, commit=True)
+            # print(f"✅ 房間 {room_id} 異常已清除")
+        except Exception as e:
+            pass  # 靜默處理，不洗版
 
 # # --- 測試你的 TaskDBManager 類別 (可選) ---
 # # DB_CONFIG用途： 這份配置只在你自己單獨運行 TaskDBManager.py 檔案時（例如你之前做的測試）才會被執行。
