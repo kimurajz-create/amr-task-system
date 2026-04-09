@@ -1,7 +1,7 @@
 import psycopg2
 from datetime import datetime
 from psycopg2.extras import execute_values
-from desktop_config import DB_CONFIG, ROOM_ID_MAP
+from desktop_config import ROOM_ID_MAP
 
 
 # =========================
@@ -104,6 +104,7 @@ class TaskDBManager:
         """
         result = self._execute_query(query, (room_id,), fetch=True)
         return result[0] if result else None
+    
 
     # =========================
     #    刪除任務
@@ -165,7 +166,7 @@ class TaskDBManager:
 
     
     # =========================
-    # 回傳Master API狀態
+    # 讀取Master API狀態
     # =========================
     def get_room_error(self, room_id):
         query ="""
@@ -187,13 +188,46 @@ class TaskDBManager:
         except Exception as e:
             print(f"❌ 查詢房間異常狀態失敗: {e}")
             return None
+        
+    # =========================
+    # 讀取手術室用function
+    # =========================
+    def get_ui_locations(self):
+        """
+        從 DB 讀取下拉選單資料
+
+        ✔ 只讀 display_name + mir_code
+        ✔ 依 display_name 排序（UI 會比較好看）
+        """
+
+        sql = """
+        SELECT display_name, mir_code, room_id
+        FROM ui_locations
+        ORDER BY display_name;
+        """
+        return self._execute_query(sql, fetch=True)
+    
+
+    def get_ui_missions(self):
+        """
+        從 DB 讀取下拉選單資料
+
+        ✔ 只讀 display_name + mir_code
+        ✔ 依 display_name 排序（UI 會比較好看）
+        """
+
+        sql = """
+        SELECT display_name, mir_code
+        FROM ui_missions
+        ORDER BY display_name;
+        """
+        return self._execute_query(sql, fetch=True)
+    
 
 # =========================
 #    建立任務 helper
 # =========================
-def create_new_db_task(db, start_place, destination, mission):
-
-    room_id = ROOM_ID_MAP.get(destination)
+def create_new_db_task(db, start_place, destination, mission, room_id):
 
     new_id = db.add_new_task(
         start_place,

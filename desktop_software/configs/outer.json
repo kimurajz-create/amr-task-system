@@ -34,40 +34,5 @@
     "櫃台": "OR18",
     "充電樁": "OR19",
     "電梯橋": "OR20"
-  },
-
-  "USER_LOCATION_MAP": {
-    "LbV2_Robot position Hua": "Out華陀會議室",
-    "LbV2_Robot position lecture hall 02": "Out演講廳_02",
-    "LbV2_Robot position lecture hall 01": "Out演講廳_01",
-    "LbV2_Robot position Sofa3": "Out沙發3",
-    "LbV2_Robot position Sofa2": "Out沙發2",
-    "LbV2_Robot position Sofa1": "Out沙發1",
-    "LbV2_Robot position Reception V2": "Out櫃台",
-
-    "LbV2_MiR Charge 48V V2": "Out充電樁",
-    "LbV2_Robot position Elv  Bridge Map": "Out電梯橋",
-
-    "LbV2_Shelf position Hua": "Out車架位置(華陀)",
-    "LbV2_Shelf position lecture hall 02": "Out車架位置(演講廳_02)",
-    "LbV2_Shelf position lecture hall 01": "Out車架位置(演講廳_01)",
-    "LbV2_Shelf position Sofa3": "Out車架位置(沙發3)",
-    "LbV2_Shelf position Sofa2": "Out車架位置(沙發2)",
-    "LbV2_Shelf position Sofa1": "Out車架位置(沙發1)",
-    "LbV2_Shelf position Reception V2": "Out車架位置(櫃台)"
-  },
-
-  "USER_MISSION_GROUP_MAP": {
-    "ACE_Elv_0625": "Out電梯",
-
-    "Lobby Demo Seminar Presentation Jordan": "OutDemo_櫃台出發大廳繞一圈",
-    "Lobby Demo Cart Transport": "OutDemo_載貨運輸",
-    "Lobby Demo Empty Cart Transport": "OutDemo_空車運輸"
-  },
-
-  "REQUIRED_MISSION_CODES": [
-    "Lobby Demo Cart Transport",
-    "Lobby Demo Seminar Presentation Jordan",
-    "Lobby Demo Empty Cart Transport"
-  ]
+  }
 }

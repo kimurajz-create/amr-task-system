@@ -55,14 +55,14 @@ from PySide6.QtCore import (
 
 from PySide6.QtCore import QThread, Signal
 
-from desktop_config import (
-    DB_CONFIG,
-    USER_LOCATION_MAP,
-    USER_MISSION_GROUP_MAP,
-    REQUIRED_MISSION_CODES,
-    POLL_INTERVAL,
-    room_id,
-)
+# from desktop_config import (
+#     DB_CONFIG,
+#     USER_LOCATION_MAP,
+#     USER_MISSION_GROUP_MAP,
+#     REQUIRED_MISSION_CODES,
+#     POLL_INTERVAL,
+#     room_id,
+# )
 
 import ui_desk_client
 print(ui_desk_client.__file__)
@@ -197,136 +197,149 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.frame_notify.show()
 
-
-
-    # ===== 下拉式選單 =====
-    def load_map_positions(self,mir_codes_list):
-
+  
+    def load_map_positions_from_db(self, rows):
         """
-        UI 更新（只能在主執行緒）
+        UI 更新（從 DB 載入）
 
         這裡只做：
-        ✔ 資料轉換
-        ✔ ComboBox 更新
+        ✔ DB 資料 → UI（ComboBox）
+        ✔ 不做任何轉換（主控已經處理好）
 
-        ❌ 不可在這裡打 API（會卡 UI）
+        參數：
+        rows: [(display_name, mir_code), ...]
+
+        ⚠️ 注意：
+        - UI 操作只能在主執行緒
+        - 不要在這裡打 DB / API
         """
 
-        # 1. 初始化下拉式選單
+        # 1️⃣ 初始化下拉選單
         self.cmb_start_point.clear()
         self.cmb_end_point.clear()
 
-        # 用於儲存最終要加入選單的 (中文名稱, 英文代碼) 數據
-        combo_data_list = []
-        # 用於檢查重複的中文名稱，以確保每個地理位置只出現一次
-        unique_user_names = set() 
-        location_map = self.config.get("USER_LOCATION_MAP", {})
-        if mir_codes_list:
-            for mir_code in mir_codes_list:
-                # 名稱轉換，查找中文名稱，如果找不到，就顯示原始的英文代碼
-                user_name = location_map.get(mir_code, mir_code)
-                # --- 關鍵去重邏輯 ---
-                if user_name not in unique_user_names:
-                    unique_user_names.add(user_name)
-                    # 將 (中文名稱, 原始英文代碼) 組合成元組，加入列表準備排序
-                    combo_data_list.append((user_name, mir_code))
+        user_names_list = []  # 用於自動補完器
+        # print("DEBUG rows:", rows[:2])
+        # 2️⃣ 塞入 ComboBox（顯示中文，隱藏 mir_code）
+        for row in rows:
+            display_name = row["display_name"]
+            mir_code = row["mir_code"]
+            room_id = row.get("room_id")   # ⭐ 不會炸
+            # print(f"DEBUG location row: display_name={display_name}, mir_code={mir_code}, room_id={room_id}")
 
-            # --- 2. 排序邏輯 ---
-            # 依據元組的第一個元素 (中文名稱/user_name) 進行排序
-            # Python 預設的字串排序適用於中文/英文/數字的字典序
-            sorted_combo_data = sorted(combo_data_list, key=lambda x: x[0])
+            # ⭐ 核心：只顯示有效地點
+            if not room_id:
+                continue
 
-            # --- 3. 重新建立下拉式選單和自動補完器 ---
-            
-            user_names_list = [] # 用於自動補完器的列表
-            for user_name, mir_code in sorted_combo_data:
-                # 關鍵步驟：addItem(顯示中文, 隱藏英文代碼)
-                self.cmb_start_point.addItem(user_name, mir_code)
-                self.cmb_end_point.addItem(user_name, mir_code)
+            data = {
+                "room_id": room_id,
+                "mir_code": mir_code
+            }
 
-                user_names_list.append(user_name)
+            self.cmb_start_point.addItem(display_name, data)
+            self.cmb_end_point.addItem(display_name, data)
 
-            # --- 4. 設置自動補完器 ---
-            if user_names_list: # 確保列表非空
-                # 創建第一個 Completer 實例
-                completer1 = QCompleter(user_names_list)
-                completer1.setCaseSensitivity(Qt.CaseInsensitive)
-                
-                # 創建第二個 Completer 實例
-                completer2 = QCompleter(user_names_list)
-                completer2.setCaseSensitivity(Qt.CaseInsensitive)
-                
-                # 將獨立的 Completer 設置給各自的 ComboBox
-                self.cmb_start_point.setCompleter(completer1) 
-                self.cmb_end_point.setCompleter(completer2)
+            user_names_list.append(display_name)
 
+        # 3️⃣ 設置自動補完器
+        if user_names_list:
+            completer = QCompleter(user_names_list)
+            completer.setCaseSensitivity(Qt.CaseInsensitive)
+            self.cmb_start_point.setCompleter(completer)
+            self.cmb_end_point.setCompleter(completer)
   
-  
+
+    def load_mission_groups_from_db(self, rows):
+        """
+        UI 更新（從 DB 載入 mission groups）
+
+        這裡只做：
+        ✔ DB 資料 → UI（ComboBox）
+        ✔ 不做任何轉換（主控已經處理好）
+
+        參數：
+        rows: [(display_name, mir_code), ...]
+
+        ⚠️ 注意：
+        - UI 操作只能在主執行緒
+        - 不要在這裡打 DB / API
+        """
+
+        self.cmb_mission.clear()
+
+        user_names_list = []
+        # print("DEBUG mission rows:", rows[:2])
+        
+        for row in rows:
+            display_name = row["display_name"]
+            mir_code = row["mir_code"]
+
+            self.cmb_mission.addItem(display_name, mir_code)
+            user_names_list.append(display_name)
+
+        # 自動補完器
+        if user_names_list:
+            completer = QCompleter(user_names_list)
+            completer.setCaseSensitivity(Qt.CaseInsensitive)
+            self.cmb_mission.setCompleter(completer)
+
+    def fetch_locations_from_db(self):
+        """
+        從 DB 取得 UI locations（背景執行）
+
+        回傳：
+        [(display_name, mir_code), ...]
+
+        ⚠️ 這個 function 會丟給 Worker thread 執行
+        """
+        return self.db_manager.get_ui_locations()
+    
+    def fetch_missions_from_db(self):
+        """
+        從 DB 取得 mission groups（背景執行）
+
+        回傳：
+        [(display_name, mir_code), ...]
+
+        ⚠️ 這個 function 會丟給 Worker thread 執行
+        """
+        return self.db_manager.get_ui_missions()
 
 
     def get_room_error_from_db(self):
         return self.db_manager.get_room_error("MASTER")
 
-
-    # 取得分類後的每個地圖名稱
-    def fetch_map_data(self):
-        return functions.get_curmaps_positions_cmb()    
-
-
-    # 取得分類後的每個任務名稱
-    def fetch_mission_data(self):
-        return functions.get_mission_groups_id_cmb()
-
-
-     # 取得分類後的每個任務名稱by Mission_groups
-    def load_mission_groups_positions(self, mir_codes_list):
-        self.cmb_mission.clear()
-
-        user_names_list = []
-
-        # print("--- 字典 Key 對應診斷 ---")
-        # print("MiR 傳回的代碼列表:", mir_codes_list)
-        mission_map = self.config.get("USER_MISSION_GROUP_MAP", {})
-        required_mission_map = self.config.get("REQUIRED_MISSION_CODES", {})
-        if mir_codes_list:
-            for mir_code in mir_codes_list:
-
-                # 【篩選步驟】：只處理你想要的兩種任務代碼
-                if mir_code in required_mission_map:
-
-                    # 1. 翻譯：使用你的字典來獲取中文名稱 (Value)
-                    # 字典名稱.get(Key,Default Value)。
-                    # A (第一個參數)，Python 會嘗試將這個值作為 Key 去字典裡查找；B (第二個參數)，如果找不到 Key 的值，則返回這個預設值
-                    user_name = mission_map.get(mir_code, mir_code)
-                    # 2. 載入 ComboBox (加蓋)
-                    # 顯示給使用者看中文 (user_name)，隱藏 MiR 英文代碼 (mir_code)
-                    self.cmb_mission.addItem(user_name, mir_code)
-
-                    user_names_list.append(user_name)
-            
-            # 自動補完器
-            completer = QCompleter(user_names_list)
-            # ✅ 不分大小寫
-            completer.setCaseSensitivity(Qt.CaseInsensitive)
-            self.cmb_mission.setCompleter(completer) 
-
     # ====== 開始任務 ======
     def on_create_task_db_clicked(self):
+        start_data = self.cmb_start_point.currentData()
+        end_data = self.cmb_end_point.currentData()
+        print("DEBUG start_data:", start_data)
+        print("DEBUG end_data:", end_data)
+        if not start_data or not end_data:
+            print("❌ 選單資料錯誤")
+            return
+
         start_place = self.cmb_start_point.currentText()
         destination = self.cmb_end_point.currentText()
-        mission_content = self.cmb_mission.currentText()
+        print("DEBUG start_place:", start_place)
+        print("DEBUG destination:", destination)
 
-        self.worker = DBWorker(
+        # ⭐ 正確拆 data
+        room_id = end_data["room_id"]
+        mission_content = self.cmb_mission.currentData()
+
+        # ⭐ 丟進 DB
+        worker = DBWorker(
             create_new_db_task,
             self.db_manager,
             start_place,
             destination,
-            mission_content
+            mission_content,
+            room_id
         )
 
-        self.worker.finished.connect(self.on_task_success)
-        self.worker.error.connect(self.on_task_error)
-        self.worker.start()
+        self.workers.append(worker)
+        worker.start()
    
 
     def on_task_success(self, result):
@@ -603,12 +616,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # ⭐ 加這行（切換時檢查）
         self.check_env_safety()
-        self.load_map_positions(self.fetch_map_data())
-        self.load_mission_groups_positions(self.fetch_mission_data())
+        worker_map = DBWorker(self.fetch_locations_from_db)
+        worker_map.finished.connect(self.load_map_positions_from_db)
+        self.workers.append(worker_map)
+        worker_map.finished.connect(lambda: self._cleanup_worker(worker_map))
+        worker_map.error.connect(lambda: self._cleanup_worker(worker_map))
+        
+        worker_map.start()
+
+        worker_mission = DBWorker(self.fetch_missions_from_db)
+        worker_mission.finished.connect(self.load_mission_groups_from_db)
+        self.workers.append(worker_mission)
+        worker_mission.finished.connect(lambda: self._cleanup_worker(worker_mission))
+        worker_mission.error.connect(lambda: self._cleanup_worker(worker_mission))
+        worker_mission.start()
         # 避免舊 timer 還在跑 + 新 timer 再跑 ❌
         self.poll_timer.stop()
         # 開始新的 timer
         self.poll_timer.start(self.config["POLL_INTERVAL"])
+        
 
 
     # 寫內外環防呆 function 
@@ -673,20 +699,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         因為裡面有 UI 操作
         """
 
-         # 地圖
-        worker_map = DBWorker(self.fetch_map_data)
-        worker_map.finished.connect(self.load_map_positions)
+        # ===== 地圖（改為從 DB 讀取）=====
+        worker_map = DBWorker(self.fetch_locations_from_db)
+
+        # DB → UI（ComboBox）
+        worker_map.finished.connect(self.load_map_positions_from_db)
+
+        # 錯誤處理
         worker_map.error.connect(self.handle_worker_error)
 
+        # 管理 thread（避免被 GC 回收）
         self.workers.append(worker_map)
+
+        # thread 結束後清理
         worker_map.finished.connect(lambda: self._cleanup_worker(worker_map))
         worker_map.error.connect(lambda: self._cleanup_worker(worker_map))
 
+        # 啟動背景執行
         worker_map.start()
 
-        # 任務
-        worker_mission = DBWorker(self.fetch_mission_data)
-        worker_mission.finished.connect(self.load_mission_groups_positions)
+        worker_mission = DBWorker(self.fetch_missions_from_db)
+        worker_mission.finished.connect(self.load_mission_groups_from_db)
         worker_mission.error.connect(self.handle_worker_error)
 
         self.workers.append(worker_mission)
