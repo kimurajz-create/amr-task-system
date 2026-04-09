@@ -687,7 +687,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             
             # 第一次手動載入清單
             self.refresh_task_list()
-            #cmb載入地圖Markers
+            # ⭐ 主控啟動時載入地圖，同步一次 DB（單次初始化同步）
             self.load_map_positions()
             #cmb載入任務名字
             # self.load_mission_positions()
@@ -1042,7 +1042,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     
     def api_ok(self):
-        print("✅ API 正常")
+        # print("✅ API 正常")
 
         # ⭐ 不管狀態，直接嘗試清（DB 自己判斷有沒有）
         self.task_db_manager.clear_room_error("MASTER")
@@ -1053,7 +1053,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def api_error_handler(self):
         print("❌ API 異常")
 
-        # ⭐ 只有「第一次錯誤」才寫 DB（避免狂寫）
+        # ⭐ 只有「第一次錯誤」才寫 DB（避免狂寫）gi
         if not self.api_error:
             self.task_db_manager.mark_room_error("MASTER", "API_ERROR")
             self.api_error = True
@@ -2190,6 +2190,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # 將獨立的 Completer 設置給各自的 ComboBox
                 self.cmb_location.setCompleter(completer1) 
                 self.cmb_location2.setCompleter(completer2)
+            # ⭐ 同步到資料庫
+            self.task_db_manager.sync_ui_locations(sorted_combo_data)
                 
     # 取得全部任務名字
     def load_mission_positions(self):
@@ -2206,6 +2208,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cmb_mission.clear()
 
         user_names_list = []
+        combo_data_list = []   # ⭐ 新增：準備給 DB 的資料
 
         # 獲取 MiR 系統回傳的所有英文代碼列表
         mir_codes_list = functions.get_mission_groups_id_cmb()
@@ -2229,13 +2232,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.cmb_mission.addItem(user_name, mir_code)
 
                     user_names_list.append(user_name)
+
+                    # ⭐ 關鍵：收集資料（跟 map 一樣格式）
+                    combo_data_list.append((user_name, mir_code))
+
             
             # 自動補完器
             completer = QCompleter(user_names_list)
             # ✅ 不分大小寫
             completer.setCaseSensitivity(Qt.CaseInsensitive)
             self.cmb_mission.setCompleter(completer) 
-                
+
+            # ⭐⭐ 核心：同步到 DB（照抄 map）
+            self.task_db_manager.sync_ui_missions(combo_data_list)
 
        
  
