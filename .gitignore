@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+
+# VSCode
+.vscode/
+
+# env
+.env
+
+# build / exe
+dist/
+build/
+*.spec
