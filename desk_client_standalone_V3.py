@@ -326,7 +326,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # ⭐ 正確拆 data
         room_id = end_data["room_id"]
-        mission_content = self.cmb_mission.currentData()
+        mission_content = self.cmb_mission.currentText()
 
         # ⭐ 丟進 DB
         worker = DBWorker(
