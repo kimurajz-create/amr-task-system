@@ -225,19 +225,18 @@ class TaskDBManager:
     #-------------------------------------同步到資料庫系列---------------------------------------#
     def sync_ui_locations(self, combo_data_list):
         """
-        同步主控的下拉選單資料到 DB
-        combo_data_list: [(display_name, mir_code), ...]
+        同步主控的下拉選單資料到 DB（安全版）
+
+        ✔ 不會刪資料
+        ✔ 不會覆蓋 room_id
+        ✔ 只更新 mir_code
         """
+
         if not combo_data_list:
             print("⚠️ 沒有 UI 資料可同步")
             return False
 
         try:
-            # 1️⃣ 清空舊資料（最簡單策略）
-            delete_query = "DELETE FROM ui_locations;"
-            self._execute_query(delete_query, commit=True)
-
-            # 2️⃣ 批次插入（用你已經寫好的 batch function）
             data_to_insert = [
                 (display_name, mir_code)
                 for display_name, mir_code in combo_data_list
@@ -245,13 +244,15 @@ class TaskDBManager:
 
             sql_template = """
             INSERT INTO ui_locations (display_name, mir_code)
-            VALUES %s;
+            VALUES %s
+            ON CONFLICT (display_name)
+            DO UPDATE SET mir_code = EXCLUDED.mir_code;
             """
 
             success = self._execute_batch(sql_template, data_to_insert)
 
             if success:
-                print(f"✅ UI locations 同步完成，共 {len(data_to_insert)} 筆")
+                print(f"✅ UI locations 同步完成（UPSERT），共 {len(data_to_insert)} 筆")
             else:
                 print("❌ UI locations 同步失敗")
 
@@ -260,7 +261,7 @@ class TaskDBManager:
         except Exception as e:
             print(f"❌ 同步 UI locations 發生錯誤: {e}")
             return False
-        
+            
     def sync_ui_missions(self, combo_data_list):
         """
         同步主控的下拉選單資料到 DB

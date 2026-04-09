@@ -693,6 +693,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # self.load_mission_positions()
             self.load_mission_groups_positions()
 
+
+        
         # 讀圖
         self.original_pixmap = QPixmap("./picture/pure_dilated_map")
         if self.original_pixmap.isNull():
