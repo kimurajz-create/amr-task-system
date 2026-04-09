@@ -1,0 +1,39 @@
+{
+  "ENV": "INNER",
+
+  "SOUND": {
+  "ENABLE": true,
+  "FREQUENCY": 1000,
+  "DURATION": 500
+  },
+
+  "MIR_IP": "http://10.11.202.251",
+  "ROOM_ID": "OR01",
+  "POLL_INTERVAL": 8000,
+
+  "DB_CONFIG": {
+    "user": "postgres",
+    "host": "localhost",
+    "database": "military_mir250_project",
+    "password": "123456",
+    "port": 5432
+  },
+
+  "EXPECTED_DB_HOST": {
+    "INNER": "10.11.202.86",
+    "OUTER": "10.11.203.50"
+  },
+
+  "ROOM_ID_MAP": {
+    "華陀會議室": "OR01",
+    "演講廳_02": "OR02",
+    "演講廳_01": "OR03",
+    "沙發3": "OR05",
+    "沙發2": "OR06",
+    "沙發1": "OR07",
+    "櫃台": "OR08",
+    "充電樁": "OR09",
+    "電梯橋": "OR10"
+  }
+  
+}
