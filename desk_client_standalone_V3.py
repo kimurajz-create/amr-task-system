@@ -313,8 +313,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_create_task_db_clicked(self):
         start_data = self.cmb_start_point.currentData()
         end_data = self.cmb_end_point.currentData()
-        print("DEBUG start_data:", start_data)
-        print("DEBUG end_data:", end_data)
+        # print("DEBUG start_data:", start_data)
+        # print("DEBUG end_data:", end_data)
         if not start_data or not end_data:
             print("❌ 選單資料錯誤")
             return
@@ -339,6 +339,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
         self.workers.append(worker)
+        worker.finished.connect(self.on_task_success)
+        worker.error.connect(self.on_task_error)
+        worker.finished.connect(lambda: self._cleanup_worker(worker))
+        worker.error.connect(lambda: self._cleanup_worker(worker))
         worker.start()
    
 
