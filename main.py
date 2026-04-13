@@ -115,13 +115,13 @@ ROOM_ID_MAP = {
     "充電樁": "OR09",
     "電梯橋": "OR10",
 
-    "車架位置(華陀)": "OR11",
-    "車架位置(演講廳_02)": "OR12",
-    "車架位置(演講廳_01)": "OR13",
-    "車架位置(沙發3)": "OR14",
-    "車架位置(沙發2)": "OR15",
-    "車架位置(沙發1)": "OR16",
-    "車架位置(櫃台)": "OR17",
+    "車架位置(華陀)": "OR01",
+    "車架位置(演講廳_02)": "OR2",
+    "車架位置(演講廳_01)": "OR03",
+    "車架位置(沙發3)": "OR05",
+    "車架位置(沙發2)": "OR06",
+    "車架位置(沙發1)": "OR07",
+    "車架位置(櫃台)": "OR08",
 }
 
 
@@ -831,6 +831,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.menuToggleButton = self._create_control_button("menuToggleButton", "")
         
         # 應用程式名稱標籤
+        self.appLogoLabel = QLabel()
+        self.appLogoLabel.setObjectName("appLogoLabel")
+        self.appLogoLabel.setFixedSize(24, 24)
+
+        if getattr(sys, "frozen", False):
+            base_dir = os.path.dirname(sys.executable)
+        else:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+
+        logo_path = os.path.join(base_dir, "picture", "aceicon1.png")
+        logo_pixmap = QPixmap(logo_path)
+        if not logo_pixmap.isNull():
+            self.appLogoLabel.setPixmap(
+                logo_pixmap.scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            )
+
         self.appNameLabel = QLabel("ACE Solution - MiR")
         self.appNameLabel.setObjectName("appNameLabel")
         
@@ -847,6 +863,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 佈局元件
         title_layout.addWidget(self.menuToggleButton) # 如果不需要菜單鈕就註解掉
+        title_layout.addSpacing(6)
+        title_layout.addWidget(self.appLogoLabel)
+        title_layout.addSpacing(8)
         title_layout.addWidget(self.appNameLabel)
         title_layout.addStretch() # 伸展空間，將控制按鈕推到最右邊
         title_layout.addWidget(self.minimizeButton)
