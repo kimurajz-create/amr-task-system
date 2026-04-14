@@ -445,6 +445,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def handle_worker_error(self, err):
         self.log(f"⚠️ Worker 錯誤: {err}")
 
+    def _set_status_light(self, label, is_ok, text):
+        """
+        Render status with an HTML colored dot to avoid emoji-font issues.
+        """
+        color = "#1FAE4B" if is_ok else "#D63A3A"
+        label.setTextFormat(Qt.RichText)
+        label.setText(f"<span style='color:{color};'>&#9679;</span> {text}")
+
     def get_task_data(self):
         room_id = self.config["ROOM_ID"]
         return self.db_manager.get_latest_task_for_room(room_id)
@@ -461,7 +469,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.db_manager.clear_room_error(room_id)  # ⭐ 新增：清除異常狀態
             self.db_error = False
 
-        self.lbl_status_v1.setText("🟢 DB 正常")
+        self._set_status_light(self.lbl_status_v1, True, "DB 正常")
 
         if not task:
             if self.last_task_id is not None or self.last_status is not None:
@@ -512,21 +520,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             print("DB error:", err)
             self.db_manager.mark_room_error(self.config["ROOM_ID"], "DB_ERROR")  # ⭐ 新增
             self.db_error = True    
-        self.lbl_status_v1.setText("🔴 DB 異常")
+        self._set_status_light(self.lbl_status_v1, False, "DB 異常")
 
 
 
     def update_api_light(self, status):
         if status == "API_ERROR":
-            self.lbl_status_v2.setText("🔴 API 異常")
+            self._set_status_light(self.lbl_status_v2, False, "API 異常")
         else:
-            self.lbl_status_v2.setText("🟢 API 正常")
+            self._set_status_light(self.lbl_status_v2, True, "API 正常")
 
 
     def handle_api_error(self, err):
         self.log("⚠️ DB查詢失敗")
         print("DB error:", err)
-        self.lbl_status_v2.setText("🔴 API 異常")
+        self._set_status_light(self.lbl_status_v2, False, "API 異常")
 
 
 
