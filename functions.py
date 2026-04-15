@@ -14,22 +14,57 @@ MIR_IP = ""  # 請替換成你的 MiR AMR IP http://10.11.202.251
 Full_IP = ""
 API_USER = "Distributor"
 API_PASSWORD = "distributor"  # 請替換成你的 API 密碼
+DEFAULT_CONFIG = {
+    "MIR_IP": "http://10.11.202.251",
+    "heartbeat_display_count": 13,
+}
 ##################################IP############################################
 # 從設定檔讀取 IP，並且回傳這個 IP
-def load_ip():
+def load_config():
+    config = {}
+
     if os.path.exists(CONFIG_PATH):
-        with open(CONFIG_PATH,"r") as f:
-            config = json.load(f)
-            # 從 config.json 裡找 "MIR_IP" 這個欄位。有找到，回傳它的值 ✅，沒找到，就用 "http://10.11.202.251" 作為預設值回傳
-            return config.get("MIR_IP", "http://10.11.202.251")
-    else:
-        # 檔案不存在時寫入預設值
-        save_ip("http://10.11.202.251")
-        return "http://10.11.202.251"
+        try:
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    config = loaded
+        except Exception:
+            config = {}
+
+    merged_config = DEFAULT_CONFIG.copy()
+    merged_config.update(config)
+    return merged_config
+
+
+def save_config(config):
+    merged_config = DEFAULT_CONFIG.copy()
+    if isinstance(config, dict):
+        merged_config.update(config)
+
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(merged_config, f, ensure_ascii=False, indent=2)
+
+
+def load_ip():
+    config = load_config()
+    return config.get("MIR_IP", DEFAULT_CONFIG["MIR_IP"])
+
+
+def load_heartbeat_display_count():
+    config = load_config()
+
+    try:
+        count = int(config.get("heartbeat_display_count", DEFAULT_CONFIG["heartbeat_display_count"]))
+    except (TypeError, ValueError):
+        count = DEFAULT_CONFIG["heartbeat_display_count"]
+
+    return max(0, min(13, count))
     
 def save_ip(ip):
-    with open(CONFIG_PATH, "w") as f:
-        json.dump({"MIR_IP": ip}, f)
+    config = load_config()
+    config["MIR_IP"] = ip
+    save_config(config)
 
 #auth_encoded = 'RGlzdHJpYnV0b3I6NjJmMmYwZjFlZmYxMGQzMTUyYzk1ZjZmMDU5NjU3NmU0ODJiYjhlNDQ4MDY0MzNmNGNmOTI5NzkyODM0YjAxNA=='
 #HEADERS = {"Content-Type": "application/json","Accept": "application/json"}

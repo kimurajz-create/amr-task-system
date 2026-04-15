@@ -416,6 +416,7 @@ class TaskDBManager:
         判定邏輯：檢查心跳時間戳是否持續更新
         - 時間戳持續不變 2 次查詢（~20秒）→ 離線
         - 時間戳有新更新 → 在線
+        - 首次載入快取時先視為離線，避免 GUI 初始誤顯示為在線
         
         好處：完全規避時間不同步問題，只看有沒有新心跳
         
@@ -446,12 +447,13 @@ class TaskDBManager:
             
             # 跟踪時間戳是否更新（不管秒數差多少）
             if room_id not in self.room_heartbeat_cache:
-                # 首次記錄該房間
+                # 首次載入時先不要直接視為在線，避免 GUI 剛登入就誤判綠燈。
+                # 先視為離線，直到後續輪詢觀察到 heartbeat 時間戳有更新，再切換為在線。
                 self.room_heartbeat_cache[room_id] = {
                     'last_ts': current_ts,
-                    'no_update_count': 0
+                    'no_update_count': 2
                 }
-                is_online = True  # 首次出現視為在線
+                is_online = False
             else:
                 cached = self.room_heartbeat_cache[room_id]
                 if current_ts == cached['last_ts']:

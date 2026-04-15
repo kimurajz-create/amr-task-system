@@ -680,6 +680,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if IP.startswith("http://"):
             IP=IP[7:]
         self.lineEdit_IP.setText(IP)
+        self.heartbeat_display_count = functions.load_heartbeat_display_count()
+        self.apply_heartbeat_label_visibility()
 
         # 暫時隱藏frame 0923
         self.frame_temp.hide()
@@ -779,6 +781,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.clicked_enabled = False
         self.last_click_overlay_pos = None
         self.last_robot_world_pos = None
+        self.current_mir_state_id = None
+        self.robot_glow_phase = 0
 
         ##############換地圖時除了這邊的座標，也要到draw_car_position裡面改原始圖片尺寸(load的那一張)##############
 
@@ -1583,6 +1587,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.txtEdit_GetPM.setPlainText("No pending missions")
                 
             state_ID = functions.check_MiR_status_state_ID()
+            self.current_mir_state_id = state_ID
+            self.robot_glow_phase = (self.robot_glow_phase + 1) % 3
+            if self.last_robot_world_pos is not None:
+                self.draw_car_position(*self.last_robot_world_pos)
             if state_ID == 12:
                 self.label_Status_1.setText("Status：Error") 
                 self.label_Status_1.setStyleSheet("color: purple;font-size: 24px;")
@@ -1728,33 +1736,40 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # print("沒有錯誤，不需要送出資料") 0923
             pass
 
+    def get_heartbeat_label(self, index):
+        return getattr(self, f"lbl_OR_Heartbeat_{index}", None)
+
+    def get_heartbeat_room_label_map(self):
+        room_label_map = {}
+        for index in range(1, self.heartbeat_display_count + 1):
+            room_label_map[f"OR{index:02d}"] = f"lbl_OR_Heartbeat_{index}"
+        return room_label_map
+
+    def apply_heartbeat_label_visibility(self):
+        for index in range(1, 14):
+            label = self.get_heartbeat_label(index)
+            if not label:
+                continue
+
+            if index <= self.heartbeat_display_count:
+                label.show()
+            else:
+                label.clear()
+                label.hide()
+
     # ================================房間心跳監控================================
     def update_room_heartbeat_status(self):
         """
         定期查詢房間心跳狀態，並更新 GUI 標籤的顏色
         綠色 (線上): 距離最後心跳 < 10 秒
-        紅色 (離線): 距離最後心跳 >= 10 秒
+        灰色 (離線): 距離最後心跳 >= 10 秒
         """
         try:
             # 查詢所有房間的在線狀態
             all_rooms = self.task_db_manager.get_all_rooms_online_status()
             
-            # 標籤對應的房間 ID (可根據實際情況擴展到 13 間)
-            room_label_map = {
-                'OR01': 'lbl_OR_Heartbeat_1',
-                'OR02': 'lbl_OR_Heartbeat_2',
-                'OR03': 'lbl_OR_Heartbeat_3',
-                'OR04': 'lbl_OR_Heartbeat_4',
-                'OR05': 'lbl_OR_Heartbeat_5',
-                'OR06': 'lbl_OR_Heartbeat_6',
-                'OR07': 'lbl_OR_Heartbeat_7',
-                'OR08': 'lbl_OR_Heartbeat_8',
-                'OR09': 'lbl_OR_Heartbeat_9',
-                'OR10': 'lbl_OR_Heartbeat_10',
-                'OR11': 'lbl_OR_Heartbeat_11',
-                'OR12': 'lbl_OR_Heartbeat_12',
-                'OR13': 'lbl_OR_Heartbeat_13',
-            }
+            # 依照設定檔決定要顯示哪些 heartbeat 標籤
+            room_label_map = self.get_heartbeat_room_label_map()
             
             # 更新 GUI 標籤
             for room in all_rooms:
@@ -1797,16 +1812,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                     "padding: 4px;"
                                 )
                                 label.setText(f"{room_number} 🟢 線上")
-                            else:  # 離線 - 紅色
+                            else:  # 離線 - 灰色
                                 label.setStyleSheet(
-                                    "color: #dc3545; "  # 紅色文字
+                                    "color: #6c757d; "  # 灰色文字
                                     "font-size: 16px; "
                                     "background-color: white; "  # 白色背景
-                                    "border: 2px solid #dc3545; "
+                                    "border: 2px solid #6c757d; "
                                     "border-radius: 5px; "
                                     "padding: 4px;"
                                 )
-                                label.setText(f"{room_number} 🔴 離線")
+                                label.setText(f"{room_number} 離線")
                         else:
                             # 標籤不存在，可能是還沒有添加到 UI 中
                             pass
@@ -2387,6 +2402,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         painter.drawLine(x - 12, y, x + 12, y)
         painter.drawLine(x, y - 12, x, y + 12)
 
+    def is_robot_in_motion_state(self):
+        return self.current_mir_state_id in {5, 9}
+
+    def draw_robot_marker(self, painter, x, y):
+        painter.setRenderHint(QPainter.Antialiasing, True)
+
+        if self.is_robot_in_motion_state():
+            glow_alpha = 120 + (self.robot_glow_phase % 3) * 35
+            glow_pen = QPen(QColor(57, 255, 20, glow_alpha))
+            glow_pen.setWidth(6)
+            painter.setPen(glow_pen)
+            painter.setBrush(Qt.NoBrush)
+            painter.drawEllipse(x - 18, y - 18, 36, 36)
+
+        body_rect = QRect(x - 11, y - 9, 22, 18)
+        painter.setPen(QPen(QColor("#0B1F33"), 2))
+        painter.setBrush(QColor("#E84C3D"))
+        painter.drawRoundedRect(body_rect, 5, 5)
+
+        painter.setBrush(QColor("#DFF6FF"))
+        painter.drawRoundedRect(QRect(x - 6, y - 6, 12, 7), 2, 2)
+
+        painter.setBrush(QColor("#2F3B45"))
+        painter.drawEllipse(x - 9, y + 6, 5, 5)
+        painter.drawEllipse(x + 4, y + 6, 5, 5)
+
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor("#FFD166"))
+        painter.drawEllipse(x - 13, y - 2, 4, 4)
+        painter.drawEllipse(x + 9, y - 2, 4, 4)
+
     def draw_car_position(self, world_x, world_y):
         # 確保兩個 QLabel 的位置和尺寸對齊 (雖然尺寸不同，但它們必須重疊)
         # self.label_car_overlay.setGeometry(self.label_map_1.geometry())
@@ -2425,13 +2471,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pixmap.fill(Qt.transparent)
         
         painter = QPainter(pixmap)
-        pen = QPen(QColor("red"))
-        pen.setWidth(10)
-        painter.setPen(pen)
-        
-        radius = 5
-        # 繪製時使用校準後的 x_final 和 y_final
-        painter.drawEllipse(x_final - radius, y_final - radius, radius * 2, radius * 2)
+        self.draw_robot_marker(painter, x_final, y_final)
         if self.last_click_overlay_pos is not None:
             click_x, click_y = self.last_click_overlay_pos
             self.draw_click_marker(painter, click_x, click_y)
