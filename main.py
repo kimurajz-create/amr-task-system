@@ -193,6 +193,7 @@ class LoginWindow(QWidget, Ui_Form_LoginWindow):
         
         # 1. 呼叫 setupUi 來載入 Designer 中設計的所有元件
         self.setupUi(self) 
+        self.apply_login_dark_theme()
 
         self.user_db_manager = user_db_manager
         self.task_db_manager = task_db_manager  
@@ -204,6 +205,43 @@ class LoginWindow(QWidget, Ui_Form_LoginWindow):
         # 假設註冊說明按鈕名稱是 self.btn_register_info
         # 如果您的 UI 中沒有此按鈕，請註解或刪除下面這行
         # self.btn_register_info.clicked.connect(self.show_register_info)
+
+    def apply_login_dark_theme(self):
+        self.setStyleSheet("""
+        QWidget {
+            background-color: #1E1E1E;
+            color: #F2F2F2;
+        }
+        QLabel {
+            color: #F4F4F4;
+            background: transparent;
+        }
+        QLineEdit {
+            background-color: #2C2C2C;
+            color: #F2F2F2;
+            border: 1px solid #555555;
+            border-radius: 4px;
+            padding: 6px 8px;
+            selection-background-color: #3A7BD5;
+            selection-color: #FFFFFF;
+        }
+        QLineEdit::placeholder {
+            color: #A9A9A9;
+        }
+        QPushButton {
+            background-color: #3A3A3A;
+            color: #F5F5F5;
+            border: 1px solid #5C5C5C;
+            border-radius: 6px;
+            padding: 6px 14px;
+        }
+        QPushButton:hover {
+            background-color: #4A4A4A;
+        }
+        QPushButton:pressed {
+            background-color: #2E2E2E;
+        }
+        """)
 
     def login(self):
         username = self.lineEdit_username_input.text().strip()
