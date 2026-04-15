@@ -200,6 +200,15 @@ class LoginWindow(QWidget, Ui_Form_LoginWindow):
 
         # 確保密碼輸入框是密文模式 (也可以在 Designer 中設定)
         self.lineEdit_password_input.setEchoMode(QLineEdit.Password)
+        self.resize(350, 260)
+        self.label_title.setGeometry(QRect(100, 22, 141, 18))
+        self.lineEdit_username_input.setFixedHeight(34)
+        self.lineEdit_password_input.setFixedHeight(34)
+        self.label_username.setGeometry(QRect(20, 58, 70, 18))
+        self.lineEdit_username_input.setGeometry(QRect(20, 88, 301, 34))
+        self.label_password.setGeometry(QRect(20, 134, 70, 18))
+        self.lineEdit_password_input.setGeometry(QRect(20, 164, 301, 34))
+        self.btn_login.setGeometry(QRect(125, 210, 103, 30))
 
         self.btn_login.clicked.connect(self.login)
         # 假設註冊說明按鈕名稱是 self.btn_register_info
@@ -221,7 +230,8 @@ class LoginWindow(QWidget, Ui_Form_LoginWindow):
             color: #F2F2F2;
             border: 1px solid #555555;
             border-radius: 4px;
-            padding: 6px 8px;
+            padding: 0 10px;
+            font-size: 13px;
             selection-background-color: #3A7BD5;
             selection-color: #FFFFFF;
         }
