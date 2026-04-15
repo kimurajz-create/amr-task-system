@@ -2170,6 +2170,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if state == 2:
             self.btn_SentRobotTo.setEnabled(True)
         else:
+            self.clear_click_marker()
             self.btn_SentRobotTo.setEnabled(False)
         print(self.clicked_enabled)
         print("點擊模式已", "啟用" if self.clicked_enabled else "關閉")
@@ -2438,6 +2439,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         painter.end()
         
         self.label_car_overlay.setPixmap(pixmap)
+
+    def clear_click_marker(self):
+        self.last_click_overlay_pos = None
+        if self.last_robot_world_pos is not None:
+            self.draw_car_position(*self.last_robot_world_pos)
+        else:
+            self.label_car_overlay.clear()
 
     # 更新MiR位置
     def update_robot_position(self,world_x,world_y):
