@@ -777,6 +777,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Flag
         self.clicked_enabled = False
+        self.last_click_overlay_pos = None
+        self.last_robot_world_pos = None
 
         ##############換地圖時除了這邊的座標，也要到draw_car_position裡面改原始圖片尺寸(load的那一張)##############
 
@@ -2373,6 +2375,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         painter.end()
         self.label_map_1.setPixmap(pixmap)
 
+    def draw_click_marker(self, painter, x, y):
+        marker_color = QColor(0, 220, 255)
+        marker_pen = QPen(marker_color)
+        marker_pen.setWidth(3)
+        painter.setPen(marker_pen)
+
+        radius = 8
+        painter.drawEllipse(x - radius, y - radius, radius * 2, radius * 2)
+        painter.drawLine(x - 12, y, x + 12, y)
+        painter.drawLine(x, y - 12, x, y + 12)
+
     def draw_car_position(self, world_x, world_y):
         # 確保兩個 QLabel 的位置和尺寸對齊 (雖然尺寸不同，但它們必須重疊)
         # self.label_car_overlay.setGeometry(self.label_map_1.geometry())
@@ -2418,7 +2431,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         radius = 5
         # 繪製時使用校準後的 x_final 和 y_final
         painter.drawEllipse(x_final - radius, y_final - radius, radius * 2, radius * 2)
-        
+        if self.last_click_overlay_pos is not None:
+            click_x, click_y = self.last_click_overlay_pos
+            self.draw_click_marker(painter, click_x, click_y)
+
         painter.end()
         
         self.label_car_overlay.setPixmap(pixmap)
@@ -2426,6 +2442,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # 更新MiR位置
     def update_robot_position(self,world_x,world_y):
         # 畫在地圖上
+        self.last_robot_world_pos = (world_x, world_y)
         self.draw_car_position(world_x,world_y)
 
     # 自動取得當前MiR車子位置
@@ -2505,6 +2522,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             
             self.dsb_x_m.setValue(world_x)
             self.dsb_y_m.setValue(world_y)
+
+            self.last_click_overlay_pos = (relative_pos.x(), relative_pos.y())
+            if self.last_robot_world_pos is not None:
+                self.draw_car_position(*self.last_robot_world_pos)
+            else:
+                marker_pixmap = QPixmap(self.label_car_overlay.size())
+                marker_pixmap.fill(Qt.transparent)
+                marker_painter = QPainter(marker_pixmap)
+                self.draw_click_marker(marker_painter, relative_pos.x(), relative_pos.y())
+                marker_painter.end()
+                self.label_car_overlay.setPixmap(marker_pixmap)
             
             print(f"{world_x}, {world_y}")
             print(f"你點了圖片座標 ({x:.1f}, {y:.1f})，對應世界座標為 ({world_x:.2f}, {world_y:.2f})")
