@@ -125,6 +125,11 @@ font-size: 32px; </string>
 QPushButton:hover {
     background-color: #1E70BF;     /* 滑鼠移上去變色 */
 }
+QPushButton:disabled {
+    background-color: #4A4A4A;
+    color: #BDBDBD;
+    border: 1px solid #666666;
+}
 </string>
       </property>
       <property name="text">
@@ -435,9 +440,9 @@ font-size: 13px; </string>
    <widget class="QLabel" name="lbl_status_v1">
     <property name="geometry">
      <rect>
-      <x>530</x>
+       <x>510</x>
       <y>460</y>
-      <width>111</width>
+       <width>138</width>
       <height>20</height>
      </rect>
     </property>
@@ -455,9 +460,9 @@ font-size: 16px; </string>
    <widget class="QLabel" name="lbl_status_v2">
     <property name="geometry">
      <rect>
-      <x>650</x>
+       <x>650</x>
       <y>460</y>
-      <width>111</width>
+       <width>126</width>
       <height>20</height>
      </rect>
     </property>

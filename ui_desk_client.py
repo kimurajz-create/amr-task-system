@@ -68,6 +68,11 @@ class Ui_MainWindow(object):
 "QPushButton:hover {\n"
 "    background-color: #1E70BF;     /* \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 */\n"
 "}\n"
+"QPushButton:disabled {\n"
+"    background-color: #4A4A4A;\n"
+"    color: #BDBDBD;\n"
+"    border: 1px solid #666666;\n"
+"}\n"
 "")
         self.frame_notify_right = QFrame(self.centralwidget)
         self.frame_notify_right.setObjectName(u"frame_notify_right")
@@ -204,13 +209,13 @@ class Ui_MainWindow(object):
         self.txt_log.setReadOnly(True)
         self.lbl_status_v1 = QLabel(self.centralwidget)
         self.lbl_status_v1.setObjectName(u"lbl_status_v1")
-        self.lbl_status_v1.setGeometry(QRect(530, 460, 111, 20))
+        self.lbl_status_v1.setGeometry(QRect(510, 460, 138, 20))
         self.lbl_status_v1.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
 "font-size: 16px; ")
         self.lbl_status_v1.setAlignment(Qt.AlignCenter)
         self.lbl_status_v2 = QLabel(self.centralwidget)
         self.lbl_status_v2.setObjectName(u"lbl_status_v2")
-        self.lbl_status_v2.setGeometry(QRect(650, 460, 111, 20))
+        self.lbl_status_v2.setGeometry(QRect(650, 460, 126, 20))
         self.lbl_status_v2.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
 "font-size: 16px; ")
         self.lbl_status_v2.setAlignment(Qt.AlignCenter)

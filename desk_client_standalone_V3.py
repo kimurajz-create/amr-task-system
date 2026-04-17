@@ -140,6 +140,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # ===== 通知區 =====
         self.frame_notify.hide()
         self.btn_close_notify.clicked.connect(self.hide_notify)
+        self.waiting_dots = 0
+        self.waiting_base_text = "等候通知"
+        self.waiting_timer = QTimer(self)
+        self.waiting_timer.timeout.connect(self.update_waiting_animation)
 
         # ===== 任務監看 polling =====
 
@@ -175,6 +179,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # ===== 通知區 =====
     def show_notify(self, title, message):
+        self.waiting_timer.stop()
+        self.btn_close_notify.setEnabled(True)
 
         self.lbl_notify_title.setText(title)
         self.lbl_notify_msg.setText(message)
@@ -191,11 +197,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # QApplication.beep()
 
     def hide_notify(self):
+        self.btn_close_notify.setEnabled(False)
 
         self.lbl_notify_title.setText("🚗 等待車輛")
-        self.lbl_notify_msg.setText("等候通知....")
+        self.waiting_dots = 0
+        self.lbl_notify_msg.setText(self.waiting_base_text)
+        self.waiting_timer.start(400)
 
         self.frame_notify.show()
+
+    def update_waiting_animation(self):
+        dots = "." * self.waiting_dots
+        self.lbl_notify_msg.setText(f"{self.waiting_base_text}{dots}")
+        self.waiting_dots = (self.waiting_dots + 1) % 4
 
   
     def load_map_positions_from_db(self, rows):
@@ -469,7 +483,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.db_manager.clear_room_error(room_id)  # ⭐ 新增：清除異常狀態
             self.db_error = False
 
-        self._set_status_light(self.lbl_status_v1, True, "DB 正常")
+        self._set_status_light(self.lbl_status_v1, True, "資料庫連線正常")
 
         if not task:
             if self.last_task_id is not None or self.last_status is not None:
@@ -520,21 +534,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             print("DB error:", err)
             self.db_manager.mark_room_error(self.config["ROOM_ID"], "DB_ERROR")  # ⭐ 新增
             self.db_error = True    
-        self._set_status_light(self.lbl_status_v1, False, "DB 異常")
+        self._set_status_light(self.lbl_status_v1, False, "資料庫連線異常")
 
 
 
     def update_api_light(self, status):
         if status == "API_ERROR":
-            self._set_status_light(self.lbl_status_v2, False, "API 異常")
+            self._set_status_light(self.lbl_status_v2, False, "主控連線異常")
         else:
-            self._set_status_light(self.lbl_status_v2, True, "API 正常")
+            self._set_status_light(self.lbl_status_v2, True, "主控連線正常")
 
 
     def handle_api_error(self, err):
         self.log("⚠️ DB查詢失敗")
         print("DB error:", err)
-        self._set_status_light(self.lbl_status_v2, False, "API 異常")
+        self._set_status_light(self.lbl_status_v2, False, "主控連線異常")
 
 
 
