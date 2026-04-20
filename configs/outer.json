@@ -9,6 +9,8 @@
 
   "MIR_IP": "http://10.10.10.123",
   "ROOM_ID": "OR01",
+  "ROOM_DISPLAY_PREFIX": "手術室",
+  "ROOM_DISPLAY_NUMBER": "01",
   "POLL_INTERVAL": 10000,
 
   "DB_CONFIG": {

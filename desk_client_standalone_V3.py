@@ -177,6 +177,38 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cmb_env.currentTextChanged.connect(self.on_env_changed)
         self.on_env_changed(self.cmb_env.currentText())
 
+    def get_room_display_text(self):
+        # 先看設定檔有沒有直接給完整文字。
+        # 例如 ROOM_DISPLAY_TEXT = "手術室01"
+        # 如果有，就直接用這個值，不再往下組 prefix + number。
+        full_text = self.config.get("ROOM_DISPLAY_TEXT")
+        if full_text:
+            return str(full_text)
+
+        # 如果沒有完整文字，就分開讀前綴和編號。
+        # prefix 預設是「手術室」。
+        prefix = str(self.config.get("ROOM_DISPLAY_PREFIX", "手術室"))
+        number = self.config.get("ROOM_DISPLAY_NUMBER")
+
+        # 如果設定檔沒有給 ROOM_DISPLAY_NUMBER，
+        # 就退回去從 ROOM_ID 取尾端數字，例如 OR01 -> 01。
+        if number is None:
+            room_id = str(self.config.get("ROOM_ID", ""))
+            # r"(\\d+)$" 的意思：
+            # \\d+  = 一個以上的數字
+            # $    = 字串結尾
+            # 所以這行是在找 ROOM_ID 最後面的數字
+            match = re.search(r"(\d+)$", room_id)
+            # 如果有找到數字，就取出找到的內容。
+            # 如果沒找到，就整個 ROOM_ID 原樣拿來用。
+            number = match.group(1) if match else room_id
+
+        # 最後把 prefix 和 number 串起來，例如「手術室」+「07」=>「手術室07」
+        return f"{prefix}{number}"
+
+    def apply_room_display_text(self):
+        self.label_5.setText(self.get_room_display_text())
+
     # ===== 通知區 =====
     def show_notify(self, title, message):
         self.waiting_timer.stop()
@@ -615,6 +647,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         with open(config_path, "r", encoding="utf-8") as f:
             self.config = json.load(f)
+        self.apply_room_display_text()
 
         self.env = text   # ⭐ 很重要（給下面用）
 
