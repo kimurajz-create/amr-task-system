@@ -83,7 +83,7 @@ def get_auth_headers():
         "Accept": "application/json"
     }
 
-# 確認MiR API 連線確認狀態 
+# 確認MiR API 連線確認狀態 raw 版本且沒用到
 def check_api_status():
     url = f"{MIR_IP}/api/v2.0.0/status"
     headers = get_auth_headers()
@@ -140,6 +140,10 @@ def check_MiR_status():
         print(f"API 錯誤: {response.status_code}, {response.text}")
 
 # 取得MiR state_id
+def get_mission_text():
+    status = check_api_status_v3()
+    return status.get("mission_text")
+
 def check_MiR_status_state_ID():
     url = f"{MIR_IP}/api/v2.0.0/status"
     headers = get_auth_headers()

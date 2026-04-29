@@ -591,6 +591,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.workers = []          # ⭐ 存所有 thread（避免被 Python 回收 → crash）
         self.polling_busy = False  # ⭐ 防止 polling 還沒結束又啟動
         self.active_workers = 0    # ⭐ 記錄目前有幾個 thread 在跑（這版是1但保險留著）
+        self.last_mission_text = None
+        self.current_mission_text = ""
+        # Make room for a two-line status area: Status + Mission.
+        self.label_Status_1.setMinimumWidth(520)
+        self.label_Status_1.setMaximumWidth(900)
+        self.label_Status_1.setMinimumHeight(68)
+        self.label_Status_1.setMaximumHeight(80)
+        self.label_Status_1.setWordWrap(True)
+        self.label_Status_1.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self._adjust_status_area_layout()
 
         ########################################儲存 Manager 實例，以便後續的方法可以使用################################
         self.user_db_manager = user_db_manager
@@ -1113,17 +1123,144 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # API 呼叫（背景執行，不碰 UI）
     def check_api_status_worker(self):
-        functions.check_api_status_v3()
+        return functions.check_api_status_v3()
 
     
-    def api_ok(self):
+    def api_ok(self, status=None):
         # print("✅ API 正常")
 
         # ⭐ 不管狀態，直接嘗試清（DB 自己判斷有沒有）
         self.task_db_manager.clear_room_error("MASTER")
 
         self.api_error = False
+        self._print_mission_text(status)
 
+        # API 成功後，把最新 mission_text 同步到 console 與狀態列。
+        self._print_mission_text(status)
+
+    def _print_mission_text(self, status):
+        # 只處理 MiR /status 回來的 dict。
+        if not isinstance(status, dict):
+            return
+
+        mission_text = status.get("mission_text")
+        # 若內容沒變，避免重複刷新 UI 與 console。
+        if mission_text is None or mission_text == self.last_mission_text:
+            return
+
+        self.last_mission_text = mission_text
+        self.current_mission_text = mission_text
+        # mission_text 改變時，重新組合狀態列文字。
+        self._update_status_label(self.current_mir_state_id)
+        print(f"mission_text: {mission_text}")
+
+    def _update_status_label(self, state_id):
+        # 將 MiR state_id 轉成人看得懂的狀態文字與顏色。
+        status_map = {
+            1: ("Starting", "yellow"),
+            2: ("ShuttingDown", "red"),
+            3: ("Ready", "green"),
+            4: ("Pause", "yellow"),
+            5: ("Executing", "green"),
+            6: ("Aborted", "yellow"),
+            7: ("GoalReached", "green"),
+            8: ("Docked", "green"),
+            9: ("Docking", "green"),
+            10: ("EmergencyStop", "red"),
+            11: ("ManualControl", "red"),
+            12: ("Error", "purple"),
+        }
+
+        status_name, color = status_map.get(state_id, ("Unknown", "white"))
+        # First line shows robot state; mission text is appended on line two.
+        label_text = f"Status: {status_name}"
+        """
+        label_text = f"Status：{status_name}"
+
+        """
+        # 統一組合狀態列格式；若有 mission_text 就顯示在後面。
+        label_text = f"Status: {status_name}"
+        label_text = f"Status: {status_name}"
+        label_text = f"Status: {status_name}"
+        if self.current_mission_text:
+            label_text = f"{label_text}\nMission: {self.current_mission_text}"
+
+        self.label_Status_1.setText(label_text)
+        self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+
+
+    def _update_status_label(self, state_id):
+        # 將 MiR state_id 轉成人看得懂的狀態文字與顏色。
+        status_map = {
+            1: ("Starting", "yellow"),
+            2: ("ShuttingDown", "red"),
+            3: ("Ready", "green"),
+            4: ("Pause", "yellow"),
+            5: ("Executing", "green"),
+            6: ("Aborted", "yellow"),
+            7: ("GoalReached", "green"),
+            8: ("Docked", "green"),
+            9: ("Docking", "green"),
+            10: ("EmergencyStop", "red"),
+            11: ("ManualControl", "red"),
+            12: ("Error", "purple"),
+        }
+
+        status_name, color = status_map.get(state_id, ("Unknown", "white"))
+        # 統一組合狀態列格式；若有 mission_text 就顯示在後面。
+        label_text = f"Status: {status_name}"
+
+        if self.current_mission_text:
+            label_text = f"{label_text}\nMission: {self.current_mission_text}"
+
+        self.label_Status_1.setText(label_text)
+        self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+
+    def _update_status_label(self, state_id):
+        # Final status renderer used by the UI: line 1 = robot state, line 2 = mission text.
+        status_map = {
+            1: ("Starting", "yellow"),
+            2: ("ShuttingDown", "red"),
+            3: ("Ready", "green"),
+            4: ("Pause", "yellow"),
+            5: ("Executing", "green"),
+            6: ("Aborted", "yellow"),
+            7: ("GoalReached", "green"),
+            8: ("Docked", "green"),
+            9: ("Docking", "green"),
+            10: ("EmergencyStop", "red"),
+            11: ("ManualControl", "red"),
+            12: ("Error", "purple"),
+        }
+
+        status_name, color = status_map.get(state_id, ("Unknown", "white"))
+        mission_line = self.current_mission_text or "-"
+        label_text = f"Status: {status_name}\nMission: {mission_line}"
+
+        self.label_Status_1.setText(label_text)
+        self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+
+    def _adjust_status_area_layout(self):
+        # Expand the status container so the second "Mission" line is not clipped.
+        self.horizontalLayoutWidget_5.setGeometry(QRect(1220, 60, 661, 86))
+
+        # Push the controls below the status area downward to avoid overlap.
+        self.horizontalLayoutWidget_4.setGeometry(QRect(1220, 155, 561, 51))
+        self.btn_SelectStart.setGeometry(QRect(1790, 165, 91, 30))
+
+        self.horizontalLayoutWidget_2.setGeometry(QRect(1220, 215, 559, 51))
+        self.btn_SelectDestination.setGeometry(QRect(1790, 225, 91, 30))
+
+        self.horizontalLayoutWidget.setGeometry(QRect(1220, 275, 561, 51))
+        self.btn_Start_Exhibition_Drink.setGeometry(QRect(1560, 355, 121, 30))
+        self.btn_Start_Exhibition_Military.setGeometry(QRect(1720, 355, 121, 30))
+
+        self.btn_Emergency_Cut_Line.setGeometry(QRect(1220, 405, 316, 48))
+        self.btn_Add_New_Mission.setGeometry(QRect(1560, 405, 316, 48))
+        self.btn_StartMission.setGeometry(QRect(1740, 490, 31, 30))
+        self.btn_StopMission1.setGeometry(QRect(1780, 490, 31, 30))
+        self.lineEdit_PendingMission.setGeometry(QRect(1220, 475, 224, 40))
+        self.frame_pending_mission_list.setGeometry(QRect(1200, 535, 656, 476))
 
     def api_error_handler(self):
         print("❌ API 異常")
@@ -1574,6 +1711,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             status_info = functions.check_MiR_status()
             #轉換成「格式化的 JSON 字串」，用來方便顯示（indent=4 表示用四個空格縮排）
             status_info_str = json.dumps(status_info, indent = 4) 
+            self.current_mission_text = status_info.get("mission_text", self.current_mission_text)
             timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
             full_message = f"[{timestamp}] 狀態：\n{status_info_str}\n{'-'*40}"
             self.plntxtEdit_Info.appendPlainText(full_message)
@@ -1591,42 +1729,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.robot_glow_phase = (self.robot_glow_phase + 1) % 3
             if self.last_robot_world_pos is not None:
                 self.draw_car_position(*self.last_robot_world_pos)
-            if state_ID == 12:
-                self.label_Status_1.setText("Status：Error") 
-                self.label_Status_1.setStyleSheet("color: purple;font-size: 24px;")
-            elif state_ID == 1:
-                self.label_Status_1.setText("Status：Starting") 
-                self.label_Status_1.setStyleSheet("color: yellow;font-size: 24px;")
-            elif state_ID == 2:
-                self.label_Status_1.setText("Status：ShuttingDown") 
-                self.label_Status_1.setStyleSheet("color: red;font-size: 24px;")
-            elif state_ID == 3:
-                self.label_Status_1.setText("Status：Ready") 
-                self.label_Status_1.setStyleSheet("color: green;font-size: 24px;")
-            elif state_ID == 4:
-                self.label_Status_1.setText("Status：Pause") 
-                self.label_Status_1.setStyleSheet("color: yellow;font-size: 24px;")
-            elif state_ID == 5:
-                self.label_Status_1.setText("Status：Executing") 
-                self.label_Status_1.setStyleSheet("color: green;font-size: 24px;")
-            elif state_ID == 6:
-                self.label_Status_1.setText("Status：Aborted")
-                self.label_Status_1.setStyleSheet("color: yellow;font-size: 24px;")
-            elif state_ID == 7:
-                self.label_Status_1.setText("Status：GoalReached")
-                self.label_Status_1.setStyleSheet("color: green;font-size: 24px;")
-            elif state_ID == 8:
-                self.label_Status_1.setText("Status：Docked")
-                self.label_Status_1.setStyleSheet("color: green;font-size: 24px;")
-            elif state_ID == 9:
-                self.label_Status_1.setText("Status：Docking")
-                self.label_Status_1.setStyleSheet("color: green;font-size: 24px;")
-            elif state_ID == 10:
-                self.label_Status_1.setText("Status：EmergencyStop")
-                self.label_Status_1.setStyleSheet("color: red;font-size: 24px;")
-            elif state_ID == 11:
-                self.label_Status_1.setText("Status：ManualControl")
-                self.label_Status_1.setStyleSheet("color: red;font-size: 24px;")
+            self._update_status_label(state_ID)
         except Exception as e:
             self.label_Status_1.setText("錯誤")
 
@@ -1836,7 +1939,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # ================================ API 狀態監視 =================
     def monitor_or_mir_api_status(self):
         try:
-            functions.check_api_status_v3()
+            status = functions.check_api_status_v3()
+            self._print_mission_text(status)
             # 如果之前有 API 錯誤狀態，現在恢復了，就清除 DB 中的錯誤標記
             if self.api_error:
                 self.task_db_manager.clear_room_error("MASTER")
@@ -1866,43 +1970,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #轉換成「格式化的 JSON 字串」，用來方便顯示（indent=4 表示用四個空格縮排）
         status_info_str = json.dumps(status_info, indent = 4) 
         self.plntxtEdit_Info.setPlainText(status_info_str)
-        state_ID = functions.check_MiR_status_state_ID()
-        if state_ID == 12:
-            self.label_Status_1.setText("Status：Error") 
-            self.label_Status_1.setStyleSheet("color: purple;font-size: 24px;")
-        elif state_ID == 1:
-            self.label_Status_1.setText("Status：Starting") 
-            self.label_Status_1.setStyleSheet("color: yellow;font-size: 24px;")
-        elif state_ID == 2:
-            self.label_Status_1.setText("Status：ShuttingDown") 
-            self.label_Status_1.setStyleSheet("color: red;font-size: 24px;")
-        elif state_ID == 3:
-            self.label_Status_1.setText("Status：Ready") 
-            self.label_Status_1.setStyleSheet("color: green;font-size: 24px;")
-        elif state_ID == 4:
-            self.label_Status_1.setText("Status：Pause") 
-            self.label_Status_1.setStyleSheet("color: yellow;font-size: 24px;")
-        elif state_ID == 5:
-            self.label_Status_1.setText("Status：Executing") 
-            self.label_Status_1.setStyleSheet("color: green;font-size: 24px;")
-        elif state_ID == 6:
-            self.label_Status_1.setText("Status：Aborted")
-            self.label_Status_1.setStyleSheet("color: yellow;font-size: 24px;")
-        elif state_ID == 7:
-            self.label_Status_1.setText("Status：GoalReached")
-            self.label_Status_1.setStyleSheet("color: green;font-size: 24px;")
-        elif state_ID == 8:
-            self.label_Status_1.setText("Status：Docked")
-            self.label_Status_1.setStyleSheet("color: green;font-size: 24px;")
-        elif state_ID == 9:
-            self.label_Status_1.setText("Status：Docking")
-            self.label_Status_1.setStyleSheet("color: green;font-size: 24px;")
-        elif state_ID == 10:
-            self.label_Status_1.setText("Status：EmergencyStop")
-            self.label_Status_1.setStyleSheet("color: red;font-size: 24px;")
-        elif state_ID == 11:
-            self.label_Status_1.setText("Status：ManualControl")
-            self.label_Status_1.setStyleSheet("color: red;font-size: 24px;")
+        state_ID = status_info.get("state_id")
+        self.current_mir_state_id = state_ID
+        self.current_mission_text = status_info.get("mission_text", self.current_mission_text)
+        self._update_status_label(state_ID)
         
         
     # 按鈕(回去充電站)
