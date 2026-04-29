@@ -32,6 +32,7 @@
 """
 import winsound
 import os
+import sys
 import json
 import re
 import functions
@@ -128,6 +129,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db_error = False   # ⭐ 加這行
         self.api_error = False  # ⭐ 加這行
         self.setupUi(self)
+        self.setup_responsive_layout()
         self.setWindowTitle("台中國軍醫 MiR")
 
         self.workers = []          # ⭐ 管理所有 thread（避免被 Python GC 回收 → crash）
@@ -209,6 +211,111 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def apply_room_display_text(self):
         self.label_5.setText(self.get_room_display_text())
 
+    def setup_responsive_layout(self):
+        """Convert the fixed-geometry UI into layouts that resize with the window."""
+        self.central_layout = QVBoxLayout(self.centralwidget)
+        self.central_layout.setContentsMargins(12, 12, 12, 12)
+        self.central_layout.setSpacing(12)
+
+        top_bar_layout = QHBoxLayout()
+        top_bar_layout.setSpacing(12)
+        top_bar_layout.addWidget(self.label_5)
+        top_bar_layout.addWidget(self.cmb_env)
+        top_bar_layout.addStretch(1)
+
+        self.label_5.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.cmb_env.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        content_layout = QHBoxLayout()
+        content_layout.setSpacing(12)
+
+        self.frame_notify_left.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.frame_notify_right.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.frame_notify_right.setMinimumWidth(280)
+
+        self.txt_log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.txt_log.setMinimumHeight(90)
+
+        left_panel_layout = QVBoxLayout(self.frame_notify_left)
+        left_panel_layout.setContentsMargins(24, 24, 24, 24)
+        left_panel_layout.addWidget(self.frame_notify, 1)
+
+        self.frame_notify.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.frame_notify.setMinimumSize(320, 240)
+
+        notify_layout = QVBoxLayout(self.frame_notify)
+        notify_layout.setContentsMargins(20, 24, 20, 20)
+        notify_layout.setSpacing(16)
+        self.lbl_notify_title.setWordWrap(True)
+        self.lbl_notify_msg.setWordWrap(True)
+        notify_layout.addStretch(1)
+        notify_layout.addWidget(self.lbl_notify_title)
+        notify_layout.addWidget(self.lbl_notify_msg)
+
+        notify_button_layout = QHBoxLayout()
+        notify_button_layout.addStretch(1)
+        notify_button_layout.addWidget(self.btn_close_notify)
+        notify_button_layout.addStretch(1)
+        notify_layout.addStretch(1)
+        notify_layout.addLayout(notify_button_layout)
+
+        right_panel_layout = QVBoxLayout(self.frame_notify_right)
+        right_panel_layout.setContentsMargins(0, 0, 0, 0)
+        right_panel_layout.addWidget(self.groupBox)
+
+        self.groupBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        group_layout = QVBoxLayout(self.groupBox)
+        group_layout.setContentsMargins(18, 28, 18, 18)
+        group_layout.setSpacing(10)
+
+        for widget in (
+            self.cmb_start_point,
+            self.cmb_end_point,
+            self.cmb_mission,
+            self.txt_delete_task_id,
+        ):
+            widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            widget.setMinimumHeight(32)
+
+        self.btn_add_task_db.setMinimumHeight(40)
+        self.btn_delete_task_db.setMinimumHeight(32)
+
+        group_layout.addWidget(self.label_2)
+        group_layout.addWidget(self.cmb_start_point)
+        group_layout.addWidget(self.label_3)
+        group_layout.addWidget(self.cmb_end_point)
+        group_layout.addWidget(self.label_4)
+        group_layout.addWidget(self.cmb_mission)
+        group_layout.addWidget(self.btn_add_task_db)
+        group_layout.addStretch(1)
+        group_layout.addWidget(self.label_6)
+
+        delete_layout = QHBoxLayout()
+        delete_layout.setSpacing(10)
+        delete_layout.addWidget(self.txt_delete_task_id, 1)
+        delete_layout.addWidget(self.btn_delete_task_db)
+        group_layout.addLayout(delete_layout)
+
+        status_layout = QHBoxLayout()
+        status_layout.setSpacing(12)
+        status_layout.addWidget(self.lbl_status_v1)
+        status_layout.addWidget(self.lbl_status_v2)
+
+        for label in (self.lbl_status_v1, self.lbl_status_v2):
+            label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        right_column_layout = QVBoxLayout()
+        right_column_layout.setSpacing(10)
+        right_column_layout.addWidget(self.frame_notify_right, 1)
+        right_column_layout.addLayout(status_layout)
+
+        content_layout.addWidget(self.frame_notify_left, 3)
+        content_layout.addLayout(right_column_layout, 2)
+
+        self.central_layout.addLayout(top_bar_layout)
+        self.central_layout.addLayout(content_layout, 1)
+        self.central_layout.addWidget(self.txt_log)
+
     # ===== 通知區 =====
     def show_notify(self, title, message):
         self.waiting_timer.stop()
@@ -216,12 +323,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.lbl_notify_title.setText(title)
         self.lbl_notify_msg.setText(message)
-
-        # 讓通知置中
-        parent = self.frame_notify.parent()
-        x = (parent.width() - self.frame_notify.width()) // 2
-        y = (parent.height() - self.frame_notify.height()) // 2
-        self.frame_notify.move(x, y)
 
         self.frame_notify.raise_()
         self.frame_notify.show()
