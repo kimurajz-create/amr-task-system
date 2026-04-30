@@ -1239,6 +1239,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.label_Status_1.setText(label_text)
         self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+        self.label_Status_1.setToolTip(f"Mission: {mission_line}")
 
     def _adjust_status_area_layout(self):
         # Expand the status container so the second "Mission" line is not clipped.
@@ -1732,6 +1733,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._update_status_label(state_ID)
         except Exception as e:
             self.label_Status_1.setText("錯誤")
+            self.label_Status_1.setToolTip("")
 
     # 詢問車子資料庫是否有執行的任務，並用MiR API確認底層車子任務是否完成
     def query_mir_status_db(self):
