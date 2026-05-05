@@ -3,41 +3,75 @@ import time
 import debugpy
 
 
-# 注意: 這個類別需要能夠訪問到你的 MiR 控制邏輯和資料庫管理器
-# 這裡假設你的主視窗會傳遞必要的物件給它
-# 參數傳遞方式是：透過物件實例的「引用」（Reference)
-# main.py 創建 task_thread self.task_thread = TaskThread(self)
-# TaskThread 的 __init__ 中，您接收 self.main_window = main_window_instance
-
 class TaskThread(QThread):
-    # 定義訊號，用於在執行緒完成操作時通知主執行緒 (UI)
-    # 例如，發送任務完成的訊息，或更新 UI 的狀態
-    finished_task = Signal(int) # 傳遞完成任務的 ID
-    log_message = Signal(str)    # 傳遞日誌訊息給主介面顯示
+    finished_task = Signal(int)
+    log_message = Signal(str)
 
     def __init__(self, main_window_instance, parent=None):
         super().__init__(parent)
-        # 接收主視窗的實例，這樣就可以訪問到 self.db_manager, self.is_running, self.is_AMR_idle 等變數
         self.main_window = main_window_instance
-        self.is_running = True # 執行緒自己的運行旗標，由主介面控制
+        self.is_running = True
         self.is_no_mission = False
-        
-        # 為了簡潔，從主視窗實例中獲取這些物件
-        self.functions = self.main_window.functions # 假設你的 MiR 函數被存放在這
+
+        self.functions = self.main_window.functions
         self.db_manager = self.main_window.task_db_manager
-        
-        
-        # 輔助常數
+
         self.MIR_LOCATION_MAP = self.main_window.MIR_LOCATION_MAP
         self.MIR_MISSION_GROUP_MAP = self.main_window.MIR_MISSION_GROUP_MAP
         self.CHARGING_STATION_NAME = self.main_window.CHARGING_STATION_NAME
 
+    def _resolve_mission_queue_id(self, before_max_id):
+        # MiR 任務送出後，短時間輪詢 mission_queue 最大 id，
+        # 把這次新建立的 queue id 綁回本地 DB，後續完成判斷都靠它。
+        for _ in range(10):
+            time.sleep(0.3)
+            current_max_id = self.functions.get_mission_queue_max_id()
+            if current_max_id is None:
+                continue
+            if before_max_id is None or current_max_id > before_max_id:
+                return current_max_id
+        return None
+
+    def _wait_for_mission_completion(self, mission_id, mq_id):
+        """
+        Wait for the MiR mission queue entry to settle.
+
+        This keeps completion ownership inside TaskThread so deleting the local
+        DB row does not leave the scheduler blocked forever.
+        """
+        if not mq_id:
+            # 極少數情況如果抓不到 mq_id，只能退回舊的 is_AMR_idle 備援等待。
+            self.log_message.emit(
+                f"⚠️ 任務 ID:{mission_id} 缺少 mq_id，改用 is_AMR_idle 備援等待。"
+            )
+            while not self.main_window.is_AMR_idle:
+                time.sleep(0.5)
+            return "Unknown"
+
+        while True:
+            # 這裡直接盯 MiR 的 mq_id 狀態，而不是只依賴 DB 裡是否還有 Executing。
+            # 這樣就算使用者把執行中的任務從本地 DB 刪掉，thread 仍能知道 MiR 何時跑完。
+            state = self.functions.get_mission_queue_id_state(mq_id)
+            if state == "Done":
+                self.main_window.is_AMR_idle = True
+                return "Done"
+            if state == "Aborted":
+                self.main_window.is_AMR_idle = True
+                return "Aborted"
+            time.sleep(0.5)
+
+    def _send_robot_to_charge_station(self):
+        # 排程清空或手動 stop 後，統一走這個入口回充電站。
+        charge_code = self.MIR_LOCATION_MAP.get(self.CHARGING_STATION_NAME)
+        self.functions.run_combo_location(charge_code)
 
     def run(self):
         """
-        將你原來的 on_map_location_clicked 裡面的 while 迴圈邏輯移動到這裡
+        Main scheduler loop:
+        1. fetch the next pending task
+        2. send it to MiR
+        3. wait for its mq_id to finish
         """
-        # 執行debug才需要打開
         # debugpy.debug_this_thread()
 
         self.is_running = True
@@ -45,115 +79,111 @@ class TaskThread(QThread):
 
         while self.is_running:
             self.log_message.emit("🔁 準備抓取下一筆 Pending 任務...")
-            # 1. 從資料庫獲取當前最優先任務
             priority_tasks = self.db_manager.get_highest_priority_task()
-            
+
             if not priority_tasks:
                 self.is_no_mission = True
                 self.log_message.emit("📢 任務清單為空，命令 MiR 前往充電站...")
-                
-                # 命令AMR去充電站 (cccccccc)
-                charge_code = self.MIR_LOCATION_MAP.get(self.CHARGING_STATION_NAME)
-                self.functions.run_combo_location(charge_code) 
-                # self.is_running 確保當用戶按下「停止」按鈕時，執行緒能即時退出。
+                self._send_robot_to_charge_station()
+
                 while self.is_no_mission and self.is_running:
-                    time.sleep(1) # 這裡可以睡久一點，因為任務不頻繁
-                    
-                    # 檢查是否有停止訊號
+                    time.sleep(1)
+
                     if not self.is_running:
                         break
-                        
-                    # 再次檢查是否有新任務
+
                     priority_tasks = self.db_manager.get_highest_priority_task()
                     if priority_tasks:
                         self.is_no_mission = False
                         break
-                
+
                 if not self.is_running:
-                     break
-            
-            # 2. 處理任務
+                    break
+
             mission = priority_tasks[0]
-            mir_code_id = mission['id']
-            mir_code_s = self.MIR_LOCATION_MAP.get(mission['start_point'])
-            mir_code_d = self.MIR_LOCATION_MAP.get(mission['target_point'])      
-            mir_code = self.MIR_MISSION_GROUP_MAP.get(mission['mission_content'])
-            
-            self.log_message.emit(f"➡️ 正在發送任務 ID:{mir_code_id} 從 {mir_code_s} 到 {mir_code_d}")
+            mir_code_id = mission["id"]
+            mir_code_s = self.MIR_LOCATION_MAP.get(mission["start_point"])
+            mir_code_d = self.MIR_LOCATION_MAP.get(mission["target_point"])
+            mir_code = self.MIR_MISSION_GROUP_MAP.get(mission["mission_content"])
 
-            # 3. 發送任務指令
-            # (省略充電判斷邏輯，直接發送任務)
-            if mir_code and mir_code_s and mir_code_d:
-                before_max_id = self.functions.get_mission_queue_max_id()
-                self.functions.run_combo_location_multi_var(mir_code_s, mir_code_d, mir_code)
+            self.log_message.emit(
+                f"➡️ 正在發送任務 ID:{mir_code_id} 從 {mir_code_s} 到 {mir_code_d}"
+            )
 
-
-                after_max_id = None
-                for _ in range(10):  # 10次 * 0.3s = 3秒
-                    time.sleep(0.3)
-                    cur = self.functions.get_mission_queue_max_id()
-                    if cur is not None and before_max_id is not None and cur > before_max_id:
-                        after_max_id = cur
-                        break
-                
-                # 先標記這筆任務已送出，避免因為 mq_id 一時抓不到而重送
-                self.db_manager.update_task_status(mir_code_id, new_status="Executing", command_sent=True)
-
-                if after_max_id is not None:
-                    self.db_manager.update_task_mq_id(mir_code_id, after_max_id)
-                else:
-                    self.log_message.emit("⚠️ mission_queue id 沒有變大，mq_id 綁定失敗（可能送任務失敗或 queue 更新較慢）")
-
-                
-                # ⭐ 關鍵修正點：AMR 狀態設為忙碌 (False)
-                self.main_window.is_AMR_idle = False 
-                
-                self.log_message.emit(f"✅ 任務 ID:{mir_code_id} 已送出。")
-            else:
+            if not (mir_code and mir_code_s and mir_code_d):
                 self.log_message.emit("❌ 地點或對應代碼無效，跳過此任務。")
-                time.sleep(1) # 避免連續出錯
-                continue # 跳到下一個迴圈，檢查新任務
+                time.sleep(1)
+                continue
 
-            # 4. 等待任務完成 (is_AMR_idle = False 時就會一直卡在這個 while 裡 sleep，直到別的地方把它改成 True 才會跳出，代表任務被判定完成。)
+            before_max_id = self.functions.get_mission_queue_max_id()
+            self.functions.run_combo_location_multi_var(mir_code_s, mir_code_d, mir_code)
+
+            after_max_id = self._resolve_mission_queue_id(before_max_id)
+
+            # 先標記成 Executing，避免因為使用者刷新 UI 或 queue 更新較慢而重送同一筆。
+            self.db_manager.update_task_status(
+                mir_code_id, new_status="Executing", command_sent=True
+            )
+
+            if after_max_id is not None:
+                self.db_manager.update_task_mq_id(mir_code_id, after_max_id)
+            else:
+                self.log_message.emit(
+                    "⚠️ mission_queue id 沒有成功取得，後續只能用備援邏輯等待完成。"
+                )
+
+            self.main_window.is_AMR_idle = False
+            self.log_message.emit(f"✅ 任務 ID:{mir_code_id} 已送出。")
+
             self.log_message.emit("⏳ 等待 MiR 完成任務...")
-            while not self.main_window.is_AMR_idle:
-                time.sleep(0.5) # 降低等待頻率以節省資源
+            mission_state = self._wait_for_mission_completion(mir_code_id, after_max_id)
 
-            # 5. 任務完成後的處理
             current = self.db_manager.get_currently_executing_task()
 
-            if current and current["id"] == mir_code_id:
-                # 代表還在 Executing（正常完成）
-                self.db_manager.update_task_status(mir_code_id, new_status="Completed")
-                self.finished_task.emit(mir_code_id)
-                self.log_message.emit(f"✅ 任務 ID:{mir_code_id} 已完成。")
+            if mission_state == "Done":
+                if current and current["id"] == mir_code_id:
+                    self.db_manager.update_task_status(mir_code_id, new_status="Completed")
+                    self.finished_task.emit(mir_code_id)
+                    self.log_message.emit(f"✅ 任務 ID:{mir_code_id} 已完成。")
+                else:
+                    # 任務可能在執行中被使用者從本地 DB 刪掉；
+                    # MiR 已完成，但本地既然不再追蹤，就不要硬寫回 Completed。
+                    self.log_message.emit(
+                        f"⚠️ 任務 ID:{mir_code_id} 已在 MiR 完成，但本地任務已不在 Executing，略過 Completed 回寫。"
+                    )
+            elif mission_state == "Aborted":
+                if current and current["id"] == mir_code_id:
+                    self.db_manager.update_task_status(mir_code_id, new_status="Aborted")
+                    self.log_message.emit(f"⚠️ 任務 ID:{mir_code_id} 已被 MiR 中止。")
+                else:
+                    self.log_message.emit(
+                        f"⚠️ 任務 ID:{mir_code_id} 已在 MiR 中止，但本地任務已不在 Executing。"
+                    )
             else:
-                # 代表可能已被 main.py 改成 Aborted / 其他狀態
-                self.log_message.emit(f"⚠️ 任務 ID:{mir_code_id} 非 Executing（可能已取消），不寫入 Completed。")
+                self.log_message.emit(
+                    f"⚠️ 任務 ID:{mir_code_id} 完成狀態不明，保留目前 DB 狀態。"
+                )
 
-            # 💥 關鍵修正：確保跳出阻塞後，立即檢查中斷旗標
             if not self.is_running:
-                # 這是手動中斷，不應該設為 Completed
+                # Stop 的語意不是立刻停車，而是「這趟完成後不要再接下一筆」。
                 self.log_message.emit(f"🛑 任務 ID:{mir_code_id} 被手動中斷，退出排程。")
-                break # 立即跳出最外層的 while self.is_running 迴圈
-            
-            # 檢查低電量 20%
+                break
+
             if self.main_window.is_low_battery:
-                self.log_message.emit("⚠️ 電量過低，下一個任務為強制充電。")
-                charge_code = self.MIR_LOCATION_MAP.get(self.CHARGING_STATION_NAME)
-                self.functions.run_combo_location(charge_code) 
+                self.log_message.emit("⚠️ 電量低於閾值，命令 MiR 前往充電站...")
+                self._send_robot_to_charge_station()
                 while self.main_window.is_low_battery:
-                    time.sleep(1) # 這裡可以睡久一點，因為任務不頻繁
+                    time.sleep(1)
                     if not self.is_running:
                         break
-            time.sleep(0.1) # 避免主迴圈頻繁檢查
+
+            time.sleep(0.1)
 
         self.log_message.emit("🛑 任務排程執行緒已停止。")
-        charge_code = self.MIR_LOCATION_MAP.get(self.CHARGING_STATION_NAME)
-        self.functions.run_combo_location(charge_code) 
-
+        self._send_robot_to_charge_station()
 
     def stop(self):
-        """用於從主執行緒安全停止這個執行緒"""
+        """Request a graceful stop after the current mission finishes."""
+        # 只停止後續排程，不會中斷 MiR 已經送出的當前任務。
         self.is_running = False
-        # self.wait() # 等待 run() 函式安全退出，不mark掉會報錯當掉，暫時停用
+        # self.wait()
