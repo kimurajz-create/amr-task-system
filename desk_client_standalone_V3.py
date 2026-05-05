@@ -153,6 +153,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.last_task_id = None
         self.last_status = None
         self.last_notified_task_id = None
+        self.task_snapshot_initialized = False
 
         # 設定 MiR IP
         functions.MIR_IP = functions.load_ip()
@@ -619,6 +620,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._set_status_light(self.lbl_status_v1, True, "資料庫連線正常")
 
         if not task:
+            if not self.task_snapshot_initialized:
+                self.task_snapshot_initialized = True
             if self.last_task_id is not None or self.last_status is not None:
                 self.log(f"ℹ️ {room_id} 目前沒有任務")
                 self.last_task_id = None
@@ -627,6 +630,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         current_task_id = task["id"]
         current_status = task["status"]
+
+        if not self.task_snapshot_initialized:
+            self.last_task_id = current_task_id
+            self.last_status = current_status
+            if current_status in ("Completed", "Aborted"):
+                self.last_notified_task_id = current_task_id
+            self.task_snapshot_initialized = True
+            return
 
         if current_task_id != self.last_task_id or current_status != self.last_status:
 
@@ -749,6 +760,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         with open(config_path, "r", encoding="utf-8") as f:
             self.config = json.load(f)
         self.apply_room_display_text()
+        self.last_task_id = None
+        self.last_status = None
+        self.last_notified_task_id = None
+        self.task_snapshot_initialized = False
 
         self.env = text   # ⭐ 很重要（給下面用）
 
