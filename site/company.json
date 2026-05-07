@@ -1,0 +1,11 @@
+{
+  "_comment": "company 場域設定。這份檔案描述公司版要使用的資源路徑。",
+  "site_id": "company",
+  "display_name": "Company Demo",
+  "assets": {
+    "_comment": "main_map = 左側主地圖，selected_map = 右上 MAP 小地圖，logo = 標題列 Logo",
+    "main_map": "picture/pure_dilated_map.png",
+    "selected_map": "picture/pure_dilated_map.png",
+    "logo": "picture/aceicon1.png"
+  }
+}

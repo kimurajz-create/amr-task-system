@@ -1,0 +1,11 @@
+{
+  "_comment": "hospital 場域設定。這份檔案描述醫院版要使用的資源路徑。",
+  "site_id": "hospital",
+  "display_name": "Hospital",
+  "assets": {
+    "_comment": "main_map = 左側主地圖，selected_map = 右上 MAP 小地圖，logo = 標題列 Logo",
+    "main_map": "picture/國軍台中總醫院_手術室圖2025.09.17/TC_Army.png",
+    "selected_map": "picture/國軍台中總醫院_手術室圖2025.09.17/TC_Army.png",
+    "logo": "picture/aceicon1.png"
+  }
+}

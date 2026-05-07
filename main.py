@@ -40,6 +40,120 @@ from ui_admin_panel import Ui_Form_AdminPanel
 # 引入 PySide6 的 QThread 和 Signal
 from PySide6.QtCore import QThread, Signal
 
+
+def _get_runtime_search_dirs():
+    # 同時搜尋 PyInstaller 解包資料夾與 exe 所在資料夾，
+    # 讓同一份程式在開發環境與打包後都能找到資源檔。
+    search_dirs = []
+
+    if getattr(sys, "frozen", False):
+        meipass_dir = getattr(sys, "_MEIPASS", None)
+        if meipass_dir:
+            search_dirs.append(Path(meipass_dir))
+        search_dirs.append(Path(sys.executable).resolve().parent)
+    else:
+        search_dirs.append(Path(__file__).resolve().parent)
+
+    return search_dirs
+
+
+# 設定檔與圖片路徑共用的搜尋根目錄。
+# 開發時會指向專案目錄；打包後則會額外檢查解包目錄與 exe 目錄。
+RUNTIME_SEARCH_DIRS = _get_runtime_search_dirs()
+
+# 提供給一般使用者的啟動預設值。
+# 正常情況下應修改 app_settings.json，而不是直接改 main.py。
+DEFAULT_APP_SETTINGS = {
+    "site_profile": "company",
+}
+
+# 保底用的資源路徑。
+# 只有當 site 設定檔缺欄位，或完全找不到設定檔時才會用到。
+DEFAULT_SITE_ASSETS = {
+    "main_map": "picture/pure_dilated_map.png",
+    "selected_map": "picture/pure_dilated_map.png",
+    "logo": "picture/aceicon1.png",
+}
+
+
+def resolve_runtime_path(relative_path):
+    # 把像 picture/xxx.png 這種相對路徑轉成實際可讀取的路徑，
+    # 讓執行前與打包後都能共用同一種寫法。
+    if not relative_path:
+        return None
+
+    if isinstance(relative_path, str) and relative_path.startswith(":/"):
+        return relative_path
+
+    relative_path = Path(relative_path)
+    for base_dir in RUNTIME_SEARCH_DIRS:
+        candidate = base_dir / relative_path
+        if candidate.exists():
+            return str(candidate)
+
+    return str(RUNTIME_SEARCH_DIRS[0] / relative_path)
+
+
+def load_app_settings():
+    # app_settings.json 是一般使用者切換場域的入口；
+    # 環境變數則保留給開發與測試時臨時覆蓋用。
+    settings_relative_path = Path("app_settings.json")
+
+    for base_dir in RUNTIME_SEARCH_DIRS:
+        candidate = base_dir / settings_relative_path
+        if not candidate.exists():
+            continue
+
+        try:
+            with candidate.open("r", encoding="utf-8") as settings_file:
+                app_settings = json.load(settings_file)
+        except (json.JSONDecodeError, OSError) as exc:
+            print(f"app_settings.json 讀取失敗，改用預設值: {exc}")
+            return DEFAULT_APP_SETTINGS.copy()
+
+        merged_settings = DEFAULT_APP_SETTINGS.copy()
+        merged_settings.update(app_settings)
+        return merged_settings
+
+    return DEFAULT_APP_SETTINGS.copy()
+
+
+# 啟動時的場域決策優先順序：
+# 1. AMR_SITE_PROFILE 環境變數（開發 / 測試臨時覆蓋）
+# 2. app_settings.json（一般使用者設定）
+# 3. DEFAULT_APP_SETTINGS 內建保底值
+APP_SETTINGS = load_app_settings()
+DEFAULT_SITE_PROFILE = os.environ.get(
+    "AMR_SITE_PROFILE",
+    APP_SETTINGS.get("site_profile", "company"),
+)
+
+
+def load_site_config(site_profile=None):
+    # site_profile 只負責決定「要載入哪一個場域」；
+    # 真正的地圖與 Logo 路徑都放在 site/<profile>.json 裡。
+    site_profile = site_profile or DEFAULT_SITE_PROFILE
+    site_config_relative_path = Path("site") / f"{site_profile}.json"
+    site_config_path = Path(resolve_runtime_path(site_config_relative_path))
+
+    if not site_config_path.exists():
+        # 如果指定場域不存在，先退回 company，至少保有可用的基準設定。
+        if site_profile != "company":
+            print(f"找不到 site profile: {site_profile}，改用 company 設定。")
+            return load_site_config("company")
+        # 如果連 company.json 都不存在，就退回程式內建的保底圖片路徑。
+        print("找不到 company site config，改用內建預設地圖資源。")
+        return {"site_id": "company", "assets": DEFAULT_SITE_ASSETS.copy()}
+
+    with site_config_path.open("r", encoding="utf-8") as config_file:
+        site_config = json.load(config_file)
+
+    assets = DEFAULT_SITE_ASSETS.copy()
+    assets.update(site_config.get("assets", {}))
+    site_config["assets"] = assets
+    site_config.setdefault("site_id", site_profile)
+    return site_config
+
 # ----------------------------------------------------------------------
 # 1. 數據層：定義 MiR 英文代碼與中文名稱的對應關係
 # 這是你的「翻譯字典」英翻中，工程語言轉user語言
@@ -405,22 +519,32 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
     location_selected = Signal(str)
 
 
-    def __init__(self):
+    def __init__(self, map_image_path=None):
         super().__init__()
         self.setupUi(self)
 
-        map_pixmap = QPixmap("./picture/pure_dilated_map") 
-        if not map_pixmap.isNull():
-            self.label_sm_map_1.setPixmap(map_pixmap)
-            self.label_sm_map_1.setScaledContents(True) # 允許縮放
-        else:
-            print("錯誤：無法加載地圖圖片！")
+        # 小地圖不再固定寫死公司版圖片，而是改由目前場域設定決定。
+        self.set_map_image(map_image_path)
 
         # 連接地圖上的地點按鈕
         self._connect_location_buttons()
         # 連接「確定」按鈕到發送信號的方法
         self.btn_sm_enter.clicked.connect(self._confirm_selection)
         self.btn_sm_cancel.clicked.connect(self.close)
+
+    def set_map_image(self, map_image_path):
+        if not map_image_path:
+            return
+
+        # 保留 Qt Designer 裡的預設圖當 fallback，
+        # 但實際執行時會改成目前場域設定的小地圖。
+        map_pixmap = QPixmap(map_image_path)
+        if map_pixmap.isNull():
+            print(f"小地圖載入失敗: {map_image_path}")
+            return
+
+        self.label_sm_map_1.setPixmap(map_pixmap)
+        self.label_sm_map_1.setScaledContents(True)
 
     def _update_selected_point(self, location_name):
         """
@@ -553,6 +677,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowFlag(Qt.FramelessWindowHint)
 
         self.setupUi(self) #這會設定 self.centralWidget 為您的原有內容容器。
+        # 啟動時先決定本次執行要使用哪個場域，
+        # 之後主地圖、小地圖、Logo 都從同一份設定讀取。
+        # self.site_profile = 最終決定目前跑 company 還是 hospital 的值
+        # self.site_config = 對應的 site/<profile>.json 內容
+        # self.site_assets = 本次先抽出的地圖/Logo 資源包
+        self.site_profile = DEFAULT_SITE_PROFILE
+        self.site_config = load_site_config(self.site_profile)
+        self.site_assets = self.site_config["assets"]
         #########################################客製化title：穩健 ToolBar 方案########################################
         # 1. 創建客製化標題列的 QFrame
         #    這個 QFrame 包含了您設計的標題文字和最小化/最大化/關閉按鈕。
@@ -675,7 +807,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.comboBox_destination = self.findChild(QComboBox, 'cmb_location')
 
         # 🥇 僅創建一次 SelectedMap 實例
-        self.map_dialog = SelectedMap() 
+        # 右上 MAP 彈窗使用目前場域的小地圖資源，
+        # 之後只要切 site_profile 就能換圖，不必再改程式。
+        selected_map_path = resolve_runtime_path(self.site_assets.get("selected_map"))
+        self.map_dialog = SelectedMap(selected_map_path) 
         # 隱藏地圖選擇對話框
         self.map_dialog.hide()
 
@@ -756,9 +891,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         
         # 讀圖
-        self.original_pixmap = QPixmap("./picture/pure_dilated_map")
+        # 左側主地圖與小地圖共用同一組場域資源設定。
+        # 這裡就是主畫面「依設定換地圖」的主要入口。
+        main_map_path = resolve_runtime_path(self.site_assets.get("main_map"))
+        self.original_pixmap = QPixmap(main_map_path)
         if self.original_pixmap.isNull():
-            print("圖片讀取失敗！")
+            print(f"主地圖載入失敗: {main_map_path}")
         else:
             self.label_map_1.setPixmap(self.original_pixmap)
             self.label_map_1.resize(self.original_pixmap.size())
@@ -899,12 +1037,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.appLogoLabel.setObjectName("appLogoLabel")
         self.appLogoLabel.setFixedSize(24, 24)
 
-        if getattr(sys, "frozen", False):
-            base_dir = os.path.dirname(sys.executable)
-        else:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-
-        logo_path = os.path.join(base_dir, "picture", "aceicon1.png")
+        # Logo 也放進同一份資源設定，避免場域路徑分散在不同地方。
+        # 之後若某個場域要換 Logo，只需要修改 site/<profile>.json。
+        logo_path = resolve_runtime_path(self.site_assets.get("logo"))
         logo_pixmap = QPixmap(logo_path)
         if not logo_pixmap.isNull():
             self.appLogoLabel.setPixmap(
