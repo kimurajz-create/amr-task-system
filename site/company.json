@@ -7,5 +7,10 @@
     "main_map": "picture/pure_dilated_map.png",
     "selected_map": "picture/pure_dilated_map.png",
     "logo": "picture/aceicon1.png"
+  },
+  "calibration": {
+    "_comment": "image_pts = 地圖像素座標點，world_pts = 對應 MiR 世界座標點，兩者需一一對應",
+    "image_pts": [[933, 552], [567, 1381], [2635, 950]],
+    "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]]
   }
 }

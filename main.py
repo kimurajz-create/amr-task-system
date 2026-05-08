@@ -75,6 +75,13 @@ DEFAULT_SITE_ASSETS = {
     "logo": "picture/aceicon1.png",
 }
 
+# 保底用的地圖校正點。
+# 只有當 site 設定檔尚未提供 image_pts / world_pts 時才會使用。
+DEFAULT_SITE_CALIBRATION = {
+    "image_pts": [[933, 552], [567, 1381], [2635, 950]],
+    "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]],
+}
+
 
 def resolve_runtime_path(relative_path):
     # 把像 picture/xxx.png 這種相對路徑轉成實際可讀取的路徑，
@@ -151,6 +158,11 @@ def load_site_config(site_profile=None):
     assets = DEFAULT_SITE_ASSETS.copy()
     assets.update(site_config.get("assets", {}))
     site_config["assets"] = assets
+
+    calibration = DEFAULT_SITE_CALIBRATION.copy()
+    calibration.update(site_config.get("calibration", {}))
+    site_config["calibration"] = calibration
+
     site_config.setdefault("site_id", site_profile)
     return site_config
 
@@ -682,9 +694,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.site_profile = 最終決定目前跑 company 還是 hospital 的值
         # self.site_config = 對應的 site/<profile>.json 內容
         # self.site_assets = 本次先抽出的地圖/Logo 資源包
+        # self.site_calibration = 本次抽出的 image_pts / world_pts 校正資料
         self.site_profile = DEFAULT_SITE_PROFILE
         self.site_config = load_site_config(self.site_profile)
         self.site_assets = self.site_config["assets"]
+        self.site_calibration = self.site_config["calibration"]
         #########################################客製化title：穩健 ToolBar 方案########################################
         # 1. 創建客製化標題列的 QFrame
         #    這個 QFrame 包含了您設計的標題文字和最小化/最大化/關閉按鈕。
@@ -927,29 +941,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Flag
         self.clicked_enabled = False
+        self.sent_robot_to_in_progress = False
         self.last_click_overlay_pos = None
         self.last_robot_world_pos = None
         self.current_mir_state_id = None
         self.robot_glow_phase = 0
 
-        ##############換地圖時除了這邊的座標，也要到draw_car_position裡面改原始圖片尺寸(load的那一張)##############
-
-        # 三個對應點（像素座標）充電站，左下角牆角，櫃台上方 706 649 MiR floor plan_V0
-        # self.image_pts = np.array([[200,130],[126,355],[563,274],],dtype = np.float32)
-        # 三個對應點 3*3 正方形
-        # self.image_pts = np.array([[347,209],[538,216],[440,128],],dtype = np.float32)
-        # 三個對應點（像素座標）充電站，左下角牆角，櫃台上方 3216 1824 pure_dilated_map
-        self.image_pts = np.array([[933,552],[567,1381],[2635,950],],dtype = np.float32)
-        
-        # 三個對應點（MiR 世界座標）
-        # 地圖"Lobby"座標 
-        # self.world_pts = np.array([[-0.867, 27.335], [-7.411, 7.937],[31.021, 15.012],], dtype=np.float32)
-        # 地圖"Lobby_V2"座標 
-        self.world_pts = np.array([[1.465, 28.374], [-5.091, 9.006],[34.138, 17.249],], dtype=np.float32)
-        # # 地圖"ACE Exhibition 3x3 Test01"座標 
-        # self.world_pts = np.array([[-0.858, 22.619], [1.915, 22.447],[-1.344, 19.359],], dtype=np.float32)
-        # 醫療展現場
-        # self.world_pts = np.array([[11.65, 10.49], [13.564, 10.529],[12.777, 11.656],], dtype=np.float32)
+        # image_pts / world_pts 已從 main.py 硬編碼抽離到 site config。
+        # 這裡只負責讀取目前場域的校正點，不改動後續 affine 計算邏輯。
+        self.image_pts = np.array(
+            self.site_calibration["image_pts"],
+            dtype=np.float32,
+        )
+        self.world_pts = np.array(
+            self.site_calibration["world_pts"],
+            dtype=np.float32,
+        )
 
         # 建立仿射轉換矩陣
         self.affine_matrix = self.compute_affine_transform()
@@ -1917,6 +1924,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.status_timer = QTimer()
         self.status_timer.timeout.connect(self.query_mir_status_ready)
         self.status_timer.start(5000)
+
+    def _update_sent_robot_to_button_state(self):
+        self.btn_SentRobotTo.setEnabled(
+            self.clicked_enabled and not self.sent_robot_to_in_progress
+        )
         
     # 自動詢問到了沒
     def query_mir_status_ready(self):
@@ -1925,6 +1937,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             print("導航完成，刪除位置")
             self.status_timer.stop()
             functions.delete_srt_position()
+            self.sent_robot_to_in_progress = False
+            self._update_sent_robot_to_button_state()
         self.load_map_positions()
 
 
@@ -2247,7 +2261,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_stop_mission_clicked(self):
         self.btn_StartMission.setDisabled(False)
         self.btn_StopMission1.setDisabled(True)
-        self.btn_SentRobotTo.setEnabled(True)
+        self._update_sent_robot_to_button_state()
         # 不要馬上停止
         # functions.stop_the_mission()
         # 2. 停止排程執行緒
@@ -2337,10 +2351,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # 按鈕(Sent robot to go)
     def on_sent_robot_to_clicked(self):
+        if self.sent_robot_to_in_progress:
+            print("Sent robot to 導航尚未完成，暫不接受第二次送車。")
+            return
+
         X=self.dsb_x_m.value()
         Y=self.dsb_y_m.value()
         Z=self.dsb_ori_m.value()
         print(f"派送車子到:{X},{Y},{Z}")
+        self.sent_robot_to_in_progress = True
+        self._update_sent_robot_to_button_state()
         functions.post_position(X,Y,Z)
         self.load_map_positions()
         functions.run_combo_location("Sent robot to")
@@ -2391,7 +2411,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         print("state =", state)
         self.clicked_enabled = (state == 2)
         if state == 2:
-            self.btn_SentRobotTo.setEnabled(True)
+            self._update_sent_robot_to_button_state()
         else:
             self.clear_click_marker()
             self.btn_SentRobotTo.setEnabled(False)
