@@ -1,16 +1,22 @@
 {
-  "_comment": "hospital 場域設定。這份檔案描述醫院版要使用的資源路徑。",
+  "_comment": "hospital 場域設定。先保留可用資產與校正資料，location / mission 對照欄位先建立骨架，之後再逐筆補齊。",
   "site_id": "hospital",
   "display_name": "Hospital",
   "assets": {
-    "_comment": "main_map = 左側主地圖，selected_map = 右上 MAP 小地圖，logo = 標題列 Logo",
+    "_comment": "main_map = 主地圖，selected_map = 點圖選點視窗，logo = 左上角 Logo",
     "main_map": "picture/國軍台中總醫院_手術室圖2025.09.17/TC_Army.png",
     "selected_map": "picture/國軍台中總醫院_手術室圖2025.09.17/TC_Army.png",
     "logo": "picture/aceicon1.png"
   },
   "calibration": {
-    "_comment": "醫院版校正點目前先沿用保底格式，待現場量測後再替換為正式值",
+    "_comment": "醫院版暫時沿用既有校正資料；之後若地圖座標不同，再依實測重新填寫。",
     "image_pts": [[933, 552], [567, 1381], [2635, 950]],
     "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]]
-  }
+  },
+  "_comment_locations": "醫院版之後要把每一個 location 都補成和 company 相同結構。is_charging_station = true 的那筆會被當作回充站。",
+  "locations": [],
+  "_comment_missions": "醫院版 mission 對照表骨架。scheduler_enabled = true 的 mission 會進入目前 scheduler 下拉選單。",
+  "missions": [],
+  "_comment_quick_actions": "若醫院版也有固定按鈕任務，可在這裡定義 exhibition_drink / exhibition_military 或其他鍵。",
+  "quick_actions": {}
 }

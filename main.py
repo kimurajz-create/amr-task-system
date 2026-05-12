@@ -139,6 +139,7 @@ DEFAULT_SITE_PROFILE = os.environ.get(
 def load_site_config(site_profile=None):
     # site_profile 只負責決定「要載入哪一個場域」；
     # 真正的地圖與 Logo 路徑都放在 site/<profile>.json 裡。
+    # 從這一步開始，location / mission / quick action 也逐漸往 site config 集中。
     site_profile = site_profile or DEFAULT_SITE_PROFILE
     site_config_relative_path = Path("site") / f"{site_profile}.json"
     site_config_path = Path(resolve_runtime_path(site_config_relative_path))
@@ -150,10 +151,31 @@ def load_site_config(site_profile=None):
             return load_site_config("company")
         # 如果連 company.json 都不存在，就退回程式內建的保底圖片路徑。
         print("找不到 company site config，改用內建預設地圖資源。")
-        return {"site_id": "company", "assets": DEFAULT_SITE_ASSETS.copy()}
+        return {
+            "site_id": "company",
+            "assets": DEFAULT_SITE_ASSETS.copy(),
+            "calibration": DEFAULT_SITE_CALIBRATION.copy(),
+            "locations": [],
+            "missions": [],
+            "quick_actions": {},
+        }
 
-    with site_config_path.open("r", encoding="utf-8") as config_file:
-        site_config = json.load(config_file)
+    try:
+        with site_config_path.open("r", encoding="utf-8") as config_file:
+            site_config = json.load(config_file)
+    except (json.JSONDecodeError, OSError) as exc:
+        if site_profile != "company":
+            print(f"site profile 讀取失敗: {site_profile}，改用 company 設定。原因: {exc}")
+            return load_site_config("company")
+        print(f"company site config 讀取失敗，改用內建預設設定。原因: {exc}")
+        return {
+            "site_id": "company",
+            "assets": DEFAULT_SITE_ASSETS.copy(),
+            "calibration": DEFAULT_SITE_CALIBRATION.copy(),
+            "locations": [],
+            "missions": [],
+            "quick_actions": {},
+        }
 
     assets = DEFAULT_SITE_ASSETS.copy()
     assets.update(site_config.get("assets", {}))
@@ -163,6 +185,11 @@ def load_site_config(site_profile=None):
     calibration.update(site_config.get("calibration", {}))
     site_config["calibration"] = calibration
 
+    # 這三個欄位是新 schema。
+    # 就算 hospital 還沒補資料，也先保證程式拿得到空陣列 / 空 dict，不會直接噴錯。
+    site_config.setdefault("locations", [])
+    site_config.setdefault("missions", [])
+    site_config.setdefault("quick_actions", {})
     site_config.setdefault("site_id", site_profile)
     return site_config
 
@@ -273,6 +300,112 @@ MIR_LOCATION_MAP = {v: k for k, v in USER_LOCATION_MAP.items()}
 MIR_MISSION_GROUP_MAP = {v: k for k, v in USER_MISSION_GROUP_MAP.items()}
 
 CHARGING_STATION_NAME = "充電樁"
+EXHIBITION_DRINK_MISSION_NAME = "Lobby Demo Seminar Presentation Jordan"
+EXHIBITION_MILITARY_MISSION_NAME = "Lobby Exhibition Demo Cart Transport"
+
+LEGACY_QUICK_ACTIONS = {
+    "exhibition_drink": EXHIBITION_DRINK_MISSION_NAME,
+    "exhibition_military": EXHIBITION_MILITARY_MISSION_NAME,
+}
+
+
+def build_site_runtime_maps(site_config):
+    """
+    將 site/<profile>.json 的新結構，轉回目前程式既有邏輯可直接使用的 map。
+
+    目的：
+    1. 讓資料來源改成 site config
+    2. 但暫時不要一次重寫所有舊流程
+    3. 缺資料時仍保留舊 hardcode 當 fallback
+    """
+    runtime_maps = {
+        # 先以舊 hardcode 當保底值，避免某個場域尚未補完整時整段功能失效。
+        "user_location_map": USER_LOCATION_MAP.copy(),
+        "mir_location_map": MIR_LOCATION_MAP.copy(),
+        "user_mission_group_map": USER_MISSION_GROUP_MAP.copy(),
+        "mir_mission_group_map": MIR_MISSION_GROUP_MAP.copy(),
+        "room_id_map": ROOM_ID_MAP.copy(),
+        "location_to_marker": LOCATION_TO_MARKER.copy(),
+        "required_mission_codes": set(REQUIRED_MISSION_CODES),
+        "charging_station_name": CHARGING_STATION_NAME,
+        "quick_actions": LEGACY_QUICK_ACTIONS.copy(),
+    }
+
+    location_records = site_config.get("locations") or []
+    mission_records = site_config.get("missions") or []
+    quick_actions = site_config.get("quick_actions") or {}
+
+    user_location_map = {}
+    location_to_marker = {}
+    room_id_map = {}
+    charging_station_name = None
+
+    for location in location_records:
+        # 每一筆 location 同時承載：
+        # MiR 名稱、UI 顯示名稱、marker 對應、room_id、以及是否為充電站。
+        mir_name = location.get("mir_name")
+        display_name = location.get("display_name")
+        if not mir_name or not display_name:
+            continue
+
+        user_location_map[mir_name] = display_name
+
+        marker_id = location.get("marker_id")
+        if marker_id:
+            location_to_marker[display_name] = marker_id
+
+        room_id = location.get("room_id")
+        if room_id:
+            room_id_map[display_name] = room_id
+
+        # 這裡不是用 display_name == "充電樁" 判斷，
+        # 而是明確看 is_charging_station，之後不同場域可自由換名字。
+        if location.get("is_charging_station"):
+            charging_station_name = display_name
+
+    if user_location_map:
+        # 由 locations 陣列組回舊程式常用的兩張表：
+        # 1. MiR name -> UI name
+        # 2. UI name -> MiR name
+        runtime_maps["user_location_map"] = user_location_map
+        runtime_maps["mir_location_map"] = {v: k for k, v in user_location_map.items()}
+    if location_to_marker:
+        runtime_maps["location_to_marker"] = location_to_marker
+    if room_id_map:
+        runtime_maps["room_id_map"] = room_id_map
+    if charging_station_name:
+        runtime_maps["charging_station_name"] = charging_station_name
+
+    user_mission_group_map = {}
+    required_mission_codes = set()
+
+    for mission in mission_records:
+        # 每一筆 mission 目前先保留兩種角色：
+        # 1. 下拉選單顯示名稱
+        # 2. 是否納入 scheduler 任務清單
+        mir_name = mission.get("mir_name")
+        display_name = mission.get("display_name")
+        if not mir_name or not display_name:
+            continue
+
+        user_mission_group_map[mir_name] = display_name
+        if mission.get("scheduler_enabled"):
+            required_mission_codes.add(mir_name)
+
+    if user_mission_group_map:
+        runtime_maps["user_mission_group_map"] = user_mission_group_map
+        runtime_maps["mir_mission_group_map"] = {v: k for k, v in user_mission_group_map.items()}
+    if required_mission_codes:
+        runtime_maps["required_mission_codes"] = required_mission_codes
+
+    if isinstance(quick_actions, dict) and quick_actions:
+        # quick_actions 專門給少數「按鈕直送任務」使用，
+        # 像 exhibition_drink / exhibition_military 這類特殊按鈕。
+        merged_quick_actions = LEGACY_QUICK_ACTIONS.copy()
+        merged_quick_actions.update(quick_actions)
+        runtime_maps["quick_actions"] = merged_quick_actions
+
+    return runtime_maps
 
 # ------------將「耗時操作」丟到背景 thread 執行----------
 class DBWorker(QThread):
@@ -699,6 +832,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.site_config = load_site_config(self.site_profile)
         self.site_assets = self.site_config["assets"]
         self.site_calibration = self.site_config["calibration"]
+        # site_runtime_maps = 新舊架構之間的過渡層。
+        # UI / TaskThread 仍吃熟悉的 map，但來源已經優先改成 site config。
+        self.site_runtime_maps = build_site_runtime_maps(self.site_config)
+        self.site_quick_actions = self.site_runtime_maps["quick_actions"]
         #########################################客製化title：穩健 ToolBar 方案########################################
         # 1. 創建客製化標題列的 QFrame
         #    這個 QFrame 包含了您設計的標題文字和最小化/最大化/關閉按鈕。
@@ -797,14 +934,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.is_test_mode = True
         
 
-        # 【新增：將全局常數賦值給 MainWindow 實例的屬性】
-        # 輔助常數
-        self.MIR_LOCATION_MAP = MIR_LOCATION_MAP
-        self.MIR_MISSION_GROUP_MAP = MIR_MISSION_GROUP_MAP
-        self.CHARGING_STATION_NAME = CHARGING_STATION_NAME
-        self.USER_LOCATION_MAP = USER_LOCATION_MAP
-        self.USER_MISSION_GROUP_MAP = USER_MISSION_GROUP_MAP
-        self.ROOM_ID_MAP = ROOM_ID_MAP
+        # 將場域設定轉出的 runtime map 掛到 self。
+        # 後面如果還看到 self.MIR_LOCATION_MAP / self.ROOM_ID_MAP，
+        # 代表那段舊流程已經開始吃 site config 了。
+        self.MIR_LOCATION_MAP = self.site_runtime_maps["mir_location_map"]
+        self.MIR_MISSION_GROUP_MAP = self.site_runtime_maps["mir_mission_group_map"]
+        self.CHARGING_STATION_NAME = self.site_runtime_maps["charging_station_name"]
+        self.USER_LOCATION_MAP = self.site_runtime_maps["user_location_map"]
+        self.USER_MISSION_GROUP_MAP = self.site_runtime_maps["user_mission_group_map"]
+        self.ROOM_ID_MAP = self.site_runtime_maps["room_id_map"]
+        self.LOCATION_TO_MARKER = self.site_runtime_maps["location_to_marker"]
+        self.REQUIRED_MISSION_CODES = self.site_runtime_maps["required_mission_codes"]
 
         # 初始化 MiR 函數
         # 將您已經導入的 functions 模組，作為一個屬性(attribute)賦值給 MainWindow 實例 (self)
@@ -1780,7 +1920,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 步驟 1: 清空所有可能的標記狀態 (重置)
         # ----------------------------------------------------
         # 遍歷所有已知地點標記的名稱
-        for marker_name in LOCATION_TO_MARKER.values():
+        for marker_name in self.LOCATION_TO_MARKER.values():
             # 這一行程式碼讓您能夠用一個簡單的迴圈，遍歷地圖上所有名稱有規律的標記
             marker_label = getattr(self, marker_name, None)
             if marker_label:
@@ -1821,7 +1961,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # ----------------------------------
             # 更新起點標記
             # ----------------------------------
-            start_marker_name = LOCATION_TO_MARKER.get(start_point)
+            start_marker_name = self.LOCATION_TO_MARKER.get(start_point)
             if start_marker_name:
                 marker_label = getattr(self, start_marker_name, None)
                 if marker_label:
@@ -1835,7 +1975,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # ----------------------------------
             # 更新目的地標記
             # ----------------------------------
-            target_marker_name = LOCATION_TO_MARKER.get(target_point)
+            target_marker_name = self.LOCATION_TO_MARKER.get(target_point)
             if target_marker_name and target_marker_name != start_marker_name:
                 marker_label = getattr(self, target_marker_name, None)
                 if marker_label:
@@ -2129,14 +2269,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
     # 按鈕(回去充電站)
     def on_start_chargestation_clicked(self):
-        # 嘗試從字典中獲取充電站的英文代碼
-        # 如果找不到 "充電樁" 這個 Key，就回傳 None
-        charge_code = MIR_LOCATION_MAP.get(CHARGING_STATION_NAME)
+        # 先拿到「本場域定義的充電站顯示名稱」，
+        # 再反查對應的 MiR position name 後送出。
+        charge_code = self.MIR_LOCATION_MAP.get(self.CHARGING_STATION_NAME)
         if charge_code:
             functions.run_combo_location(charge_code)
             print(f"✅ 已送出任務到充電站代碼: {charge_code}")
         else:
-            QMessageBox.critical(self, "錯誤！", "🚨 請檢查 MiR 名稱是否被更改，或字典是否遺漏了 '充電樁' 的定義。")
+            QMessageBox.critical(
+                self,
+                "錯誤！",
+                f"🚨 請檢查場域設定是否有定義充電站: {self.CHARGING_STATION_NAME}",
+            )
             
             
             
@@ -2282,13 +2426,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     
     # 按鈕(執行大廳或展場任務) 
     def on_start_mission_clicked_exhibition_drink(self):
-        # 取得任務ID(GUID)
-        mission_guid = functions.get_mission_id("Lobby Demo Seminar Presentation Jordan")
+        # 特殊按鈕先讀 quick_actions，沒設定才退回舊 hardcode。
+        mission_name = self.site_quick_actions.get(
+            "exhibition_drink",
+            EXHIBITION_DRINK_MISSION_NAME,
+        )
+        mission_guid = functions.get_mission_id(mission_name)
         functions.start_the_mission(mission_guid)
 
     def on_start_mission_clicked_exhibition_military(self):
-        # 取得任務ID(GUID)
-        mission_guid = functions.get_mission_id("Lobby Exhibition Demo Cart Transport")
+        # 這樣不同場域只要改 JSON，不必再改按鈕邏輯。
+        mission_name = self.site_quick_actions.get(
+            "exhibition_military",
+            EXHIBITION_MILITARY_MISSION_NAME,
+        )
+        mission_guid = functions.get_mission_id(mission_name)
         functions.start_the_mission(mission_guid)
 
 
@@ -2470,7 +2622,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if mir_codes_list:
             for mir_code in mir_codes_list:
                 # 名稱轉換，查找中文名稱，如果找不到，就顯示原始的英文代碼
-                user_name = USER_LOCATION_MAP.get(mir_code, mir_code)
+                user_name = self.USER_LOCATION_MAP.get(mir_code, mir_code)
                 # --- 關鍵去重邏輯 ---
                 if user_name not in unique_user_names:
                     unique_user_names.add(user_name)
@@ -2535,12 +2687,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for mir_code in mir_codes_list:
 
                 # 【篩選步驟】：只處理你想要的兩種任務代碼
-                if mir_code in REQUIRED_MISSION_CODES:
+                if mir_code in self.REQUIRED_MISSION_CODES:
 
                     # 1. 翻譯：使用你的字典來獲取中文名稱 (Value)
                     # 字典名稱.get(Key,Default Value)。
                     # A (第一個參數)，Python 會嘗試將這個值作為 Key 去字典裡查找；B (第二個參數)，如果找不到 Key 的值，則返回這個預設值
-                    user_name = USER_MISSION_GROUP_MAP.get(mir_code, mir_code)
+                    user_name = self.USER_MISSION_GROUP_MAP.get(mir_code, mir_code)
                     
                     # 2. 載入 ComboBox (加蓋)
                     # 顯示給使用者看中文 (user_name)，隱藏 MiR 英文代碼 (mir_code)
