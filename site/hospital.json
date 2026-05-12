@@ -1,7 +1,7 @@
 {
-  "_comment": "hospital 場域設定。先保留可用資產與校正資料，location / mission 對照欄位先建立骨架，之後再逐筆補齊。",
+  "_comment": "hospital 場域設定，依醫院 POC 可跑版本整理 location / mission 對照。",
   "site_id": "hospital",
-  "display_name": "Hospital",
+  "display_name": "國軍台中總醫院",
   "assets": {
     "_comment": "main_map = 主地圖，selected_map = 點圖選點視窗，logo = 左上角 Logo",
     "main_map": "picture/國軍台中總醫院_手術室圖2025.09.17/TC_Army.png",
@@ -9,14 +9,306 @@
     "logo": "picture/aceicon1.png"
   },
   "calibration": {
-    "_comment": "醫院版暫時沿用既有校正資料；之後若地圖座標不同，再依實測重新填寫。",
-    "image_pts": [[933, 552], [567, 1381], [2635, 950]],
-    "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]]
+    "_comment": "沿用醫院 POC 版本實測可跑的地圖校正點。",
+    "image_pts": [[892, 411], [325, 361], [325, 113]],
+    "world_pts": [[-7.209, 18.944], [27.55, 15.386], [27.683, -1.588]]
   },
-  "_comment_locations": "醫院版之後要把每一個 location 都補成和 company 相同結構。is_charging_station = true 的那筆會被當作回充站。",
-  "locations": [],
-  "_comment_missions": "醫院版 mission 對照表骨架。scheduler_enabled = true 的 mission 會進入目前 scheduler 下拉選單。",
-  "missions": [],
-  "_comment_quick_actions": "若醫院版也有固定按鈕任務，可在這裡定義 exhibition_drink / exhibition_military 或其他鍵。",
-  "quick_actions": {}
+  "_comment_locations": "locations 會轉成 user_location_map / room_id_map / location_to_marker。is_charging_station = true 的那筆會被當作回充站。",
+  "locations": [
+    {
+      "mir_name": "MH_Robot position OR 1",
+      "display_name": "手術室1",
+      "marker_id": "label_rp_1",
+      "room_id": "OR01",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 2",
+      "display_name": "手術室2",
+      "marker_id": "label_rp_2",
+      "room_id": "OR02",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 3",
+      "display_name": "手術室3",
+      "marker_id": "label_rp_3",
+      "room_id": "OR03",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 4",
+      "display_name": "手術室4",
+      "marker_id": "label_rp_4",
+      "room_id": "OR04",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 5",
+      "display_name": "手術室5",
+      "marker_id": "label_rp_5",
+      "room_id": "OR05",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 6",
+      "display_name": "手術室6",
+      "marker_id": "label_rp_6",
+      "room_id": "OR06",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 7",
+      "display_name": "手術室7",
+      "marker_id": "label_rp_7",
+      "room_id": "OR07",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 8",
+      "display_name": "手術室8",
+      "marker_id": "label_rp_8",
+      "room_id": "OR08",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 9",
+      "display_name": "手術室9",
+      "marker_id": "label_rp_9",
+      "room_id": "OR09",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 10",
+      "display_name": "手術室10",
+      "marker_id": "label_rp_10",
+      "room_id": "OR10",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 11",
+      "display_name": "手術室11",
+      "marker_id": "label_rp_11",
+      "room_id": "OR11",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 12",
+      "display_name": "手術室12",
+      "marker_id": "label_rp_12",
+      "room_id": "OR12",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Robot position OR 13",
+      "display_name": "手術室13",
+      "marker_id": "label_rp_13",
+      "room_id": "OR13",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_MiR Charge 48V V2",
+      "display_name": "充電樁",
+      "marker_id": null,
+      "room_id": null,
+      "map_button_id": null,
+      "is_charging_station": true
+    },
+    {
+      "mir_name": "MH_Shelf position SR 1",
+      "display_name": "滅菌室",
+      "marker_id": null,
+      "room_id": "SR01",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position SR 2",
+      "display_name": "滅菌室2",
+      "marker_id": null,
+      "room_id": "SR02",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 1",
+      "display_name": "車架位置(手術室1)",
+      "marker_id": "label_rp_1",
+      "room_id": "OR01",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 2",
+      "display_name": "車架位置(手術室2)",
+      "marker_id": "label_rp_2",
+      "room_id": "OR02",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 3",
+      "display_name": "車架位置(手術室3)",
+      "marker_id": "label_rp_3",
+      "room_id": "OR03",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 4",
+      "display_name": "車架位置(手術室4)",
+      "marker_id": "label_rp_4",
+      "room_id": "OR04",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 5",
+      "display_name": "車架位置(手術室5)",
+      "marker_id": "label_rp_5",
+      "room_id": "OR05",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 6",
+      "display_name": "車架位置(手術室6)",
+      "marker_id": "label_rp_6",
+      "room_id": "OR06",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 7",
+      "display_name": "車架位置(手術室7)",
+      "marker_id": "label_rp_7",
+      "room_id": "OR07",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 8",
+      "display_name": "車架位置(手術室8)",
+      "marker_id": "label_rp_8",
+      "room_id": "OR08",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 9",
+      "display_name": "車架位置(手術室9)",
+      "marker_id": "label_rp_9",
+      "room_id": "OR09",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 10",
+      "display_name": "車架位置(手術室10)",
+      "marker_id": "label_rp_10",
+      "room_id": "OR10",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 11",
+      "display_name": "車架位置(手術室11)",
+      "marker_id": "label_rp_11",
+      "room_id": "OR11",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 12",
+      "display_name": "車架位置(手術室12)",
+      "marker_id": "label_rp_12",
+      "room_id": "OR12",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position OR 13",
+      "display_name": "車架位置(手術室13)",
+      "marker_id": "label_rp_13",
+      "room_id": "OR13",
+      "map_button_id": null,
+      "is_charging_station": false
+    }
+  ],
+  "_comment_missions": "missions 會轉成 user_mission_group_map。scheduler_enabled = true 的 mission 會進入目前 scheduler 下拉選單。",
+  "missions": [
+    {
+      "mir_name": "ACE_Elv_0625",
+      "display_name": "電梯",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Reception to lecture hall 01",
+      "display_name": "Demo_櫃台到演講廳_01並返回櫃台",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Reception to lecture hall 02",
+      "display_name": "Demo_櫃台到演講廳_02並返回櫃台",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Reception to Sofa1",
+      "display_name": "Demo_櫃台到沙發1並返回櫃台",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Reception to Sofa2",
+      "display_name": "Demo_櫃台到沙發2並返回櫃台",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Reception to Sofa3",
+      "display_name": "Demo_櫃台到沙發3並返回櫃台",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Seminar Presentation Jordan",
+      "display_name": "Demo_櫃台出發大廳繞一圈",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Cart Transport",
+      "display_name": "Demo_載貨運輸",
+      "scheduler_enabled": true
+    },
+    {
+      "mir_name": "Lobby Demo Empty Cart Transport",
+      "display_name": "Demo_空車運輸",
+      "scheduler_enabled": true
+    },
+    {
+      "mir_name": "Taichung Military Hospital Empty Cart Transport",
+      "display_name": "Demo_國軍台中醫院空車運輸",
+      "scheduler_enabled": true
+    },
+    {
+      "mir_name": "Taichung Military Hospital Cart Transport",
+      "display_name": "Demo_國軍台中醫院載貨運輸",
+      "scheduler_enabled": true
+    }
+  ],
+  "_comment_quick_actions": "先覆蓋舊的 company fallback，避免醫院場域按到不存在的 demo mission。",
+  "quick_actions": {
+    "exhibition_drink": "Taichung Military Hospital Empty Cart Transport",
+    "exhibition_military": "Taichung Military Hospital Cart Transport"
+  }
 }
