@@ -1,4 +1,4 @@
 {
   "_comment": "一般使用者在這裡切換場域。可填 company 或 hospital。若有設定 AMR_SITE_PROFILE 環境變數，會以環境變數為主。",
-  "site_profile": "hospital"
+  "site_profile": "company"
 }

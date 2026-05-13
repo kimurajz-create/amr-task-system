@@ -929,6 +929,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.is_low_battery=False
         #是否已經通知低電量 1010
         self.is_low_battery_notified = False
+        self.notified_task_results = set()
+        self.mir_status_poll_disconnected = False
         #是否連線
         self.is_online = True
         self.is_test_mode = True
@@ -1599,7 +1601,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         # TODO: 未來請在這裡加入程式碼，將訊息寫入到 UI 上的日誌顯示區。
 
-    def handle_task_completion(self, task_id: int):
+    def _notify_task_result(self, result_status: str, task_id: int, start_point: str, target_point: str):
+        notification_key = (result_status, task_id)
+        if notification_key in self.notified_task_results:
+            return
+
+        self.notified_task_results.add(notification_key)
+
+        if result_status == "Completed":
+            self.add_notification_item("完成", f"{task_id} 任務完成: 從 {start_point} 前往 {target_point}")
+        elif result_status == "Aborted":
+            self.add_notification_item("取消", f"{task_id} 任務被取消/中止: 從 {start_point} 前往 {target_point}")
+
+    def _finalize_task_result(self, task_id: int, result_status: str, start_point: str, target_point: str):
+        transitioned = self.task_db_manager.transition_task_status(
+            task_id,
+            from_status="Executing",
+            to_status=result_status,
+        )
+
+        if not transitioned:
+            return False
+
+        self.is_AMR_idle = True
+        self._notify_task_result(result_status, task_id, start_point, target_point)
+        self.refresh_task_list()
+        return True
+
+    def handle_task_completion(self, task_id: int, result_status: str, start_point: str, target_point: str):
+        print(f"[TASK RESULT] task_id={task_id}, status={result_status}")
+        finalized = self._finalize_task_result(task_id, result_status, start_point, target_point)
+        if not finalized:
+            self.is_AMR_idle = True
+        return
         """
         [槽] 接收 TaskThread 發出的任務完成訊號 (task_id)。
         
@@ -2023,6 +2057,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         executing_task_data = self.task_db_manager.get_currently_executing_task()
         # 檢查是否有正在執行的任務
         if not executing_task_data:
+            self.mir_status_poll_disconnected = False
             # 沒有任務在執行，直接退出
             return
         
@@ -2047,12 +2082,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # max_mission_id  = functions.get_mission_queue_max_id()
         # print(f"max_id_state: {max_id_state}, max_mission_id: {max_mission_id}") 
 
+        if state is None:
+            if not self.mir_status_poll_disconnected:
+                print(f"[MIR RECONCILE] mission queue state unavailable for mq_id={mq_id}")
+            self.mir_status_poll_disconnected = True
+            return
+
+        if self.mir_status_poll_disconnected:
+            print(f"[MIR RECONCILE] mission queue connection restored for mq_id={mq_id}")
+            self.mir_status_poll_disconnected = False
+
         if  state == "Done":
-            self.is_AMR_idle=True
+            self._finalize_task_result(task_id, "Completed", start_point, target_point)
+            return
             self.add_notification_item("完成", f"{task_id} 任務完成: 從 {start_point} 前往 {target_point}")
 
         elif state == "Aborted":
-            self.task_db_manager.update_task_status(task_id, new_status="Aborted")
+            self._finalize_task_result(task_id, "Aborted", start_point, target_point)
+            return
             self.is_AMR_idle = True
             self.add_notification_item("取消", f"{task_id} 任務被取消/中止: 從 {start_point} 前往 {target_point}")
 

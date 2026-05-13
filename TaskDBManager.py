@@ -380,6 +380,54 @@ class TaskDBManager:
             self._resequence_pending_tasks() 
             print("🔧 任務隊列重編號完成。")
 
+    def transition_task_status(self, task_id: int, from_status: str, to_status: str, command_sent: bool = None):
+        """Transition a task only if it is still in the expected state."""
+        if to_status == "Completed":
+            if command_sent is not None:
+                query = """
+                UPDATE tasks
+                SET status = %s, mir_command_sent = %s, sequence = 0
+                WHERE id = %s AND status = %s
+                RETURNING id;
+                """
+                params = (to_status, command_sent, task_id, from_status)
+            else:
+                query = """
+                UPDATE tasks
+                SET status = %s, sequence = 0
+                WHERE id = %s AND status = %s
+                RETURNING id;
+                """
+                params = (to_status, task_id, from_status)
+        else:
+            if command_sent is not None:
+                query = """
+                UPDATE tasks
+                SET status = %s, mir_command_sent = %s
+                WHERE id = %s AND status = %s
+                RETURNING id;
+                """
+                params = (to_status, command_sent, task_id, from_status)
+            else:
+                query = """
+                UPDATE tasks
+                SET status = %s
+                WHERE id = %s AND status = %s
+                RETURNING id;
+                """
+                params = (to_status, task_id, from_status)
+
+        rows = self._execute_query(query, params, fetch=True, commit=True)
+        updated = bool(rows)
+
+        if updated:
+            print(f"Transitioned task ID {task_id}: {from_status} -> {to_status}")
+            if to_status == "Completed":
+                self._resequence_pending_tasks()
+                print("Resequenced pending tasks after completion.")
+
+        return updated
+
     def _resequence_pending_tasks(self):
         """
         重新編號所有狀態不是 'Completed' 的任務，確保 sequence 從 1 開始連續。

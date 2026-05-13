@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
     "MIR_IP": "http://10.11.202.251",
     "heartbeat_display_count": 13,
 }
+REQUEST_TIMEOUT_SECONDS = 3
 ##################################IP############################################
 # 從設定檔讀取 IP，並且回傳這個 IP
 def load_config():
@@ -329,6 +330,17 @@ def get_mission_groups_id_cmb():
 def get_mission_queue_max_id():
     url = f"{MIR_IP}/api/v2.0.0/mission_queue"
     headers = get_auth_headers()
+    try:
+        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+        if response.status_code == 200:
+            mission_queue_list = response.json()
+            queue_ids = [item["id"] for item in mission_queue_list if "id" in item]
+            return max(queue_ids) if queue_ids else None
+
+        print(f"???⊥???mission_queue?”_01: {response.text}")
+    except requests.RequestException as exc:
+        print(f"???⊥???mission_queue?”_01: {exc}")
+    return None
     response = requests.get(url,headers = headers)
     if response.status_code == 200:
         mission_queue_list = response.json() 
@@ -352,6 +364,16 @@ def get_mission_queue_max_id_state():
 def get_mission_queue_id_state(mission_queue_id):
     url = f"{MIR_IP}/api/v2.0.0/mission_queue/{mission_queue_id}"
     headers = get_auth_headers()
+    try:
+        response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+        if response.status_code == 200:
+            mission_data = response.json()
+            return mission_data["state"]
+
+        print(f"???⊥???mission_queue?”_03: {response.text}")
+    except requests.RequestException as exc:
+        print(f"???⊥???mission_queue?”_03: {exc}")
+    return None
     response = requests.get(url,headers = headers)
     if response.status_code == 200:
         mission_data = response.json() 
@@ -370,7 +392,7 @@ def move_to_position(mission_id,position_uuid):
     }
     print(mission_data) 
     headers = get_auth_headers()
-    response = requests.post(url, json=mission_data, headers=headers)
+    response = requests.post(url, json=mission_data, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 201:
         print(f"成功發送移動至 {position_uuid} 的指令")
     else:
@@ -386,7 +408,7 @@ def move_to_position_multi_var(start_uuid,goal_uuid,mission_id):
     }
     print(f"任務參數:{mission_data}") 
     headers = get_auth_headers()
-    response = requests.post(url, json=mission_data, headers=headers)
+    response = requests.post(url, json=mission_data, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 201:
         print(f"成功發送移動至 {goal_uuid} 的指令")
         mission_queue_max_id = get_mission_queue_max_id()
