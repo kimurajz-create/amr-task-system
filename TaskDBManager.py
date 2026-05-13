@@ -328,6 +328,16 @@ class TaskDBManager:
         result = self._execute_query(query, fetch=True)
         return result[0] if result else None
 
+    def get_task_by_id(self, task_id: int):
+        query = """
+        SELECT id, sequence, start_point, target_point, mission_content, status, mq_id, room_id
+        FROM tasks
+        WHERE id = %s
+        LIMIT 1;
+        """
+        result = self._execute_query(query, (task_id,), fetch=True)
+        return result[0] if result else None
+
     
     def get_highest_priority_task(self):
         query = """
@@ -379,6 +389,54 @@ class TaskDBManager:
         if new_status == "Completed":
             self._resequence_pending_tasks() 
             print("🔧 任務隊列重編號完成。")
+
+    def transition_task_status(self, task_id: int, from_status: str, to_status: str, command_sent: bool = None):
+        """Transition a task only if it is still in the expected state."""
+        if to_status == "Completed":
+            if command_sent is not None:
+                query = """
+                UPDATE tasks
+                SET status = %s, mir_command_sent = %s, sequence = 0
+                WHERE id = %s AND status = %s
+                RETURNING id;
+                """
+                params = (to_status, command_sent, task_id, from_status)
+            else:
+                query = """
+                UPDATE tasks
+                SET status = %s, sequence = 0
+                WHERE id = %s AND status = %s
+                RETURNING id;
+                """
+                params = (to_status, task_id, from_status)
+        else:
+            if command_sent is not None:
+                query = """
+                UPDATE tasks
+                SET status = %s, mir_command_sent = %s
+                WHERE id = %s AND status = %s
+                RETURNING id;
+                """
+                params = (to_status, command_sent, task_id, from_status)
+            else:
+                query = """
+                UPDATE tasks
+                SET status = %s
+                WHERE id = %s AND status = %s
+                RETURNING id;
+                """
+                params = (to_status, task_id, from_status)
+
+        rows = self._execute_query(query, params, fetch=True, commit=True)
+        updated = bool(rows)
+
+        if updated:
+            print(f"Transitioned task ID {task_id}: {from_status} -> {to_status}")
+            if to_status == "Completed":
+                self._resequence_pending_tasks()
+                print("Resequenced pending tasks after completion.")
+
+        return updated
 
     def _resequence_pending_tasks(self):
         """
