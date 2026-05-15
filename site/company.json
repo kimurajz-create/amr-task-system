@@ -191,10 +191,5 @@
       "display_name": "Demo_空車運輸",
       "scheduler_enabled": true
     }
-  ],
-  "_comment_quick_actions": "quick_actions 給少數固定按鈕直送任務使用，例如 exhibition_drink / exhibition_military。",
-  "quick_actions": {
-    "exhibition_drink": "Lobby Demo Seminar Presentation Jordan",
-    "exhibition_military": "Lobby Exhibition Demo Cart Transport"
-  }
+  ]
 }

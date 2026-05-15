@@ -3063,68 +3063,6 @@ QPushButton:hover {
      <string>MAP</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="btn_Start_Exhibition_Drink">
-    <property name="geometry">
-     <rect>
-      <x>1560</x>
-      <y>320</y>
-      <width>121</width>
-      <height>30</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <family>Noto Sans TC</family>
-      <pointsize>-1</pointsize>
-     </font>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">QPushButton {
-	background-color:#0678DD;
-    color: white;                  /* 白字 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 16px;               /* 字體大小 */
-}
-
-QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
-}</string>
-    </property>
-    <property name="text">
-     <string>大廳限定</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="btn_Start_Exhibition_Military">
-    <property name="geometry">
-     <rect>
-      <x>1720</x>
-      <y>320</y>
-      <width>121</width>
-      <height>30</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <family>Noto Sans TC</family>
-      <pointsize>-1</pointsize>
-     </font>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">QPushButton {
-	background-color:#0678DD;
-    color: white;                  /* 白字 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 16px;               /* 字體大小 */
-}
-
-QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
-}</string>
-    </property>
-    <property name="text">
-     <string>展場限定</string>
-    </property>
-   </widget>
    <zorder>frame_map</zorder>
    <zorder>btn_StartMission</zorder>
    <zorder>btn_StopMission1</zorder>
@@ -3140,8 +3078,6 @@ QPushButton:hover {
    <zorder>frame_temp</zorder>
    <zorder>btn_SelectDestination</zorder>
    <zorder>btn_SelectStart</zorder>
-   <zorder>btn_Start_Exhibition_Drink</zorder>
-   <zorder>btn_Start_Exhibition_Military</zorder>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>

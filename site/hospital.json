@@ -305,10 +305,5 @@
       "display_name": "Demo_國軍台中醫院載貨運輸",
       "scheduler_enabled": true
     }
-  ],
-  "_comment_quick_actions": "先覆蓋舊的 company fallback，避免醫院場域按到不存在的 demo mission。",
-  "quick_actions": {
-    "exhibition_drink": "Taichung Military Hospital Empty Cart Transport",
-    "exhibition_military": "Taichung Military Hospital Cart Transport"
-  }
+  ]
 }

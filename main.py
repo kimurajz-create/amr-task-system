@@ -157,7 +157,6 @@ def load_site_config(site_profile=None):
             "calibration": DEFAULT_SITE_CALIBRATION.copy(),
             "locations": [],
             "missions": [],
-            "quick_actions": {},
         }
 
     try:
@@ -174,7 +173,6 @@ def load_site_config(site_profile=None):
             "calibration": DEFAULT_SITE_CALIBRATION.copy(),
             "locations": [],
             "missions": [],
-            "quick_actions": {},
         }
 
     assets = DEFAULT_SITE_ASSETS.copy()
@@ -186,10 +184,9 @@ def load_site_config(site_profile=None):
     site_config["calibration"] = calibration
 
     # 這三個欄位是新 schema。
-    # 就算 hospital 還沒補資料，也先保證程式拿得到空陣列 / 空 dict，不會直接噴錯。
+    # 就算 hospital 還沒補資料，也先保證程式拿得到空陣列，不會直接噴錯。
     site_config.setdefault("locations", [])
     site_config.setdefault("missions", [])
-    site_config.setdefault("quick_actions", {})
     site_config.setdefault("site_id", site_profile)
     return site_config
 
@@ -300,13 +297,6 @@ MIR_LOCATION_MAP = {v: k for k, v in USER_LOCATION_MAP.items()}
 MIR_MISSION_GROUP_MAP = {v: k for k, v in USER_MISSION_GROUP_MAP.items()}
 
 CHARGING_STATION_NAME = "充電樁"
-EXHIBITION_DRINK_MISSION_NAME = "Lobby Demo Seminar Presentation Jordan"
-EXHIBITION_MILITARY_MISSION_NAME = "Lobby Exhibition Demo Cart Transport"
-
-LEGACY_QUICK_ACTIONS = {
-    "exhibition_drink": EXHIBITION_DRINK_MISSION_NAME,
-    "exhibition_military": EXHIBITION_MILITARY_MISSION_NAME,
-}
 
 
 def build_site_runtime_maps(site_config):
@@ -328,12 +318,10 @@ def build_site_runtime_maps(site_config):
         "location_to_marker": LOCATION_TO_MARKER.copy(),
         "required_mission_codes": set(REQUIRED_MISSION_CODES),
         "charging_station_name": CHARGING_STATION_NAME,
-        "quick_actions": LEGACY_QUICK_ACTIONS.copy(),
     }
 
     location_records = site_config.get("locations") or []
     mission_records = site_config.get("missions") or []
-    quick_actions = site_config.get("quick_actions") or {}
 
     user_location_map = {}
     location_to_marker = {}
@@ -397,13 +385,6 @@ def build_site_runtime_maps(site_config):
         runtime_maps["mir_mission_group_map"] = {v: k for k, v in user_mission_group_map.items()}
     if required_mission_codes:
         runtime_maps["required_mission_codes"] = required_mission_codes
-
-    if isinstance(quick_actions, dict) and quick_actions:
-        # quick_actions 專門給少數「按鈕直送任務」使用，
-        # 像 exhibition_drink / exhibition_military 這類特殊按鈕。
-        merged_quick_actions = LEGACY_QUICK_ACTIONS.copy()
-        merged_quick_actions.update(quick_actions)
-        runtime_maps["quick_actions"] = merged_quick_actions
 
     return runtime_maps
 
@@ -835,7 +816,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # site_runtime_maps = 新舊架構之間的過渡層。
         # UI / TaskThread 仍吃熟悉的 map，但來源已經優先改成 site config。
         self.site_runtime_maps = build_site_runtime_maps(self.site_config)
-        self.site_quick_actions = self.site_runtime_maps["quick_actions"]
         #########################################客製化title：穩健 ToolBar 方案########################################
         # 1. 創建客製化標題列的 QFrame
         #    這個 QFrame 包含了您設計的標題文字和最小化/最大化/關閉按鈕。
@@ -1115,8 +1095,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.btn_GetPM.hide() # 暫時隱藏
         self.btn_StopMission1.clicked.connect(self.on_stop_mission_clicked)
         self.btn_StopMission2.clicked.connect(self.on_stop_mission_clicked)
-        self.btn_Start_Exhibition_Drink.clicked.connect(self.on_start_mission_clicked_exhibition_drink)
-        self.btn_Start_Exhibition_Military.clicked.connect(self.on_start_mission_clicked_exhibition_military)
         self.btn_Reset.clicked.connect(self.on_reset_status_clicked)
         self.btn_save_ip.clicked.connect(self.on_save_ip_clicked)
         self.btn_IO_Up.clicked.connect(self.on_up_io_clicked)
@@ -1537,8 +1515,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.btn_SelectDestination.setGeometry(QRect(1790, 225, 91, 30))
 
         self.horizontalLayoutWidget.setGeometry(QRect(1220, 275, 561, 51))
-        self.btn_Start_Exhibition_Drink.setGeometry(QRect(1560, 355, 121, 30))
-        self.btn_Start_Exhibition_Military.setGeometry(QRect(1720, 355, 121, 30))
 
         self.btn_Emergency_Cut_Line.setGeometry(QRect(1220, 405, 316, 48))
         self.btn_Add_New_Mission.setGeometry(QRect(1560, 405, 316, 48))
@@ -2471,27 +2447,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         mission_guid = functions.get_mission_id(self.cmb_mission.currentText())
         functions.start_the_mission(mission_guid)
     
-    # 按鈕(執行大廳或展場任務) 
-    def on_start_mission_clicked_exhibition_drink(self):
-        # 特殊按鈕先讀 quick_actions，沒設定才退回舊 hardcode。
-        mission_name = self.site_quick_actions.get(
-            "exhibition_drink",
-            EXHIBITION_DRINK_MISSION_NAME,
-        )
-        mission_guid = functions.get_mission_id(mission_name)
-        functions.start_the_mission(mission_guid)
-
-    def on_start_mission_clicked_exhibition_military(self):
-        # 這樣不同場域只要改 JSON，不必再改按鈕邏輯。
-        mission_name = self.site_quick_actions.get(
-            "exhibition_military",
-            EXHIBITION_MILITARY_MISSION_NAME,
-        )
-        mission_guid = functions.get_mission_id(mission_name)
-        functions.start_the_mission(mission_guid)
-
-
-
     # 按鈕(執行相對移動任務)
     def on_relative_move_clicked(self):
         x = self.dsb_x.value()

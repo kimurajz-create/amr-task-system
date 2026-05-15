@@ -1370,34 +1370,6 @@ class Ui_MainWindow(object):
 "QPushButton:hover {\n"
 "    background-color: #1E70BF;     /* \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 */\n"
 "}")
-        self.btn_Start_Exhibition_Drink = QPushButton(self.centralwidget)
-        self.btn_Start_Exhibition_Drink.setObjectName(u"btn_Start_Exhibition_Drink")
-        self.btn_Start_Exhibition_Drink.setGeometry(QRect(1560, 320, 121, 30))
-        self.btn_Start_Exhibition_Drink.setFont(font1)
-        self.btn_Start_Exhibition_Drink.setStyleSheet(u"QPushButton {\n"
-"	background-color:#0678DD;\n"
-"    color: white;                  /* \u767d\u5b57 */\n"
-"    padding: 6px 12px;             /* \u5167\u8ddd */\n"
-"    font-size: 16px;               /* \u5b57\u9ad4\u5927\u5c0f */\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: #1E70BF;     /* \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 */\n"
-"}")
-        self.btn_Start_Exhibition_Military = QPushButton(self.centralwidget)
-        self.btn_Start_Exhibition_Military.setObjectName(u"btn_Start_Exhibition_Military")
-        self.btn_Start_Exhibition_Military.setGeometry(QRect(1720, 320, 121, 30))
-        self.btn_Start_Exhibition_Military.setFont(font1)
-        self.btn_Start_Exhibition_Military.setStyleSheet(u"QPushButton {\n"
-"	background-color:#0678DD;\n"
-"    color: white;                  /* \u767d\u5b57 */\n"
-"    padding: 6px 12px;             /* \u5167\u8ddd */\n"
-"    font-size: 16px;               /* \u5b57\u9ad4\u5927\u5c0f */\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: #1E70BF;     /* \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 */\n"
-"}")
         MainWindow.setCentralWidget(self.centralwidget)
         self.frame_map.raise_()
         self.btn_StartMission.raise_()
@@ -1414,8 +1386,6 @@ class Ui_MainWindow(object):
         self.frame_temp.raise_()
         self.btn_SelectDestination.raise_()
         self.btn_SelectStart.raise_()
-        self.btn_Start_Exhibition_Drink.raise_()
-        self.btn_Start_Exhibition_Military.raise_()
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
@@ -1538,7 +1508,5 @@ class Ui_MainWindow(object):
         self.label_8.setText(QCoreApplication.translate("MainWindow", u"check mir status", None))
         self.btn_SelectDestination.setText(QCoreApplication.translate("MainWindow", u"MAP", None))
         self.btn_SelectStart.setText(QCoreApplication.translate("MainWindow", u"MAP", None))
-        self.btn_Start_Exhibition_Drink.setText(QCoreApplication.translate("MainWindow", u"\u5927\u5ef3\u9650\u5b9a", None))
-        self.btn_Start_Exhibition_Military.setText(QCoreApplication.translate("MainWindow", u"\u5c55\u5834\u9650\u5b9a", None))
     # retranslateUi
 
