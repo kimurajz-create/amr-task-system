@@ -1053,6 +1053,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 【關鍵修正】設置窗口標誌，使其忽略滑鼠事件
         # Qt.WA_TransparentForMouseEvents 是用於 QWidget 的屬性，但 QLabel 繼承自 QWidget
         self.label_car_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.map_overlay_frames = {}
+        self._setup_main_map_overlay_containers()
                 
         # # 讀logo 暫時沒用到
         # self.icon_pixmap = QPixmap("./picture/aceicon1.png")
@@ -1139,6 +1141,115 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if child in {self.label_map_1, self.label_car_overlay}:
                 continue
             child.raise_()
+
+    def _create_map_overlay_frame(self, object_name):
+        overlay = QFrame(self.frame_map)
+        overlay.setObjectName(object_name)
+        overlay.setFrameShape(QFrame.StyledPanel)
+        overlay.setFrameShadow(QFrame.Raised)
+        overlay.setStyleSheet(
+            f"""
+            QFrame#{object_name} {{
+                background-color: rgba(5, 11, 18, 196);
+                border: 1px solid rgba(120, 170, 210, 140);
+                border-radius: 18px;
+            }}
+            """
+        )
+        overlay.show()
+        return overlay
+
+    def _build_main_map_overlay_specs(self):
+        top_right_widgets = [
+            self.horizontalLayoutWidget_6,
+            self.horizontalLayoutWidget_5,
+            self.horizontalLayoutWidget_4,
+            self.btn_SelectStart,
+            self.horizontalLayoutWidget_2,
+            self.btn_SelectDestination,
+            self.horizontalLayoutWidget,
+            self.btn_Emergency_Cut_Line,
+            self.btn_Add_New_Mission,
+        ]
+        bottom_right_widgets = [
+            self.lineEdit_PendingMission,
+            self.btn_StartMission,
+            self.btn_StopMission1,
+            self.frame_pending_mission_list,
+        ]
+        bottom_left_widgets = [
+            self.horizontalLayoutWidget_7,
+            self.horizontalLayoutWidget_8,
+            self.chb_map,
+            self.btn_SentRobotTo,
+            *(getattr(self, f"lbl_OR_Heartbeat_{index}") for index in range(1, 14)),
+            self.lineEdit_MessageAnnounce,
+            self.verticalLayoutWidget,
+        ]
+
+        return [
+            ("map_overlay_top_right", top_right_widgets, (20, 18, 20, 24)),
+            ("map_overlay_bottom_right", bottom_right_widgets, (20, 18, 20, 20)),
+            ("map_overlay_bottom_left", bottom_left_widgets, (20, 18, 20, 20)),
+        ]
+
+    def _get_widgets_bounds_in_frame_map(self, widgets):
+        bounds = None
+        for widget in widgets:
+            if widget is None:
+                continue
+            top_left = widget.mapTo(self.frame_map, QPoint(0, 0))
+            widget_rect = QRect(top_left, widget.size())
+            bounds = widget_rect if bounds is None else bounds.united(widget_rect)
+
+        return bounds if bounds is not None else QRect()
+
+    def _rehost_widget_into_overlay(self, widget, overlay):
+        top_left = widget.mapTo(self.frame_map, QPoint(0, 0))
+        local_top_left = top_left - overlay.pos()
+        widget.setParent(overlay)
+        widget.move(local_top_left)
+        widget.show()
+        widget.raise_()
+
+    def _set_frame_map_relative_geometry(self, widget, rect):
+        parent_widget = widget.parentWidget()
+        if parent_widget is None or parent_widget is self.centralwidget:
+            widget.setGeometry(rect)
+            return
+
+        if parent_widget is self.frame_map:
+            widget.setGeometry(rect)
+            return
+
+        local_top_left = parent_widget.mapFrom(self.frame_map, rect.topLeft())
+        widget.setGeometry(QRect(local_top_left, rect.size()))
+
+    def _setup_main_map_overlay_containers(self):
+        if self.map_overlay_frames:
+            return
+
+        for object_name, widgets, padding in self._build_main_map_overlay_specs():
+            overlay_bounds = self._get_widgets_bounds_in_frame_map(widgets)
+            if overlay_bounds.isNull():
+                continue
+
+            left_pad, top_pad, right_pad, bottom_pad = padding
+            overlay_rect = overlay_bounds.adjusted(
+                -left_pad,
+                -top_pad,
+                right_pad,
+                bottom_pad,
+            )
+            overlay = self._create_map_overlay_frame(object_name)
+            overlay.setGeometry(overlay_rect)
+
+            for widget in widgets:
+                self._rehost_widget_into_overlay(widget, overlay)
+
+            overlay.raise_()
+            self.map_overlay_frames[object_name] = overlay
+            setattr(self, object_name, overlay)
 
     def _get_main_map_scale(self):
         if not hasattr(self, "original_pixmap") or self.original_pixmap.isNull():
@@ -1566,23 +1677,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _adjust_status_area_layout(self):
         # Expand the status container so the second "Mission" line is not clipped.
-        self.horizontalLayoutWidget_5.setGeometry(QRect(1220, 60, 661, 86))
+        self._set_frame_map_relative_geometry(self.horizontalLayoutWidget_5, QRect(1220, 60, 661, 86))
 
         # Push the controls below the status area downward to avoid overlap.
-        self.horizontalLayoutWidget_4.setGeometry(QRect(1220, 155, 561, 51))
-        self.btn_SelectStart.setGeometry(QRect(1790, 165, 91, 30))
+        self._set_frame_map_relative_geometry(self.horizontalLayoutWidget_4, QRect(1220, 155, 561, 51))
+        self._set_frame_map_relative_geometry(self.btn_SelectStart, QRect(1790, 165, 91, 30))
 
-        self.horizontalLayoutWidget_2.setGeometry(QRect(1220, 215, 559, 51))
-        self.btn_SelectDestination.setGeometry(QRect(1790, 225, 91, 30))
+        self._set_frame_map_relative_geometry(self.horizontalLayoutWidget_2, QRect(1220, 215, 559, 51))
+        self._set_frame_map_relative_geometry(self.btn_SelectDestination, QRect(1790, 225, 91, 30))
 
-        self.horizontalLayoutWidget.setGeometry(QRect(1220, 275, 561, 51))
+        self._set_frame_map_relative_geometry(self.horizontalLayoutWidget, QRect(1220, 275, 561, 51))
 
-        self.btn_Emergency_Cut_Line.setGeometry(QRect(1220, 405, 316, 48))
-        self.btn_Add_New_Mission.setGeometry(QRect(1560, 405, 316, 48))
-        self.btn_StartMission.setGeometry(QRect(1740, 490, 31, 30))
-        self.btn_StopMission1.setGeometry(QRect(1780, 490, 31, 30))
-        self.lineEdit_PendingMission.setGeometry(QRect(1220, 475, 224, 40))
-        self.frame_pending_mission_list.setGeometry(QRect(1200, 535, 656, 476))
+        self._set_frame_map_relative_geometry(self.btn_Emergency_Cut_Line, QRect(1220, 405, 316, 48))
+        self._set_frame_map_relative_geometry(self.btn_Add_New_Mission, QRect(1560, 405, 316, 48))
+        self._set_frame_map_relative_geometry(self.btn_StartMission, QRect(1740, 490, 31, 30))
+        self._set_frame_map_relative_geometry(self.btn_StopMission1, QRect(1780, 490, 31, 30))
+        self._set_frame_map_relative_geometry(self.lineEdit_PendingMission, QRect(1220, 475, 224, 40))
+        self._set_frame_map_relative_geometry(self.frame_pending_mission_list, QRect(1200, 535, 656, 476))
 
     def api_error_handler(self):
         print("❌ API 異常")
