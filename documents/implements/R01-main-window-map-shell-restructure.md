@@ -5,7 +5,7 @@ title: Main Window Map Shell Restructure
 uuid: 665d0d866b8e449ca854f15554af3655
 version: v1
 planning: documents/planning/P01-main-window-map-overlay-redesign.md
-status: draft
+status: completed
 ---
 
 # R01 主畫面地圖骨架重組
@@ -148,6 +148,33 @@ P01 的第一階段目標是把主畫面的主要內容區改成由主地圖主�
 若 P2 開始實作且 overlay 容器職責變得明確，建議新增一份主畫面視覺骨架或地圖畫布相關模組文檔。
 
 ---
+
+## 11. Implementation Record
+
+### Final Behavior
+
+- The main map now fills the primary content area and acts as the P1 shell background.
+- `label_car_overlay` now follows the resized map container geometry.
+- Map click conversion and robot marker scaling now derive from the displayed map size instead of fixed constants.
+
+### Changed Files
+
+- `main.py`
+
+### Verification
+
+- Syntax validation passed for `main.py`, `ui_main.py`, and `functions.py` using in-memory compilation.
+- Manual UI check confirmed the map now occupies the main content area.
+- Manual UI check confirmed the existing right-side controls still render and initialize.
+
+### Known Limits
+
+- The top-right, bottom-right, and bottom-left sections still use the old visual grouping and are not yet true overlays.
+- Transparency styling and panel-scale behavior are still deferred to P2 and P3.
+
+### Next Step
+
+- Proceed to P2 and re-host the right-top, right-bottom, and left-bottom sections into overlay containers.
 
 ## TDD Refactoring Workflow
 

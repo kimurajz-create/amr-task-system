@@ -1068,6 +1068,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.last_robot_world_pos = None
         self.current_mir_state_id = None
         self.robot_glow_phase = 0
+        self._apply_main_map_shell_layout()
 
         # image_pts / world_pts 已從 main.py 硬編碼抽離到 site config。
         # 這裡只負責讀取目前場域的校正點，不改動後續 affine 計算邏輯。
@@ -1128,6 +1129,66 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # ----------------------------------------------------
     # ⭐ 客製化titlebar-標題列輔助方法 ⭐
     # ----------------------------------------------------
+    def _raise_map_foreground_widgets(self):
+        if not hasattr(self, "frame_map") or not hasattr(self, "label_car_overlay"):
+            return
+
+        for child in self.frame_map.children():
+            if not isinstance(child, QWidget):
+                continue
+            if child in {self.label_map_1, self.label_car_overlay}:
+                continue
+            child.raise_()
+
+    def _get_main_map_scale(self):
+        if not hasattr(self, "original_pixmap") or self.original_pixmap.isNull():
+            return 1.0, 1.0
+
+        pixmap_width = max(1, self.original_pixmap.width())
+        pixmap_height = max(1, self.original_pixmap.height())
+        return (
+            self.label_map_1.width() / pixmap_width,
+            self.label_map_1.height() / pixmap_height,
+        )
+
+    def _apply_main_map_shell_layout(self):
+        if not hasattr(self, "centralwidget") or not hasattr(self, "frame_map"):
+            return
+
+        shell_rect = self.centralwidget.rect()
+        if shell_rect.isNull():
+            return
+
+        self.frame_map.setMinimumSize(QSize(0, 0))
+        self.frame_map.setMaximumSize(QSize(16777215, 16777215))
+        self.frame_map.setGeometry(shell_rect)
+        self.frame_map.setStyleSheet("background-color: transparent;")
+
+        self.label_map_1.setMinimumSize(QSize(0, 0))
+        self.label_map_1.setMaximumSize(QSize(16777215, 16777215))
+        self.label_map_1.setGeometry(self.frame_map.rect())
+        self.label_map_1.setStyleSheet("border: none; background-color: #050B12;")
+        self.label_map_1.lower()
+
+        if hasattr(self, "label_car_overlay"):
+            self.label_car_overlay.setGeometry(self.label_map_1.geometry())
+            self.label_car_overlay.raise_()
+            self._raise_map_foreground_widgets()
+
+            if self.last_robot_world_pos is not None:
+                self.draw_car_position(*self.last_robot_world_pos)
+            elif self.last_click_overlay_pos is not None:
+                marker_pixmap = QPixmap(self.label_car_overlay.size())
+                marker_pixmap.fill(Qt.transparent)
+                marker_painter = QPainter(marker_pixmap)
+                self.draw_click_marker(marker_painter, *self.last_click_overlay_pos)
+                marker_painter.end()
+                self.label_car_overlay.setPixmap(marker_pixmap)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._apply_main_map_shell_layout()
+
     def _create_control_button(self, name, text):
         """創建視窗控制按鈕 (最小化, 最大化, 關閉)"""
 
@@ -2829,8 +2890,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # orig_width = 706  
         # orig_height = 469 
 
-        orig_width = 3216 
-        orig_height = 1824
+        orig_width = max(1, self.original_pixmap.width())
+        orig_height = max(1, self.original_pixmap.height())
 
         # 3. 繪圖畫布的當前尺寸 (self.label_car_overlay 的尺寸)
         current_width = self.label_car_overlay.width() # 應該是 1072
@@ -2946,8 +3007,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # 進行座標轉換和設定值
             relative_pos = self.label_map_1.mapFrom(self, event.pos())
             # 請保留您原有的縮放係數 (1.48 和 1.26)
-            x = relative_pos.x()/0.333
-            y = relative_pos.y()/0.333
+            scale_x, scale_y = self._get_main_map_scale()
+            x = relative_pos.x() / scale_x
+            y = relative_pos.y() / scale_y
             world_x, world_y = self.image_to_world(x, y)
             
             self.dsb_x_m.setValue(world_x)
