@@ -1225,6 +1225,199 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         local_top_left = parent_widget.mapFrom(self.frame_map, rect.topLeft())
         widget.setGeometry(QRect(local_top_left, rect.size()))
 
+    def _get_main_map_overlay_panel_rects(self):
+        if not hasattr(self, "frame_map"):
+            return {}
+
+        frame_width = self.frame_map.width()
+        frame_height = self.frame_map.height()
+        if frame_width <= 0 or frame_height <= 0:
+            return {}
+
+        margin = 20
+        panel_gap = 18
+
+        right_panel_width = min(700, max(640, frame_width // 3 + 40))
+        right_panel_x = frame_width - right_panel_width - margin
+
+        top_right_height = 470
+        bottom_right_height = 430
+        top_right_rect = QRect(right_panel_x, 16, right_panel_width, top_right_height)
+        bottom_right_rect = QRect(
+            right_panel_x,
+            frame_height - bottom_right_height - margin,
+            right_panel_width,
+            bottom_right_height,
+        )
+
+        available_left_width = max(
+            820,
+            bottom_right_rect.left() - margin - panel_gap,
+        )
+        bottom_left_height = 260
+        bottom_left_rect = QRect(
+            margin,
+            frame_height - bottom_left_height - margin,
+            available_left_width,
+            bottom_left_height,
+        )
+
+        return {
+            "map_overlay_top_right": top_right_rect,
+            "map_overlay_bottom_right": bottom_right_rect,
+            "map_overlay_bottom_left": bottom_left_rect,
+        }
+
+    def _apply_top_right_overlay_layout(self, overlay_rect):
+        content_width = overlay_rect.width() - 40
+        control_width = overlay_rect.width() - 140
+        button_x = overlay_rect.right() - 20 - 91 + 1
+        primary_button_width = (overlay_rect.width() - 60) // 2
+        secondary_button_width = overlay_rect.width() - 60 - primary_button_width
+        button_y = overlay_rect.bottom() - 20 - 48 + 1
+
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_6,
+            QRect(overlay_rect.left() + 20, overlay_rect.top() + 18, content_width, 51),
+        )
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_5,
+            QRect(overlay_rect.left() + 20, overlay_rect.top() + 82, content_width, 92),
+        )
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_4,
+            QRect(overlay_rect.left() + 20, overlay_rect.top() + 184, control_width, 51),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_SelectStart,
+            QRect(button_x, overlay_rect.top() + 194, 91, 30),
+        )
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_2,
+            QRect(overlay_rect.left() + 20, overlay_rect.top() + 244, control_width, 51),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_SelectDestination,
+            QRect(button_x, overlay_rect.top() + 254, 91, 30),
+        )
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget,
+            QRect(overlay_rect.left() + 20, overlay_rect.top() + 304, content_width, 51),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_Emergency_Cut_Line,
+            QRect(overlay_rect.left() + 20, button_y, primary_button_width, 48),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_Add_New_Mission,
+            QRect(
+                overlay_rect.left() + 40 + primary_button_width,
+                button_y,
+                secondary_button_width,
+                48,
+            ),
+        )
+
+    def _apply_bottom_right_overlay_layout(self, overlay_rect):
+        title_y = overlay_rect.top() + 18
+        list_y = overlay_rect.top() + 74
+        list_height = overlay_rect.height() - 94
+
+        self._set_frame_map_relative_geometry(
+            self.lineEdit_PendingMission,
+            QRect(overlay_rect.left() + 20, title_y, 300, 40),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_StartMission,
+            QRect(overlay_rect.right() - 79, title_y + 6, 31, 30),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_StopMission1,
+            QRect(overlay_rect.right() - 39, title_y + 6, 31, 30),
+        )
+        self._set_frame_map_relative_geometry(
+            self.frame_pending_mission_list,
+            QRect(overlay_rect.left() + 20, list_y, overlay_rect.width() - 40, list_height),
+        )
+
+    def _apply_bottom_left_overlay_layout(self, overlay_rect):
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_7,
+            QRect(overlay_rect.left() + 20, overlay_rect.top() + 18, 112, 31),
+        )
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_8,
+            QRect(overlay_rect.left() + 140, overlay_rect.top() + 18, 112, 31),
+        )
+        self._set_frame_map_relative_geometry(
+            self.chb_map,
+            QRect(overlay_rect.right() - 230, overlay_rect.top() + 18, 150, 31),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_SentRobotTo,
+            QRect(overlay_rect.right() - 60, overlay_rect.top() + 18, 36, 31),
+        )
+
+        heartbeat_top_y = overlay_rect.top() + 14
+        heartbeat_bottom_y = overlay_rect.top() + 58
+        heartbeat_start_x = overlay_rect.left() + 210
+        heartbeat_step = 100
+        for index in range(6):
+            widget = getattr(self, f"lbl_OR_Heartbeat_{index + 1}")
+            self._set_frame_map_relative_geometry(
+                widget,
+                QRect(heartbeat_start_x + index * heartbeat_step, heartbeat_top_y, 91, 41),
+            )
+        for index in range(7):
+            widget = getattr(self, f"lbl_OR_Heartbeat_{index + 7}")
+            self._set_frame_map_relative_geometry(
+                widget,
+                QRect(heartbeat_start_x + index * heartbeat_step, heartbeat_bottom_y, 91, 41),
+            )
+
+        self._set_frame_map_relative_geometry(
+            self.lineEdit_MessageAnnounce,
+            QRect(overlay_rect.left() + 20, overlay_rect.top() + 104, 120, 24),
+        )
+        self._set_frame_map_relative_geometry(
+            self.verticalLayoutWidget,
+            QRect(
+                overlay_rect.left() + 20,
+                overlay_rect.top() + 132,
+                overlay_rect.width() - 40,
+                overlay_rect.height() - 152,
+            ),
+        )
+
+        self.listWidget_msg.setMinimumSize(QSize(0, 0))
+        self.listWidget_msg.setMaximumSize(QSize(16777215, 16777215))
+
+    def _apply_main_map_overlay_panel_layouts(self):
+        if not hasattr(self, "map_overlay_frames"):
+            return
+
+        overlay_rects = self._get_main_map_overlay_panel_rects()
+        if not overlay_rects:
+            return
+
+        top_right_overlay = self.map_overlay_frames.get("map_overlay_top_right")
+        if top_right_overlay is not None:
+            top_right_rect = overlay_rects["map_overlay_top_right"]
+            top_right_overlay.setGeometry(top_right_rect)
+            self._apply_top_right_overlay_layout(top_right_rect)
+
+        bottom_right_overlay = self.map_overlay_frames.get("map_overlay_bottom_right")
+        if bottom_right_overlay is not None:
+            bottom_right_rect = overlay_rects["map_overlay_bottom_right"]
+            bottom_right_overlay.setGeometry(bottom_right_rect)
+            self._apply_bottom_right_overlay_layout(bottom_right_rect)
+
+        bottom_left_overlay = self.map_overlay_frames.get("map_overlay_bottom_left")
+        if bottom_left_overlay is not None:
+            bottom_left_rect = overlay_rects["map_overlay_bottom_left"]
+            bottom_left_overlay.setGeometry(bottom_left_rect)
+            self._apply_bottom_left_overlay_layout(bottom_left_rect)
+
     def _setup_main_map_overlay_containers(self):
         if self.map_overlay_frames:
             return
@@ -1284,6 +1477,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if hasattr(self, "label_car_overlay"):
             self.label_car_overlay.setGeometry(self.label_map_1.geometry())
             self.label_car_overlay.raise_()
+            if hasattr(self, "map_overlay_frames"):
+                self._apply_main_map_overlay_panel_layouts()
             self._raise_map_foreground_widgets()
 
             if self.last_robot_world_pos is not None:
@@ -1676,24 +1871,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_Status_1.setToolTip(f"Mission: {mission_line}")
 
     def _adjust_status_area_layout(self):
-        # Expand the status container so the second "Mission" line is not clipped.
-        self._set_frame_map_relative_geometry(self.horizontalLayoutWidget_5, QRect(1220, 60, 661, 86))
-
-        # Push the controls below the status area downward to avoid overlap.
-        self._set_frame_map_relative_geometry(self.horizontalLayoutWidget_4, QRect(1220, 155, 561, 51))
-        self._set_frame_map_relative_geometry(self.btn_SelectStart, QRect(1790, 165, 91, 30))
-
-        self._set_frame_map_relative_geometry(self.horizontalLayoutWidget_2, QRect(1220, 215, 559, 51))
-        self._set_frame_map_relative_geometry(self.btn_SelectDestination, QRect(1790, 225, 91, 30))
-
-        self._set_frame_map_relative_geometry(self.horizontalLayoutWidget, QRect(1220, 275, 561, 51))
-
-        self._set_frame_map_relative_geometry(self.btn_Emergency_Cut_Line, QRect(1220, 405, 316, 48))
-        self._set_frame_map_relative_geometry(self.btn_Add_New_Mission, QRect(1560, 405, 316, 48))
-        self._set_frame_map_relative_geometry(self.btn_StartMission, QRect(1740, 490, 31, 30))
-        self._set_frame_map_relative_geometry(self.btn_StopMission1, QRect(1780, 490, 31, 30))
-        self._set_frame_map_relative_geometry(self.lineEdit_PendingMission, QRect(1220, 475, 224, 40))
-        self._set_frame_map_relative_geometry(self.frame_pending_mission_list, QRect(1200, 535, 656, 476))
+        self._apply_main_map_overlay_panel_layouts()
 
     def api_error_handler(self):
         print("❌ API 異常")
