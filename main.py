@@ -788,6 +788,59 @@ class NotificationItem(QWidget):
         # 將關閉按鈕存為屬性，供外部連接訊號
         self.close_button = close_btn
 
+class CompactNotificationItem(QWidget):
+    def __init__(self, notification_type, message, parent=None):
+        super().__init__(parent)
+
+        palette_map = {
+            "摰?": ("rgba(16, 104, 70, 230)", "rgba(95, 210, 154, 220)", "OK"),
+            "霅血?": ("rgba(125, 85, 18, 230)", "rgba(255, 196, 72, 220)", "!"),
+        }
+        bg_color, border_color, icon_text = palette_map.get(
+            notification_type,
+            ("rgba(120, 36, 52, 230)", "rgba(255, 122, 146, 220)", "X"),
+        )
+
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {bg_color};
+                border: 1px solid {border_color};
+                border-radius: 12px;
+                color: #F4F7FB;
+            }}
+        """)
+
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(10, 8, 10, 8)
+        main_layout.setSpacing(8)
+
+        icon_label = QLabel(icon_text)
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setFixedSize(24, 24)
+        icon_label.setStyleSheet(
+            "font-size: 11px; font-weight: 700; color: #F7FAFF; "
+            "background-color: rgba(255, 255, 255, 0.16); border-radius: 12px;"
+        )
+        main_layout.addWidget(icon_label)
+
+        message_label = QLabel(message)
+        message_label.setWordWrap(True)
+        message_label.setTextFormat(Qt.RichText)
+        message_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        message_label.setStyleSheet("font-size: 12px; color: #F4F7FB; background: transparent;")
+        main_layout.addWidget(message_label)
+
+        close_btn = QPushButton("×")
+        close_btn.setFixedSize(18, 18)
+        close_btn.setStyleSheet(
+            "QPushButton { border: none; font-size: 14px; font-weight: 700; "
+            "color: rgba(244, 247, 251, 0.78); background-color: transparent; }"
+            "QPushButton:hover { color: #FFFFFF; }"
+        )
+        main_layout.addWidget(close_btn)
+
+        self.close_button = close_btn
+
 class MainWindow(QMainWindow, Ui_MainWindow):
     # 主函式
     def __init__(self, username, user_db_manager, task_db_manager):
@@ -1055,6 +1108,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_car_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.map_overlay_frames = {}
         self._setup_main_map_overlay_containers()
+        self._apply_main_map_overlay_theme()
                 
         # # 讀logo 暫時沒用到
         # self.icon_pixmap = QPixmap("./picture/aceicon1.png")
@@ -1147,17 +1201,309 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         overlay.setObjectName(object_name)
         overlay.setFrameShape(QFrame.StyledPanel)
         overlay.setFrameShadow(QFrame.Raised)
+        overlay.setAttribute(Qt.WA_StyledBackground, True)
         overlay.setStyleSheet(
             f"""
             QFrame#{object_name} {{
-                background-color: rgba(5, 11, 18, 196);
-                border: 1px solid rgba(120, 170, 210, 140);
-                border-radius: 18px;
+                background-color: rgba(7, 15, 26, 218);
+                border: 1px solid rgba(138, 182, 219, 118);
+                border-radius: 16px;
             }}
             """
         )
         overlay.show()
         return overlay
+
+    def _build_overlay_button_qss(self, variant="secondary", icon_only=False):
+        if variant == "primary":
+            bg_color = "#1790FF"
+            hover_color = "#36A1FF"
+            border_color = "#1790FF"
+            text_color = "#FFFFFF"
+        elif variant == "danger":
+            bg_color = "rgba(184, 49, 75, 0.18)"
+            hover_color = "rgba(208, 68, 96, 0.28)"
+            border_color = "rgba(255, 132, 157, 0.56)"
+            text_color = "#FFD8DE"
+        elif variant == "ghost":
+            bg_color = "rgba(255, 255, 255, 0.06)"
+            hover_color = "rgba(255, 255, 255, 0.12)"
+            border_color = "rgba(149, 190, 225, 0.28)"
+            text_color = "#EAF2FD"
+        else:
+            bg_color = "rgba(23, 144, 255, 0.12)"
+            hover_color = "rgba(23, 144, 255, 0.22)"
+            border_color = "rgba(95, 178, 255, 0.42)"
+            text_color = "#EAF4FF"
+
+        radius = 11 if not icon_only else 10
+        padding = "0px" if icon_only else "0 12px"
+        font_size = "13px" if not icon_only else "12px"
+
+        return f"""
+        QPushButton {{
+            background-color: {bg_color};
+            color: {text_color};
+            border: 1px solid {border_color};
+            border-radius: {radius}px;
+            padding: {padding};
+            font-size: {font_size};
+            font-weight: 600;
+        }}
+        QPushButton:hover {{
+            background-color: {hover_color};
+        }}
+        QPushButton:disabled {{
+            background-color: rgba(255, 255, 255, 0.05);
+            color: rgba(234, 244, 255, 0.36);
+            border: 1px solid rgba(149, 190, 225, 0.16);
+        }}
+        """
+
+    def _build_overlay_input_qss(self, title=False):
+        if title:
+            return """
+            QLineEdit {
+                color: #F2F7FF;
+                background: transparent;
+                border: none;
+                font-size: 18px;
+                font-weight: 700;
+                padding: 0px;
+            }
+            """
+
+        return """
+        QLineEdit {
+            color: #EAF4FF;
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(150, 190, 225, 0.22);
+            border-radius: 10px;
+            font-size: 13px;
+            padding: 0 12px;
+        }
+        """
+
+    def _build_overlay_combo_qss(self):
+        return """
+        QComboBox {
+            color: #EAF4FF;
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(150, 190, 225, 0.22);
+            border-radius: 10px;
+            font-size: 13px;
+            padding: 0 12px;
+        }
+        QComboBox::drop-down {
+            border: none;
+            width: 24px;
+            background: transparent;
+        }
+        QComboBox QAbstractItemView {
+            background-color: #0B1828;
+            color: #EAF4FF;
+            border: 1px solid rgba(95, 178, 255, 0.30);
+            selection-background-color: rgba(23, 144, 255, 0.28);
+        }
+        """
+
+    def _build_compact_status_label_qss(self, color):
+        return (
+            f"color: {color}; font-size: 18px; font-weight: 700; "
+            "background-color: transparent;"
+        )
+
+    def _heartbeat_label_qss(self, text_color, border_color):
+        return (
+            "color: {text_color}; font-size: 11px; font-weight: 700; "
+            "background-color: rgba(255, 255, 255, 0.92); "
+            "border: 1px solid {border_color}; border-radius: 8px; padding: 2px 4px;"
+        ).format(text_color=text_color, border_color=border_color)
+
+    def _set_battery_progress_style(self, color):
+        self.progressBar_battery.setStyleSheet(f"""
+        QProgressBar {{
+            color: #EAF4FF;
+            background-color: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(150, 190, 225, 0.24);
+            border-radius: 9px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+        }}
+        QProgressBar::chunk {{
+            background-color: {color};
+            border-radius: 8px;
+        }}
+        """)
+
+    def _apply_main_map_overlay_theme(self):
+        self.label_Status_1.setMinimumWidth(280)
+        self.label_Status_1.setMaximumWidth(320)
+        self.label_Status_1.setMinimumHeight(44)
+        self.label_Status_1.setMaximumHeight(56)
+        self.label_Status_1.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.label_Status_1.setStyleSheet(self._build_compact_status_label_qss("#7CFFB2"))
+
+        self.lineEdit_MiR250_A.setStyleSheet(
+            "color: #F2F7FF; font-size: 24px; font-weight: 700; background: transparent;"
+        )
+        self.lineEdit_MiR250_A.setMinimumSize(QSize(128, 40))
+        self.lineEdit_MiR250_A.setMaximumSize(QSize(140, 40))
+
+        self.progressBar_battery.setMinimumSize(QSize(88, 20))
+        self.progressBar_battery.setMaximumSize(QSize(96, 20))
+        self._set_battery_progress_style("#3DDC97")
+
+        for button in (self.btn_ChargeMission, self.btn_Reset):
+            button.setMinimumSize(QSize(88, 32))
+            button.setMaximumSize(QSize(96, 32))
+            button.setStyleSheet(self._build_overlay_button_qss("danger"))
+
+        self.lineEdit_IP.setMinimumSize(QSize(126, 34))
+        self.lineEdit_IP.setMaximumSize(QSize(150, 34))
+        self.lineEdit_IP.setStyleSheet(self._build_overlay_input_qss())
+        self.btn_save_ip.setMinimumSize(QSize(34, 34))
+        self.btn_save_ip.setMaximumSize(QSize(34, 34))
+        self.btn_save_ip.setStyleSheet(self._build_overlay_button_qss("ghost", icon_only=True))
+
+        for label in (self.label_6, self.label, self.label_3):
+            label.setMinimumSize(QSize(90, 20))
+            label.setMaximumSize(QSize(110, 20))
+            label.setStyleSheet("color: rgba(226, 236, 248, 0.78); font-size: 13px; font-weight: 600;")
+
+        for combo in (self.cmb_location2, self.cmb_location, self.cmb_mission):
+            combo.setMinimumHeight(38)
+            combo.setMaximumHeight(38)
+            combo.setMinimumWidth(0)
+            combo.setMaximumWidth(16777215)
+            combo.setStyleSheet(self._build_overlay_combo_qss())
+
+        for button in (self.btn_SelectStart, self.btn_SelectDestination):
+            button.setMinimumSize(QSize(64, 32))
+            button.setMaximumSize(QSize(64, 32))
+            button.setStyleSheet(self._build_overlay_button_qss("ghost"))
+
+        self.btn_Emergency_Cut_Line.setStyleSheet(self._build_overlay_button_qss("danger"))
+        self.btn_Add_New_Mission.setStyleSheet(self._build_overlay_button_qss("primary"))
+
+        self.lineEdit_PendingMission.setStyleSheet(self._build_overlay_input_qss(title=True))
+        self.lineEdit_PendingMission.setMinimumSize(QSize(180, 32))
+        self.lineEdit_PendingMission.setMaximumSize(QSize(220, 32))
+
+        for button in (self.btn_StartMission, self.btn_StopMission1):
+            button.setMinimumSize(QSize(34, 34))
+            button.setMaximumSize(QSize(34, 34))
+        self.btn_StartMission.setStyleSheet(self._build_overlay_button_qss("primary", icon_only=True))
+        self.btn_StopMission1.setStyleSheet(self._build_overlay_button_qss("danger", icon_only=True))
+
+        self.frame_pending_mission_list.setStyleSheet("border: none; background: transparent;")
+        self.tableWidget_pending_mission_list.setStyleSheet("""
+        QTableWidget {
+            background-color: rgba(7, 16, 27, 0.76);
+            alternate-background-color: rgba(255, 255, 255, 0.03);
+            color: #EAF4FF;
+            border: 1px solid rgba(150, 190, 225, 0.18);
+            border-radius: 12px;
+            gridline-color: rgba(150, 190, 225, 0.10);
+            font-size: 11px;
+        }
+        QTableWidget::item {
+            padding: 4px;
+            border-bottom: 1px solid rgba(150, 190, 225, 0.08);
+        }
+        QHeaderView::section {
+            background-color: rgba(255, 255, 255, 0.06);
+            color: rgba(234, 244, 255, 0.82);
+            padding: 4px;
+            border: none;
+            border-bottom: 1px solid rgba(150, 190, 225, 0.16);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        """)
+        self.tableWidget_pending_mission_list.setAlternatingRowColors(True)
+        self.tableWidget_pending_mission_list.verticalHeader().setDefaultSectionSize(42)
+        self.tableWidget_pending_mission_list.horizontalHeader().setDefaultSectionSize(68)
+        self.tableWidget_pending_mission_list.horizontalHeader().setMinimumSectionSize(22)
+
+        self.lineEdit_MessageAnnounce.setStyleSheet(
+            "color: rgba(226, 236, 248, 0.78); font-size: 12px; font-weight: 700; background: transparent;"
+        )
+        self.lineEdit_MessageAnnounce.setMinimumSize(QSize(100, 20))
+        self.lineEdit_MessageAnnounce.setMaximumSize(QSize(120, 20))
+
+        for layout in (self.horizontalLayout_4, self.horizontalLayout_8):
+            layout.setSpacing(6)
+
+        for dot, color in (
+            (self.lineEdit_MessageAnnounce_6, "#42BE57"),
+            (self.lineEdit_MessageAnnounce_7, "#FF9D2F"),
+        ):
+            dot.setMinimumSize(QSize(10, 10))
+            dot.setMaximumSize(QSize(10, 10))
+            dot.setAlignment(Qt.AlignCenter)
+            dot.setStyleSheet(
+                f"background-color: {color}; color: transparent; border-radius: 5px; border: none;"
+            )
+
+        for label in (self.lineEdit_current_tasks, self.lineEdit_pending_tasks):
+            label.setMinimumHeight(20)
+            label.setMaximumHeight(20)
+            label.setStyleSheet(
+                "color: rgba(226, 236, 248, 0.78); font-size: 12px; font-weight: 600; background: transparent;"
+            )
+
+        self.chb_map.setMinimumSize(QSize(120, 30))
+        self.chb_map.setMaximumSize(QSize(126, 30))
+        self.chb_map.setStyleSheet("""
+        QCheckBox {
+            color: #EAF4FF;
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(150, 190, 225, 0.22);
+            border-radius: 10px;
+            padding: 0 10px;
+            font-size: 12px;
+            spacing: 8px;
+        }
+        QCheckBox::indicator {
+            width: 14px;
+            height: 14px;
+            background-color: transparent;
+            border: 1px solid rgba(234, 244, 255, 0.72);
+            border-radius: 4px;
+        }
+        QCheckBox::indicator:checked {
+            background-color: #1790FF;
+            image: url(:/icons/icons/check.svg);
+        }
+        """)
+
+        self.btn_SentRobotTo.setMinimumSize(QSize(34, 30))
+        self.btn_SentRobotTo.setMaximumSize(QSize(34, 30))
+        self.btn_SentRobotTo.setStyleSheet(self._build_overlay_button_qss("primary", icon_only=True))
+
+        for index in range(1, 14):
+            label = getattr(self, f"lbl_OR_Heartbeat_{index}")
+            label.setWordWrap(True)
+            label.setAlignment(Qt.AlignCenter)
+            label.setMinimumSize(QSize(56, 34))
+            label.setMaximumSize(QSize(60, 34))
+            label.setStyleSheet(self._heartbeat_label_qss("#5A6573", "#B7C7D9"))
+
+        self.listWidget_msg.setStyleSheet("""
+        QListWidget {
+            border: 1px solid rgba(150, 190, 225, 0.20);
+            border-radius: 12px;
+            padding: 0px;
+            background-color: rgba(7, 16, 27, 0.86);
+        }
+        QListWidget::item {
+            margin: 2px;
+            padding: 0px;
+        }
+        """)
+        self.listWidget_msg.setSpacing(2)
 
     def _build_main_map_overlay_specs(self):
         top_right_widgets = [
@@ -1234,15 +1580,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if frame_width <= 0 or frame_height <= 0:
             return {}
 
-        margin = 20
-        panel_gap = 18
+        margin = 16
+        panel_gap = 14
 
-        right_panel_width = min(700, max(640, frame_width // 3 + 40))
+        right_panel_width = min(560, max(480, frame_width // 4 + 72))
         right_panel_x = frame_width - right_panel_width - margin
 
-        top_right_height = 470
-        bottom_right_height = 430
-        top_right_rect = QRect(right_panel_x, 16, right_panel_width, top_right_height)
+        top_right_height = 346
+        bottom_right_height = 314
+        top_right_rect = QRect(right_panel_x, margin, right_panel_width, top_right_height)
         bottom_right_rect = QRect(
             right_panel_x,
             frame_height - bottom_right_height - margin,
@@ -1251,10 +1597,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
         available_left_width = max(
-            820,
-            bottom_right_rect.left() - margin - panel_gap,
+            520,
+            min(760, bottom_right_rect.left() - margin - panel_gap),
         )
-        bottom_left_height = 260
+        bottom_left_height = 198
         bottom_left_rect = QRect(
             margin,
             frame_height - bottom_left_height - margin,
@@ -1269,123 +1615,136 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         }
 
     def _apply_top_right_overlay_layout(self, overlay_rect):
-        content_width = overlay_rect.width() - 40
-        control_width = overlay_rect.width() - 140
-        button_x = overlay_rect.right() - 20 - 91 + 1
-        primary_button_width = (overlay_rect.width() - 60) // 2
-        secondary_button_width = overlay_rect.width() - 60 - primary_button_width
-        button_y = overlay_rect.bottom() - 20 - 48 + 1
+        panel_padding = 16
+        row_gap = 8
+        button_gap = 10
+        map_button_width = 64
+        row_height = 40
+        header_height = 42
+        status_height = 52
+        content_width = overlay_rect.width() - panel_padding * 2
+        control_width = content_width - map_button_width - 10
+        button_x = overlay_rect.right() - panel_padding - map_button_width + 1
+        primary_button_width = (content_width - button_gap) // 2
+        secondary_button_width = content_width - primary_button_width - button_gap
+        top_y = overlay_rect.top() + panel_padding
+        row_2_y = top_y + header_height + row_gap
+        row_3_y = row_2_y + status_height + row_gap
+        row_4_y = row_3_y + row_height + row_gap
+        row_5_y = row_4_y + row_height + row_gap
+        button_y = overlay_rect.bottom() - panel_padding - 40 + 1
 
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget_6,
-            QRect(overlay_rect.left() + 20, overlay_rect.top() + 18, content_width, 51),
+            QRect(overlay_rect.left() + panel_padding, top_y, content_width, header_height),
         )
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget_5,
-            QRect(overlay_rect.left() + 20, overlay_rect.top() + 82, content_width, 92),
+            QRect(overlay_rect.left() + panel_padding, row_2_y, content_width, status_height),
         )
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget_4,
-            QRect(overlay_rect.left() + 20, overlay_rect.top() + 184, control_width, 51),
+            QRect(overlay_rect.left() + panel_padding, row_3_y, control_width, row_height),
         )
         self._set_frame_map_relative_geometry(
             self.btn_SelectStart,
-            QRect(button_x, overlay_rect.top() + 194, 91, 30),
+            QRect(button_x, row_3_y + 4, map_button_width, 32),
         )
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget_2,
-            QRect(overlay_rect.left() + 20, overlay_rect.top() + 244, control_width, 51),
+            QRect(overlay_rect.left() + panel_padding, row_4_y, control_width, row_height),
         )
         self._set_frame_map_relative_geometry(
             self.btn_SelectDestination,
-            QRect(button_x, overlay_rect.top() + 254, 91, 30),
+            QRect(button_x, row_4_y + 4, map_button_width, 32),
         )
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget,
-            QRect(overlay_rect.left() + 20, overlay_rect.top() + 304, content_width, 51),
+            QRect(overlay_rect.left() + panel_padding, row_5_y, content_width, row_height),
         )
         self._set_frame_map_relative_geometry(
             self.btn_Emergency_Cut_Line,
-            QRect(overlay_rect.left() + 20, button_y, primary_button_width, 48),
+            QRect(overlay_rect.left() + panel_padding, button_y, primary_button_width, 40),
         )
         self._set_frame_map_relative_geometry(
             self.btn_Add_New_Mission,
             QRect(
-                overlay_rect.left() + 40 + primary_button_width,
+                overlay_rect.left() + panel_padding + primary_button_width + button_gap,
                 button_y,
                 secondary_button_width,
-                48,
+                40,
             ),
         )
 
     def _apply_bottom_right_overlay_layout(self, overlay_rect):
-        title_y = overlay_rect.top() + 18
-        list_y = overlay_rect.top() + 74
-        list_height = overlay_rect.height() - 94
+        panel_padding = 16
+        title_y = overlay_rect.top() + panel_padding
+        list_y = overlay_rect.top() + 58
+        list_height = overlay_rect.height() - 74
 
         self._set_frame_map_relative_geometry(
             self.lineEdit_PendingMission,
-            QRect(overlay_rect.left() + 20, title_y, 300, 40),
+            QRect(overlay_rect.left() + panel_padding, title_y, 220, 32),
         )
         self._set_frame_map_relative_geometry(
             self.btn_StartMission,
-            QRect(overlay_rect.right() - 79, title_y + 6, 31, 30),
+            QRect(overlay_rect.right() - 84, title_y, 34, 34),
         )
         self._set_frame_map_relative_geometry(
             self.btn_StopMission1,
-            QRect(overlay_rect.right() - 39, title_y + 6, 31, 30),
+            QRect(overlay_rect.right() - 44, title_y, 34, 34),
         )
         self._set_frame_map_relative_geometry(
             self.frame_pending_mission_list,
-            QRect(overlay_rect.left() + 20, list_y, overlay_rect.width() - 40, list_height),
+            QRect(overlay_rect.left() + panel_padding, list_y, overlay_rect.width() - panel_padding * 2, list_height),
         )
 
     def _apply_bottom_left_overlay_layout(self, overlay_rect):
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget_7,
-            QRect(overlay_rect.left() + 20, overlay_rect.top() + 18, 112, 31),
+            QRect(overlay_rect.left() + 16, overlay_rect.top() + 16, 92, 24),
         )
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget_8,
-            QRect(overlay_rect.left() + 140, overlay_rect.top() + 18, 112, 31),
+            QRect(overlay_rect.left() + 114, overlay_rect.top() + 16, 92, 24),
         )
         self._set_frame_map_relative_geometry(
             self.chb_map,
-            QRect(overlay_rect.right() - 230, overlay_rect.top() + 18, 150, 31),
+            QRect(overlay_rect.right() - 178, overlay_rect.top() + 14, 126, 30),
         )
         self._set_frame_map_relative_geometry(
             self.btn_SentRobotTo,
-            QRect(overlay_rect.right() - 60, overlay_rect.top() + 18, 36, 31),
+            QRect(overlay_rect.right() - 42, overlay_rect.top() + 14, 34, 30),
         )
 
-        heartbeat_top_y = overlay_rect.top() + 14
-        heartbeat_bottom_y = overlay_rect.top() + 58
-        heartbeat_start_x = overlay_rect.left() + 210
-        heartbeat_step = 100
+        heartbeat_top_y = overlay_rect.top() + 12
+        heartbeat_bottom_y = overlay_rect.top() + 52
+        heartbeat_start_x = overlay_rect.left() + 220
+        heartbeat_step = 62
         for index in range(6):
             widget = getattr(self, f"lbl_OR_Heartbeat_{index + 1}")
             self._set_frame_map_relative_geometry(
                 widget,
-                QRect(heartbeat_start_x + index * heartbeat_step, heartbeat_top_y, 91, 41),
+                QRect(heartbeat_start_x + index * heartbeat_step, heartbeat_top_y, 56, 34),
             )
         for index in range(7):
             widget = getattr(self, f"lbl_OR_Heartbeat_{index + 7}")
             self._set_frame_map_relative_geometry(
                 widget,
-                QRect(heartbeat_start_x + index * heartbeat_step, heartbeat_bottom_y, 91, 41),
+                QRect(heartbeat_start_x + index * heartbeat_step, heartbeat_bottom_y, 56, 34),
             )
 
         self._set_frame_map_relative_geometry(
             self.lineEdit_MessageAnnounce,
-            QRect(overlay_rect.left() + 20, overlay_rect.top() + 104, 120, 24),
+            QRect(overlay_rect.left() + 16, overlay_rect.top() + 96, 120, 20),
         )
         self._set_frame_map_relative_geometry(
             self.verticalLayoutWidget,
             QRect(
-                overlay_rect.left() + 20,
-                overlay_rect.top() + 132,
-                overlay_rect.width() - 40,
-                overlay_rect.height() - 152,
+                overlay_rect.left() + 16,
+                overlay_rect.top() + 120,
+                overlay_rect.width() - 32,
+                overlay_rect.height() - 136,
             ),
         )
 
@@ -1815,7 +2174,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             label_text = f"{label_text}\nMission: {self.current_mission_text}"
 
         self.label_Status_1.setText(label_text)
-        self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+        self.label_Status_1.setStyleSheet(self._build_compact_status_label_qss(color))
 
 
     def _update_status_label(self, state_id):
@@ -1843,7 +2202,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             label_text = f"{label_text}\nMission: {self.current_mission_text}"
 
         self.label_Status_1.setText(label_text)
-        self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+        self.label_Status_1.setStyleSheet(self._build_compact_status_label_qss(color))
 
     def _update_status_label(self, state_id):
         # Final status renderer used by the UI: line 1 = robot state, line 2 = mission text.
@@ -1867,7 +2226,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         label_text = f"Status: {status_name}\nMission: {mission_line}"
 
         self.label_Status_1.setText(label_text)
-        self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+        self.label_Status_1.setStyleSheet(self._build_compact_status_label_qss(color))
         self.label_Status_1.setToolTip(f"Mission: {mission_line}")
 
     def _adjust_status_area_layout(self):
@@ -2056,7 +2415,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         將客製化的 NotificationItem 加入到 self.listWidget_msg 中
         """
         # 1. 創建客製化 Widget
-        notification_widget = NotificationItem(type, message)
+        notification_widget = CompactNotificationItem(type, message)
         
         # 2. 創建 QListWidgetItem 作為容器
         list_item = QListWidgetItem(self.listWidget_msg)
@@ -2479,18 +2838,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
         # 設定進度條顏色。沒有設定 ::chunk 樣式時，Qt 有時會不渲染 chunk 或讓它預設尺寸極小
-        self.progressBar_battery.setStyleSheet(f"""
-        QProgressBar {{
-            color: black;  
-            border: 2px solid grey; 
-            border-radius: 5px;
-            text-align: center;
-            font-size: 16px;
-        }}
-        QProgressBar::chunk {{
-            background-color: {color};
-        }}
-        """)
+        self._set_battery_progress_style(color)
         self.progressBar_battery.setValue(battery_level)
         
     # 自動取得歷史錯誤資料
@@ -2555,6 +2903,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         if label:
                             # 從房間 ID 提取房間號 (例如 'OR01' → '01')
                             room_number = room_id[2:] if room_id.startswith('OR') else room_id
+
+                            if error_status:
+                                label.setStyleSheet(self._heartbeat_label_qss("#C06A00", "#FD7E14"))
+                                label.setText(f"{room_number}\n異常")
+                                continue
+                            if is_online:
+                                label.setStyleSheet(self._heartbeat_label_qss("#1F8A4D", "#28A745"))
+                                label.setText(f"{room_number}\n線上")
+                                continue
+                            label.setStyleSheet(self._heartbeat_label_qss("#5A6573", "#6C757D"))
+                            label.setText(f"{room_number}\n離線")
+                            continue
                             
                             # 設定標籤的樣式（背景白色，用文字和邊框顏色表示狀態）
                             # 優先級: 異常 > 離線 > 在線
