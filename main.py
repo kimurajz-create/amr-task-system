@@ -942,8 +942,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 設定列寬度的自適應策略
         self.header = self.tableWidget_pending_mission_list.horizontalHeader()
-        self.header.setSectionResizeMode(4, QHeaderView.Stretch)
-        self.header.setSectionResizeMode(5, QHeaderView.Stretch)
+        self._configure_pending_mission_table()
         
         # 設置表格行高
         self.tableWidget_pending_mission_list.setWordWrap(True)
@@ -1583,7 +1582,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         margin = 16
         panel_gap = 14
 
-        right_panel_width = min(560, max(480, frame_width // 4 + 72))
+        right_panel_width = min(560, max(520, frame_width // 4 + 72))
         right_panel_x = frame_width - right_panel_width - margin
 
         top_right_height = 346
@@ -1698,6 +1697,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.frame_pending_mission_list,
             QRect(overlay_rect.left() + panel_padding, list_y, overlay_rect.width() - panel_padding * 2, list_height),
         )
+        self._sync_pending_mission_table_geometry()
+
+    def _sync_pending_mission_table_geometry(self):
+        if not hasattr(self, "frame_pending_mission_list") or not hasattr(self, "tableWidget_pending_mission_list"):
+            return
+
+        self.tableWidget_pending_mission_list.setGeometry(self.frame_pending_mission_list.rect())
+
+    def _configure_pending_mission_table(self):
+        header = self.tableWidget_pending_mission_list.horizontalHeader()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(1, QHeaderView.Fixed)
+        header.setSectionResizeMode(2, QHeaderView.Fixed)
+        header.setSectionResizeMode(3, QHeaderView.Fixed)
+        header.setSectionResizeMode(4, QHeaderView.Fixed)
+        header.setSectionResizeMode(5, QHeaderView.Stretch)
+        header.setSectionResizeMode(6, QHeaderView.Fixed)
+        header.setSectionResizeMode(7, QHeaderView.Fixed)
+
+        self.tableWidget_pending_mission_list.setColumnWidth(1, 42)
+        self.tableWidget_pending_mission_list.setColumnWidth(2, 62)
+        self.tableWidget_pending_mission_list.setColumnWidth(3, 76)
+        self.tableWidget_pending_mission_list.setColumnWidth(4, 76)
+        self.tableWidget_pending_mission_list.setColumnWidth(6, 62)
+        self.tableWidget_pending_mission_list.setColumnWidth(7, 54)
+        self._sync_pending_mission_table_geometry()
 
     def _apply_bottom_left_overlay_layout(self, overlay_rect):
         self._set_frame_map_relative_geometry(
@@ -2363,6 +2388,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 設置佈局的間距和邊界為 0，讓按鈕可以置中 (這是對的)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(Qt.AlignCenter)
      
         # 建立一個 QPushButton
         delete_btn = QPushButton("")
