@@ -793,33 +793,65 @@ class CompactNotificationItem(QWidget):
         super().__init__(parent)
 
         palette_map = {
-            "摰?": ("rgba(16, 104, 70, 230)", "rgba(95, 210, 154, 220)", "OK"),
-            "霅血?": ("rgba(125, 85, 18, 230)", "rgba(255, 196, 72, 220)", "!"),
+            "完成": {
+                "bg": "#DFF3E5",
+                "border": "#79CEA0",
+                "text": "#183926",
+                "icon_bg": "#EFFAF2",
+                "icon_fg": "#1E8E52",
+                "close": "#4B6B56",
+                "icon": "✓",
+            },
+            "警告": {
+                "bg": "#FFF4D6",
+                "border": "#F1C96A",
+                "text": "#5D4513",
+                "icon_bg": "#FFF9EB",
+                "icon_fg": "#B7791F",
+                "close": "#7A622B",
+                "icon": "!",
+            },
+            "取消": {
+                "bg": "#F9E1E6",
+                "border": "#E59AA9",
+                "text": "#5B2732",
+                "icon_bg": "#FDF1F4",
+                "icon_fg": "#B54863",
+                "close": "#7B4552",
+                "icon": "×",
+            },
+            "錯誤": {
+                "bg": "#F9E1E6",
+                "border": "#E59AA9",
+                "text": "#5B2732",
+                "icon_bg": "#FDF1F4",
+                "icon_fg": "#B54863",
+                "close": "#7B4552",
+                "icon": "×",
+            },
         }
-        bg_color, border_color, icon_text = palette_map.get(
-            notification_type,
-            ("rgba(120, 36, 52, 230)", "rgba(255, 122, 146, 220)", "X"),
-        )
+        palette = palette_map.get(notification_type, palette_map["錯誤"])
 
         self.setStyleSheet(f"""
             QWidget {{
-                background-color: {bg_color};
-                border: 1px solid {border_color};
-                border-radius: 12px;
-                color: #F4F7FB;
+                background-color: {palette["bg"]};
+                border: 1px solid {palette["border"]};
+                border-radius: 10px;
+                color: {palette["text"]};
             }}
         """)
 
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(10, 8, 10, 8)
-        main_layout.setSpacing(8)
+        main_layout.setContentsMargins(10, 6, 10, 6)
+        main_layout.setSpacing(10)
 
-        icon_label = QLabel(icon_text)
+        icon_label = QLabel(palette["icon"])
         icon_label.setAlignment(Qt.AlignCenter)
-        icon_label.setFixedSize(24, 24)
+        icon_label.setFixedSize(20, 20)
         icon_label.setStyleSheet(
-            "font-size: 11px; font-weight: 700; color: #F7FAFF; "
-            "background-color: rgba(255, 255, 255, 0.16); border-radius: 12px;"
+            f"font-size: 11px; font-weight: 700; color: {palette['icon_fg']}; "
+            f"background-color: {palette['icon_bg']}; border: 1px solid {palette['border']}; "
+            "border-radius: 10px;"
         )
         main_layout.addWidget(icon_label)
 
@@ -827,15 +859,17 @@ class CompactNotificationItem(QWidget):
         message_label.setWordWrap(True)
         message_label.setTextFormat(Qt.RichText)
         message_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        message_label.setStyleSheet("font-size: 12px; color: #F4F7FB; background: transparent;")
+        message_label.setStyleSheet(
+            "font-size: 12px; color: #F4F7FB; background: transparent; border: none;"
+        )
         main_layout.addWidget(message_label)
 
         close_btn = QPushButton("×")
         close_btn.setFixedSize(18, 18)
         close_btn.setStyleSheet(
-            "QPushButton { border: none; font-size: 14px; font-weight: 700; "
-            "color: rgba(244, 247, 251, 0.78); background-color: transparent; }"
-            "QPushButton:hover { color: #FFFFFF; }"
+            f"QPushButton {{ border: none; font-size: 13px; font-weight: 700; "
+            f"color: {palette['close']}; background-color: transparent; }}"
+            f"QPushButton:hover {{ color: {palette['text']}; }}"
         )
         main_layout.addWidget(close_btn)
 
