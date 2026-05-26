@@ -1105,9 +1105,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 【關鍵修正】設置窗口標誌，使其忽略滑鼠事件
         # Qt.WA_TransparentForMouseEvents 是用於 QWidget 的屬性，但 QLabel 繼承自 QWidget
         self.label_car_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.current_mir_state_id = None
         self.map_overlay_frames = {}
+        self.map_overlay_content_widgets = {}
+        self.map_overlay_collapsed = {
+            "map_overlay_top_right": True,
+            "map_overlay_bottom_right": True,
+            "map_overlay_bottom_left": True,
+        }
+        self.map_overlay_summary_widgets = {}
+        self.map_overlay_toggle_buttons = {}
         self._setup_main_map_overlay_containers()
         self._apply_main_map_overlay_theme()
+        self._setup_overlay_edge_cards()
+        self._refresh_overlay_card_summaries()
                 
         # # 讀logo 暫時沒用到
         # self.icon_pixmap = QPixmap("./picture/aceicon1.png")
@@ -1121,7 +1132,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.sent_robot_to_in_progress = False
         self.last_click_overlay_pos = None
         self.last_robot_world_pos = None
-        self.current_mir_state_id = None
         self.robot_glow_phase = 0
         self._apply_main_map_shell_layout()
 
@@ -1177,6 +1187,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 padding: 0px; /* 移除項目本身的內邊距 */
             }
         """)
+        self._apply_main_map_overlay_theme()
+        self._refresh_overlay_card_summaries()
 
         # self.setStyleSheet(tooltip_reset_style)
         # self.add_notification_item("錯誤", "9999 任務失敗：目標點座標錯誤。")
@@ -1201,15 +1213,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         overlay.setFrameShape(QFrame.StyledPanel)
         overlay.setFrameShadow(QFrame.Raised)
         overlay.setAttribute(Qt.WA_StyledBackground, True)
-        overlay.setStyleSheet(
-            f"""
-            QFrame#{object_name} {{
-                background-color: rgba(7, 15, 26, 218);
-                border: 1px solid rgba(138, 182, 219, 118);
-                border-radius: 16px;
-            }}
-            """
-        )
+        overlay.setStyleSheet(self._build_overlay_frame_qss(object_name))
         overlay.show()
         return overlay
 
@@ -1504,6 +1508,221 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """)
         self.listWidget_msg.setSpacing(2)
 
+    def _build_overlay_summary_title_qss(self):
+        return (
+            "color: #F3F8FF; background: transparent; "
+            "font-size: 15px; font-weight: 700;"
+        )
+
+    def _build_overlay_summary_chip_qss(self, variant="neutral"):
+        if variant == "success":
+            background = "rgba(61, 220, 151, 0.20)"
+            border = "rgba(124, 255, 178, 0.48)"
+            color = "#D8FFE7"
+        elif variant == "warning":
+            background = "rgba(255, 157, 47, 0.18)"
+            border = "rgba(255, 191, 116, 0.42)"
+            color = "#FFEBD2"
+        elif variant == "danger":
+            background = "rgba(184, 49, 75, 0.18)"
+            border = "rgba(255, 132, 157, 0.42)"
+            color = "#FFD8DE"
+        else:
+            background = "rgba(23, 144, 255, 0.18)"
+            border = "rgba(95, 178, 255, 0.42)"
+            color = "#EAF4FF"
+
+        return (
+            "background-color: {background}; color: {color}; "
+            "border: 1px solid {border}; border-radius: 11px; "
+            "padding: 0 10px; font-size: 12px; font-weight: 700;"
+        ).format(background=background, color=color, border=border)
+
+    def _create_overlay_summary_label(self, parent, object_name, chip=False, variant="neutral"):
+        label = QLabel(parent)
+        label.setObjectName(object_name)
+        label.setAlignment((Qt.AlignCenter if chip else Qt.AlignLeft) | Qt.AlignVCenter)
+        label.setStyleSheet(
+            self._build_overlay_summary_chip_qss(variant)
+            if chip
+            else self._build_overlay_summary_title_qss()
+        )
+        label.hide()
+        return label
+
+    def _build_overlay_frame_qss(self, object_name, collapsed=False):
+        background_alpha = 232 if collapsed else 218
+        border_alpha = 138 if collapsed else 118
+        radius = 18 if collapsed else 16
+        return f"""
+            QFrame#{object_name} {{
+                background-color: rgba(7, 15, 26, {background_alpha});
+                border: 1px solid rgba(138, 182, 219, {border_alpha});
+                border-radius: {radius}px;
+            }}
+        """
+
+    def _set_overlay_frame_style(self, object_name):
+        overlay = self.map_overlay_frames.get(object_name)
+        if overlay is None:
+            return
+        overlay.setStyleSheet(
+            self._build_overlay_frame_qss(
+                object_name,
+                self.map_overlay_collapsed.get(object_name, False),
+            )
+        )
+
+    def _setup_overlay_edge_cards(self):
+        if not self.map_overlay_frames:
+            return
+
+        for object_name, overlay in self.map_overlay_frames.items():
+            toggle_button = QPushButton(overlay)
+            toggle_button.setObjectName(f"{object_name}_toggle")
+            toggle_button.setCursor(Qt.PointingHandCursor)
+            toggle_button.clicked.connect(
+                lambda _checked=False, key=object_name: self._toggle_map_overlay_collapsed(key)
+            )
+            toggle_button.show()
+            self.map_overlay_toggle_buttons[object_name] = toggle_button
+
+            summary_widgets = {}
+            if object_name == "map_overlay_top_right":
+                summary_widgets["title"] = self._create_overlay_summary_label(overlay, f"{object_name}_title")
+                summary_widgets["status"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_status", chip=True, variant="success"
+                )
+                summary_widgets["battery"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_battery", chip=True
+                )
+                summary_widgets["tasks"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_tasks", chip=True
+                )
+            elif object_name == "map_overlay_bottom_right":
+                summary_widgets["title"] = self._create_overlay_summary_label(overlay, f"{object_name}_title")
+                summary_widgets["count"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_count", chip=True, variant="warning"
+                )
+                summary_widgets["active"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_active", chip=True
+                )
+            elif object_name == "map_overlay_bottom_left":
+                summary_widgets["current"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_current", chip=True, variant="success"
+                )
+                summary_widgets["pending"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_pending", chip=True, variant="warning"
+                )
+                summary_widgets["notice"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_notice", chip=True
+                )
+
+            self.map_overlay_summary_widgets[object_name] = summary_widgets
+            self._set_overlay_frame_style(object_name)
+            self._apply_overlay_card_state(object_name)
+
+    def _toggle_map_overlay_collapsed(self, object_name):
+        self.map_overlay_collapsed[object_name] = not self.map_overlay_collapsed.get(object_name, False)
+        self._apply_overlay_card_state(object_name)
+        self._apply_main_map_overlay_panel_layouts()
+        self._refresh_overlay_card_summaries()
+
+    def _raise_overlay_card_chrome(self, object_name):
+        for widget in self.map_overlay_summary_widgets.get(object_name, {}).values():
+            widget.raise_()
+
+        toggle_button = self.map_overlay_toggle_buttons.get(object_name)
+        if toggle_button is not None:
+            toggle_button.raise_()
+
+    def _apply_overlay_card_state(self, object_name):
+        overlay = self.map_overlay_frames.get(object_name)
+        if overlay is None:
+            return
+
+        collapsed = self.map_overlay_collapsed.get(object_name, False)
+
+        for widget in self.map_overlay_content_widgets.get(object_name, []):
+            widget.setVisible(not collapsed)
+
+        for widget in self.map_overlay_summary_widgets.get(object_name, {}).values():
+            widget.setVisible(collapsed)
+
+        toggle_button = self.map_overlay_toggle_buttons.get(object_name)
+        if toggle_button is not None:
+            toggle_button.setText("+" if collapsed else "-")
+            toggle_button.setToolTip("Expand" if collapsed else "Collapse")
+            toggle_button.setStyleSheet(self._build_overlay_button_qss("ghost", icon_only=True))
+
+        self._set_overlay_frame_style(object_name)
+        self._raise_overlay_card_chrome(object_name)
+
+    def _get_task_status_counts(self):
+        if not hasattr(self, "tableWidget_pending_mission_list"):
+            return {"total": 0, "pending": 0, "executing": 0}
+
+        total = self.tableWidget_pending_mission_list.rowCount()
+        pending = 0
+        executing = 0
+        for row in range(total):
+            item = self.tableWidget_pending_mission_list.item(row, 6)
+            status_text = item.text().strip() if item else ""
+            if status_text == "Executing":
+                executing += 1
+            elif status_text == "Pending":
+                pending += 1
+
+        return {"total": total, "pending": pending, "executing": executing}
+
+    def _get_robot_state_summary(self):
+        status_map = {
+            1: ("Starting", "warning"),
+            2: ("ShuttingDown", "danger"),
+            3: ("Ready", "success"),
+            4: ("Pause", "warning"),
+            5: ("Executing", "success"),
+            6: ("Aborted", "warning"),
+            7: ("GoalReached", "success"),
+            8: ("Docked", "success"),
+            9: ("Docking", "success"),
+            10: ("EmergencyStop", "danger"),
+            11: ("ManualControl", "danger"),
+            12: ("Error", "danger"),
+        }
+        return status_map.get(getattr(self, "current_mir_state_id", None), ("Unknown", "neutral"))
+
+    def _refresh_overlay_card_summaries(self):
+        if not getattr(self, "map_overlay_summary_widgets", None):
+            return
+
+        task_counts = self._get_task_status_counts()
+        notification_count = self.listWidget_msg.count() if hasattr(self, "listWidget_msg") else 0
+
+        top_right = self.map_overlay_summary_widgets.get("map_overlay_top_right", {})
+        if top_right:
+            robot_name = self.lineEdit_MiR250_A.text().strip() if hasattr(self, "lineEdit_MiR250_A") else ""
+            status_text, status_variant = self._get_robot_state_summary()
+            battery_value = self.progressBar_battery.value() if hasattr(self, "progressBar_battery") else 0
+
+            top_right["title"].setText(robot_name or "MiR250-A")
+            top_right["status"].setText(status_text)
+            top_right["status"].setStyleSheet(self._build_overlay_summary_chip_qss(status_variant))
+            top_right["battery"].setText(f"{battery_value}%")
+            top_right["tasks"].setText(f"Pending {task_counts['pending']}")
+
+        bottom_right = self.map_overlay_summary_widgets.get("map_overlay_bottom_right", {})
+        if bottom_right:
+            bottom_right["title"].setText("Tasks")
+            bottom_right["count"].setText(f"List {task_counts['total']}")
+            bottom_right["active"].setText(f"Run {task_counts['executing']}")
+
+        bottom_left = self.map_overlay_summary_widgets.get("map_overlay_bottom_left", {})
+        if bottom_left:
+            bottom_left["current"].setText(f"Now {task_counts['executing']}")
+            bottom_left["pending"].setText(f"Wait {task_counts['pending']}")
+            bottom_left["notice"].setText(f"Notice {notification_count}")
+
     def _build_main_map_overlay_specs(self):
         top_right_widgets = [
             self.horizontalLayoutWidget_6,
@@ -1582,24 +1801,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         margin = 16
         panel_gap = 14
 
-        right_panel_width = min(560, max(520, frame_width // 4 + 72))
-        right_panel_x = frame_width - right_panel_width - margin
+        top_right_collapsed = self.map_overlay_collapsed.get("map_overlay_top_right", False)
+        bottom_right_collapsed = self.map_overlay_collapsed.get("map_overlay_bottom_right", False)
+        bottom_left_collapsed = self.map_overlay_collapsed.get("map_overlay_bottom_left", False)
 
-        top_right_height = 346
-        bottom_right_height = 314
-        top_right_rect = QRect(right_panel_x, margin, right_panel_width, top_right_height)
+        top_right_width = (
+            min(440, max(420, frame_width // 5 + 60))
+            if top_right_collapsed
+            else min(560, max(520, frame_width // 4 + 72))
+        )
+        bottom_right_width = 260 if bottom_right_collapsed else min(560, max(520, frame_width // 4 + 72))
+
+        top_right_height = 68 if top_right_collapsed else 346
+        bottom_right_height = 64 if bottom_right_collapsed else 314
+        top_right_rect = QRect(frame_width - top_right_width - margin, margin, top_right_width, top_right_height)
         bottom_right_rect = QRect(
-            right_panel_x,
+            frame_width - bottom_right_width - margin,
             frame_height - bottom_right_height - margin,
-            right_panel_width,
+            bottom_right_width,
             bottom_right_height,
         )
 
-        available_left_width = max(
-            520,
-            min(760, bottom_right_rect.left() - margin - panel_gap),
+        available_left_width = (
+            360
+            if bottom_left_collapsed
+            else max(520, min(760, bottom_right_rect.left() - margin - panel_gap))
         )
-        bottom_left_height = 198
+        bottom_left_height = 64 if bottom_left_collapsed else 198
         bottom_left_rect = QRect(
             margin,
             frame_height - bottom_left_height - margin,
@@ -1614,6 +1842,40 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         }
 
     def _apply_top_right_overlay_layout(self, overlay_rect):
+        overlay_name = "map_overlay_top_right"
+        collapsed = self.map_overlay_collapsed.get(overlay_name, False)
+        toggle_button = self.map_overlay_toggle_buttons.get(overlay_name)
+        summary_widgets = self.map_overlay_summary_widgets.get(overlay_name, {})
+        panel_padding = 16
+
+        if collapsed:
+            if toggle_button is not None:
+                self._set_frame_map_relative_geometry(
+                    toggle_button,
+                    QRect(overlay_rect.right() - 42, overlay_rect.top() + 18, 26, 26),
+                )
+
+            title_width = min(120, max(108, overlay_rect.width() - 292))
+            start_x = overlay_rect.left() + panel_padding + title_width + 8
+            chip_y = overlay_rect.top() + 17
+            self._set_frame_map_relative_geometry(
+                summary_widgets["title"],
+                QRect(overlay_rect.left() + panel_padding, overlay_rect.top() + 14, title_width, 38),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["status"],
+                QRect(start_x, chip_y, 84, 30),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["battery"],
+                QRect(start_x + 92, chip_y, 52, 30),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["tasks"],
+                QRect(start_x + 152, chip_y, 64, 30),
+            )
+            return
+
         panel_padding = 16
         row_gap = 8
         button_gap = 10
@@ -1632,10 +1894,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         row_4_y = row_3_y + row_height + row_gap
         row_5_y = row_4_y + row_height + row_gap
         button_y = overlay_rect.bottom() - panel_padding - 40 + 1
+        if toggle_button is not None:
+            self._set_frame_map_relative_geometry(
+                toggle_button,
+                QRect(overlay_rect.right() - 38, overlay_rect.top() + 14, 22, 22),
+            )
 
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget_6,
-            QRect(overlay_rect.left() + panel_padding, top_y, content_width, header_height),
+            QRect(overlay_rect.left() + panel_padding, top_y, content_width - 28, header_height),
         )
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget_5,
@@ -1676,7 +1943,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
     def _apply_bottom_right_overlay_layout(self, overlay_rect):
+        overlay_name = "map_overlay_bottom_right"
+        collapsed = self.map_overlay_collapsed.get(overlay_name, False)
+        toggle_button = self.map_overlay_toggle_buttons.get(overlay_name)
+        summary_widgets = self.map_overlay_summary_widgets.get(overlay_name, {})
         panel_padding = 16
+
+        if collapsed:
+            if toggle_button is not None:
+                self._set_frame_map_relative_geometry(
+                    toggle_button,
+                    QRect(overlay_rect.right() - 38, overlay_rect.top() + 17, 22, 22),
+                )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["title"],
+                QRect(overlay_rect.left() + panel_padding, overlay_rect.top() + 14, 64, 34),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["count"],
+                QRect(overlay_rect.left() + 88, overlay_rect.top() + 17, 58, 30),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["active"],
+                QRect(overlay_rect.left() + 154, overlay_rect.top() + 17, 54, 30),
+            )
+            return
+
         title_y = overlay_rect.top() + panel_padding
         list_y = overlay_rect.top() + 58
         list_height = overlay_rect.height() - 74
@@ -1685,6 +1977,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.lineEdit_PendingMission,
             QRect(overlay_rect.left() + panel_padding, title_y, 220, 32),
         )
+        if toggle_button is not None:
+            self._set_frame_map_relative_geometry(
+                toggle_button,
+                QRect(overlay_rect.right() - 124, title_y, 34, 34),
+            )
         self._set_frame_map_relative_geometry(
             self.btn_StartMission,
             QRect(overlay_rect.right() - 84, title_y, 34, 34),
@@ -1725,18 +2022,49 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._sync_pending_mission_table_geometry()
 
     def _apply_bottom_left_overlay_layout(self, overlay_rect):
+        overlay_name = "map_overlay_bottom_left"
+        collapsed = self.map_overlay_collapsed.get(overlay_name, False)
+        toggle_button = self.map_overlay_toggle_buttons.get(overlay_name)
+        summary_widgets = self.map_overlay_summary_widgets.get(overlay_name, {})
+
+        if collapsed:
+            if toggle_button is not None:
+                self._set_frame_map_relative_geometry(
+                    toggle_button,
+                    QRect(overlay_rect.right() - 38, overlay_rect.top() + 17, 22, 22),
+                )
+            chip_y = overlay_rect.top() + 17
+            self._set_frame_map_relative_geometry(
+                summary_widgets["current"],
+                QRect(overlay_rect.left() + 16, chip_y, 88, 30),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["pending"],
+                QRect(overlay_rect.left() + 112, chip_y, 88, 30),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["notice"],
+                QRect(overlay_rect.left() + 208, chip_y, 108, 30),
+            )
+            return
+
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget_7,
-            QRect(overlay_rect.left() + 16, overlay_rect.top() + 16, 92, 24),
+            QRect(overlay_rect.left() + 58, overlay_rect.top() + 16, 92, 24),
         )
         self._set_frame_map_relative_geometry(
             self.horizontalLayoutWidget_8,
-            QRect(overlay_rect.left() + 114, overlay_rect.top() + 16, 92, 24),
+            QRect(overlay_rect.left() + 156, overlay_rect.top() + 16, 92, 24),
         )
         self._set_frame_map_relative_geometry(
             self.chb_map,
             QRect(overlay_rect.right() - 178, overlay_rect.top() + 14, 126, 30),
         )
+        if toggle_button is not None:
+            self._set_frame_map_relative_geometry(
+                toggle_button,
+                QRect(overlay_rect.left() + 16, overlay_rect.top() + 14, 34, 30),
+            )
         self._set_frame_map_relative_geometry(
             self.btn_SentRobotTo,
             QRect(overlay_rect.right() - 42, overlay_rect.top() + 14, 34, 30),
@@ -1744,7 +2072,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         heartbeat_top_y = overlay_rect.top() + 12
         heartbeat_bottom_y = overlay_rect.top() + 52
-        heartbeat_start_x = overlay_rect.left() + 220
+        heartbeat_start_x = overlay_rect.left() + 262
         heartbeat_step = 62
         for index in range(6):
             widget = getattr(self, f"lbl_OR_Heartbeat_{index + 1}")
@@ -1789,18 +2117,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             top_right_rect = overlay_rects["map_overlay_top_right"]
             top_right_overlay.setGeometry(top_right_rect)
             self._apply_top_right_overlay_layout(top_right_rect)
+            self._raise_overlay_card_chrome("map_overlay_top_right")
 
         bottom_right_overlay = self.map_overlay_frames.get("map_overlay_bottom_right")
         if bottom_right_overlay is not None:
             bottom_right_rect = overlay_rects["map_overlay_bottom_right"]
             bottom_right_overlay.setGeometry(bottom_right_rect)
             self._apply_bottom_right_overlay_layout(bottom_right_rect)
+            self._raise_overlay_card_chrome("map_overlay_bottom_right")
 
         bottom_left_overlay = self.map_overlay_frames.get("map_overlay_bottom_left")
         if bottom_left_overlay is not None:
             bottom_left_rect = overlay_rects["map_overlay_bottom_left"]
             bottom_left_overlay.setGeometry(bottom_left_rect)
             self._apply_bottom_left_overlay_layout(bottom_left_rect)
+            self._raise_overlay_card_chrome("map_overlay_bottom_left")
 
     def _setup_main_map_overlay_containers(self):
         if self.map_overlay_frames:
@@ -1826,6 +2157,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             overlay.raise_()
             self.map_overlay_frames[object_name] = overlay
+            self.map_overlay_content_widgets[object_name] = list(widgets)
             setattr(self, object_name, overlay)
 
     def _get_main_map_scale(self):
@@ -2253,6 +2585,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_Status_1.setText(label_text)
         self.label_Status_1.setStyleSheet(self._build_compact_status_label_qss(color))
         self.label_Status_1.setToolTip(f"Mission: {mission_line}")
+        self._refresh_overlay_card_summaries()
 
     def _adjust_status_area_layout(self):
         self._apply_main_map_overlay_panel_layouts()
@@ -2460,8 +2793,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         # 這是關鍵步驟：點擊按鈕時，取得 list_item 的行號並刪除
         close_btn.clicked.connect(
-            lambda: self.listWidget_msg.takeItem(self.listWidget_msg.row(list_item))
+            lambda: (
+                self.listWidget_msg.takeItem(self.listWidget_msg.row(list_item)),
+                self._refresh_overlay_card_summaries(),
+            )
         )
+        self._refresh_overlay_card_summaries()
 
     def closeEvent(self, event):
         """
@@ -2596,6 +2933,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.refresh_label_tooltip(tasks) 
 
         if not tasks:
+            self._refresh_overlay_card_summaries()
             return
         
         self.tableWidget_pending_mission_list.setRowCount(len(tasks))
@@ -2642,6 +2980,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # 重新呼叫你的置中函式和列寬調整 (這不會被前面的 setRowCount(0) 影響)
             self.set_table_items_center(self.tableWidget_pending_mission_list)
             self.tableWidget_pending_mission_list.resizeRowsToContents()
+
+        self._refresh_overlay_card_summaries()
 
     #######################刷新label&tooltip#######################
     def create_tooltip_html(self, task, role):
@@ -2866,6 +3206,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 設定進度條顏色。沒有設定 ::chunk 樣式時，Qt 有時會不渲染 chunk 或讓它預設尺寸極小
         self._set_battery_progress_style(color)
         self.progressBar_battery.setValue(battery_level)
+        self._refresh_overlay_card_summaries()
         
     # 自動取得歷史錯誤資料
     def query_his_data(self):
