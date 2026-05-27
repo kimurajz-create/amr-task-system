@@ -4,8 +4,8 @@
   "display_name": "Company Demo",
   "assets": {
     "_comment": "main_map = 主地圖，selected_map = 點圖選點視窗，logo = 左上角 Logo",
-    "main_map": "picture/pure_dilated_map.png",
-    "selected_map": "picture/pure_dilated_map.png",
+    "main_map": "picture/pure_dilated_map_dark.png",
+    "selected_map": "picture/pure_dilated_map_dark.png",
     "logo": "picture/aceicon1.png"
   },
   "calibration": {
