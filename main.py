@@ -70,8 +70,8 @@ DEFAULT_APP_SETTINGS = {
 # 保底用的資源路徑。
 # 只有當 site 設定檔缺欄位，或完全找不到設定檔時才會用到。
 DEFAULT_SITE_ASSETS = {
-    "main_map": "picture/pure_dilated_map.png",
-    "selected_map": "picture/pure_dilated_map.png",
+    "main_map": "picture/pure_dilated_map_dark.png",
+    "selected_map": "picture/pure_dilated_map_dark.png",
     "logo": "picture/aceicon1.png",
 }
 
@@ -1392,10 +1392,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.progressBar_battery.setMaximumSize(QSize(96, 20))
         self._set_battery_progress_style("#3DDC97")
 
-        for button in (self.btn_ChargeMission, self.btn_Reset):
-            button.setMinimumSize(QSize(88, 32))
-            button.setMaximumSize(QSize(96, 32))
-            button.setStyleSheet(self._build_overlay_button_qss("danger"))
+        self.horizontalLayout_7.setSpacing(4)
+
+        self.btn_ChargeMission.setMinimumSize(QSize(112, 32))
+        self.btn_ChargeMission.setMaximumSize(QSize(112, 32))
+        self.btn_ChargeMission.setStyleSheet(self._build_overlay_button_qss("danger"))
+
+        self.btn_Reset.setMinimumSize(QSize(88, 32))
+        self.btn_Reset.setMaximumSize(QSize(96, 32))
+        self.btn_Reset.setStyleSheet(self._build_overlay_button_qss("danger"))
 
         self.lineEdit_IP.setMinimumSize(QSize(126, 34))
         self.lineEdit_IP.setMaximumSize(QSize(150, 34))
@@ -1859,7 +1864,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         available_left_width = (
             360
             if bottom_left_collapsed
-            else max(520, min(760, bottom_right_rect.left() - margin - panel_gap))
+            else max(520, min(880, bottom_right_rect.left() - margin - panel_gap))
         )
         bottom_left_height = 64 if bottom_left_collapsed else 198
         bottom_left_rect = QRect(
