@@ -328,6 +328,16 @@ class TaskDBManager:
         result = self._execute_query(query, fetch=True)
         return result[0] if result else None
 
+    def get_task_by_id(self, task_id: int):
+        query = """
+        SELECT id, sequence, start_point, target_point, mission_content, status, mq_id, room_id
+        FROM tasks
+        WHERE id = %s
+        LIMIT 1;
+        """
+        result = self._execute_query(query, (task_id,), fetch=True)
+        return result[0] if result else None
+
     
     def get_highest_priority_task(self):
         query = """
