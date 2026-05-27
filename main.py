@@ -67,6 +67,14 @@ DEFAULT_APP_SETTINGS = {
     "site_profile": "company",
 }
 
+DEFAULT_DB_CONFIG = {
+    "user": "postgres",
+    "host": "localhost",
+    "database": "military_mir250_project",
+    "password": "123456",
+    "port": 5432,
+}
+
 # 保底用的資源路徑。
 # 只有當 site 設定檔缺欄位，或完全找不到設定檔時才會用到。
 DEFAULT_SITE_ASSETS = {
@@ -123,6 +131,32 @@ def load_app_settings():
         return merged_settings
 
     return DEFAULT_APP_SETTINGS.copy()
+
+
+def load_db_config():
+    db_config_relative_path = Path("db_config.json")
+
+    for base_dir in RUNTIME_SEARCH_DIRS:
+        candidate = base_dir / db_config_relative_path
+        if not candidate.exists():
+            continue
+
+        try:
+            with candidate.open("r", encoding="utf-8") as db_config_file:
+                loaded_config = json.load(db_config_file)
+        except (json.JSONDecodeError, OSError) as exc:
+            print(f"db_config.json 讀取失敗，改用預設值: {exc}")
+            return DEFAULT_DB_CONFIG.copy()
+
+        if isinstance(loaded_config, dict):
+            merged_config = DEFAULT_DB_CONFIG.copy()
+            merged_config.update(loaded_config)
+            return merged_config
+
+        print("db_config.json 格式錯誤，改用預設值。")
+        return DEFAULT_DB_CONFIG.copy()
+
+    return DEFAULT_DB_CONFIG.copy()
 
 
 # 啟動時的場域決策優先順序：
@@ -4114,13 +4148,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 # main.py (程式進入點)
 
-DB_CONFIG = {
-        'user': 'postgres',
-        'host': 'localhost',
-        'database': 'military_mir250_project',
-        'password': '123456',
-        'port': 5432
-    }
+DB_CONFIG = load_db_config()
 
 if __name__ == "__main__":
     
