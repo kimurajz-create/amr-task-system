@@ -90,6 +90,88 @@ DEFAULT_SITE_CALIBRATION = {
     "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]],
 }
 
+MIR_STATE_UI = {
+    1: {
+        "name": "Starting",
+        "label_color": "#D4A017",
+        "map_ring_color": "#C88A00",
+        "summary_variant": "warning",
+    },
+    2: {
+        "name": "ShuttingDown",
+        "label_color": "#C23B22",
+        "map_ring_color": "#B22222",
+        "summary_variant": "danger",
+    },
+    3: {
+        "name": "Ready",
+        "label_color": "#1F9D55",
+        "map_ring_color": "#178A4D",
+        "summary_variant": "success",
+    },
+    4: {
+        "name": "Pause",
+        "label_color": "#E0A800",
+        "map_ring_color": "#C89200",
+        "summary_variant": "warning",
+    },
+    5: {
+        "name": "Executing",
+        "label_color": "#00897B",
+        "map_ring_color": "#00796B",
+        "summary_variant": "success",
+    },
+    6: {
+        "name": "Aborted",
+        "label_color": "#F57C00",
+        "map_ring_color": "#E56B00",
+        "summary_variant": "warning",
+    },
+    7: {
+        "name": "GoalReached",
+        "label_color": "#2E7D32",
+        "map_ring_color": "#256A29",
+        "summary_variant": "success",
+    },
+    8: {
+        "name": "Docked",
+        "label_color": "#1565C0",
+        "map_ring_color": "#0F56A8",
+        "summary_variant": "success",
+    },
+    9: {
+        "name": "Docking",
+        "label_color": "#00ACC1",
+        "map_ring_color": "#0097A7",
+        "summary_variant": "success",
+    },
+    10: {
+        "name": "EmergencyStop",
+        "label_color": "#D32F2F",
+        "map_ring_color": "#C62828",
+        "summary_variant": "danger",
+    },
+    11: {
+        "name": "ManualControl",
+        "label_color": "#8E24AA",
+        "map_ring_color": "#7B1FA2",
+        "summary_variant": "danger",
+    },
+    12: {
+        "name": "Error",
+        "label_color": "#AD1457",
+        "map_ring_color": "#880E4F",
+        "summary_variant": "danger",
+    },
+}
+
+UNKNOWN_MIR_STATE_UI = {
+    "name": "Unknown/Offline",
+    "label_color": "#7A7F87",
+    "map_ring_color": "#5C6570",
+    "summary_variant": "neutral",
+}
+
 
 def resolve_runtime_path(relative_path):
     # 把像 picture/xxx.png 這種相對路徑轉成實際可讀取的路徑，
@@ -1414,7 +1496,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_Status_1.setMinimumHeight(44)
         self.label_Status_1.setMaximumHeight(56)
         self.label_Status_1.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.label_Status_1.setStyleSheet(self._build_compact_status_label_qss("#7CFFB2"))
+        self.label_Status_1.setStyleSheet(
+            self._build_compact_status_label_qss(UNKNOWN_MIR_STATE_UI["label_color"])
+        )
 
         self.lineEdit_MiR250_A.setStyleSheet(
             "color: #F2F7FF; font-size: 24px; font-weight: 700; background: transparent;"
@@ -1748,22 +1832,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         return {"total": total, "pending": pending, "executing": executing}
 
+    def _has_mir_state_connection_issue(self):
+        return bool(
+            getattr(self, "api_error", False)
+            or getattr(self, "mir_status_poll_disconnected", False)
+        )
+
+    def _get_mir_state_ui(self, state_id):
+        if self._has_mir_state_connection_issue():
+            return UNKNOWN_MIR_STATE_UI
+        return MIR_STATE_UI.get(state_id, UNKNOWN_MIR_STATE_UI)
+
     def _get_robot_state_summary(self):
-        status_map = {
-            1: ("Starting", "warning"),
-            2: ("ShuttingDown", "danger"),
-            3: ("Ready", "success"),
-            4: ("Pause", "warning"),
-            5: ("Executing", "success"),
-            6: ("Aborted", "warning"),
-            7: ("GoalReached", "success"),
-            8: ("Docked", "success"),
-            9: ("Docking", "success"),
-            10: ("EmergencyStop", "danger"),
-            11: ("ManualControl", "danger"),
-            12: ("Error", "danger"),
-        }
-        return status_map.get(getattr(self, "current_mir_state_id", None), ("Unknown", "neutral"))
+        state_ui = self._get_mir_state_ui(getattr(self, "current_mir_state_id", None))
+        return state_ui["name"], state_ui["summary_variant"]
+
+    def _refresh_robot_status_presentation(self):
+        self._update_status_label(self.current_mir_state_id)
+        if self.last_robot_world_pos is not None:
+            self.draw_car_position(*self.last_robot_world_pos)
 
     def _refresh_overlay_card_summaries(self):
         if not getattr(self, "map_overlay_summary_widgets", None):
@@ -2660,6 +2747,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_Status_1.setToolTip(f"Mission: {mission_line}")
         self._refresh_overlay_card_summaries()
 
+    def _update_status_label(self, state_id):
+        # Final status renderer used by the UI: line 1 = robot state, line 2 = mission text.
+        state_ui = self._get_mir_state_ui(state_id)
+        status_name = state_ui["name"]
+        mission_line = self.current_mission_text or "-"
+        label_text = f"Status: {status_name}\nMission: {mission_line}"
+
+        self.label_Status_1.setText(label_text)
+        self.label_Status_1.setStyleSheet(
+            self._build_compact_status_label_qss(state_ui["label_color"])
+        )
+        self.label_Status_1.setToolTip(f"Mission: {mission_line}")
+        self._refresh_overlay_card_summaries()
+
     def _adjust_status_area_layout(self):
         self._apply_main_map_overlay_panel_layouts()
 
@@ -2670,6 +2771,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.api_error:
             self.task_db_manager.mark_room_error("MASTER", "API_ERROR")
             self.api_error = True
+
+    def api_ok(self, status=None):
+        self.task_db_manager.clear_room_error("MASTER")
+        self.api_error = False
+        self._print_mission_text(status)
+        self._refresh_robot_status_presentation()
+
+    def api_error_handler(self):
+        print("??API ?啣虜")
+        if not self.api_error:
+            self.task_db_manager.mark_room_error("MASTER", "API_ERROR")
+            self.api_error = True
+            self.current_mir_state_id = None
+            self._refresh_robot_status_presentation()
 
     def _setup_worker(self, worker, success_cb, error_cb):
         self.active_workers += 1 # ⭐ 記錄目前有幾個 worker 在跑
@@ -3231,6 +3346,76 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.refresh_task_list() 
 
     # 自動詢問Sent robot to車子狀態
+    def query_mir_info(self):
+        try:
+            status_info = functions.check_MiR_status()
+            status_info_str = json.dumps(status_info, indent=4)
+            self.current_mission_text = status_info.get("mission_text", self.current_mission_text)
+            timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
+            full_message = f"[{timestamp}] 狀態：\n{status_info_str}\n{'-' * 40}"
+            self.plntxtEdit_Info.appendPlainText(full_message)
+
+            pm_names = functions.get_pending_mission_names()
+            if pm_names:
+                pm_names_with_index = [f"任務{index + 1} {name}" for index, name in enumerate(pm_names)]
+                self.txtEdit_GetPM.setPlainText("\n".join(pm_names_with_index))
+            else:
+                self.txtEdit_GetPM.setPlainText("No pending missions")
+
+            self.current_mir_state_id = functions.check_MiR_status_state_ID()
+            self.api_error = False
+        except Exception:
+            self.api_error = True
+            self.current_mir_state_id = None
+
+        self._refresh_robot_status_presentation()
+
+    def query_mir_status_db(self):
+        executing_task_data = self.task_db_manager.get_currently_executing_task()
+        if not executing_task_data:
+            if self.mir_status_poll_disconnected:
+                self.mir_status_poll_disconnected = False
+                self._refresh_robot_status_presentation()
+            else:
+                self.mir_status_poll_disconnected = False
+            return
+
+        task_id = executing_task_data["id"]
+        start_point = executing_task_data["start_point"]
+        target_point = executing_task_data["target_point"]
+        mq_id = executing_task_data.get("mq_id")
+
+        if not mq_id:
+            latest_mq_id = functions.get_mission_queue_max_id()
+            if latest_mq_id:
+                self.task_db_manager.update_task_mq_id(task_id, latest_mq_id)
+                mq_id = latest_mq_id
+            else:
+                return
+
+        state = functions.get_mission_queue_id_state(mq_id)
+        if state is None:
+            if not self.mir_status_poll_disconnected:
+                print(f"[MIR RECONCILE] mission queue state unavailable for mq_id={mq_id}")
+            self.mir_status_poll_disconnected = True
+            self._refresh_robot_status_presentation()
+            return
+
+        if self.mir_status_poll_disconnected:
+            print(f"[MIR RECONCILE] mission queue connection restored for mq_id={mq_id}")
+            self.mir_status_poll_disconnected = False
+            self._refresh_robot_status_presentation()
+
+        if state == "Done":
+            self._finalize_task_result(task_id, "Completed", start_point, target_point)
+            return
+
+        if state == "Aborted":
+            self._finalize_task_result(task_id, "Aborted", start_point, target_point)
+            return
+
+        self.refresh_task_list()
+
     def query_mir_status(self):
         self.status_timer = QTimer()
         self.status_timer.timeout.connect(self.query_mir_status_ready)
@@ -3934,19 +4119,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         painter.drawLine(x - 12, y, x + 12, y)
         painter.drawLine(x, y - 12, x, y + 12)
 
-    def is_robot_in_motion_state(self):
-        return self.current_mir_state_id in {5, 9}
-
     def draw_robot_marker(self, painter, x, y):
         painter.setRenderHint(QPainter.Antialiasing, True)
 
-        if self.is_robot_in_motion_state():
-            glow_alpha = 120 + (self.robot_glow_phase % 3) * 35
-            glow_pen = QPen(QColor(57, 255, 20, glow_alpha))
-            glow_pen.setWidth(6)
-            painter.setPen(glow_pen)
-            painter.setBrush(Qt.NoBrush)
-            painter.drawEllipse(x - 18, y - 18, 36, 36)
+        state_ui = self._get_mir_state_ui(self.current_mir_state_id)
+        ring_pen = QPen(QColor(state_ui["map_ring_color"]))
+        ring_pen.setWidth(5)
+        painter.setPen(ring_pen)
+        painter.setBrush(Qt.NoBrush)
+        painter.drawEllipse(x - 18, y - 18, 36, 36)
 
         body_rect = QRect(x - 11, y - 9, 22, 18)
         painter.setPen(QPen(QColor("#0B1F33"), 2))
