@@ -56,7 +56,7 @@ class TaskThread(QThread):
         """
         Wait for the MiR mission queue entry to settle.
 
-        When mq_id is unavailable we keep the old idle-flag fallback so the
+        When mq_id is unavailable we keep the idle-flag fallback so the
         scheduler can still recover after reconnect.
         """
         if not mq_id:

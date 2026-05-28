@@ -1,0 +1,195 @@
+{
+  "_comment": "company 場域設定。現階段除了地圖與校正資料，也先把 location / mission 對照資料搬進來。",
+  "site_id": "company",
+  "display_name": "Company Demo",
+  "assets": {
+    "_comment": "main_map = 主地圖，selected_map = 點圖選點視窗，logo = 左上角 Logo",
+    "main_map": "picture/pure_dilated_map.png",
+    "selected_map": "picture/pure_dilated_map.png",
+    "logo": "picture/aceicon1.png"
+  },
+  "calibration": {
+    "_comment": "image_pts = 圖上的像素座標，world_pts = MiR 世界座標，用於座標轉換。",
+    "image_pts": [[933, 552], [567, 1381], [2635, 950]],
+    "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]]
+  },
+  "_comment_locations": "locations 是場域的核心資料表。每筆 location 同時描述 MiR 名稱、UI 顯示名稱、marker、room_id，以及是否為充電站。",
+  "locations": [
+    {
+      "mir_name": "LbV2_Robot position Hua",
+      "display_name": "華陀會議室",
+      "marker_id": "label_rp_1",
+      "room_id": "OR01",
+      "map_button_id": "btn_sm_rp1",
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Robot position lecture hall 02",
+      "display_name": "演講廳_02",
+      "marker_id": "label_rp_2",
+      "room_id": "OR02",
+      "map_button_id": "btn_sm_rp2",
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Robot position lecture hall 01",
+      "display_name": "演講廳_01",
+      "marker_id": "label_rp_3",
+      "room_id": "OR03",
+      "map_button_id": "btn_sm_rp3",
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Robot position Sofa3",
+      "display_name": "沙發3",
+      "marker_id": "label_rp_6",
+      "room_id": "OR05",
+      "map_button_id": "btn_sm_rp6",
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Robot position Sofa2",
+      "display_name": "沙發2",
+      "marker_id": "label_rp_5",
+      "room_id": "OR06",
+      "map_button_id": "btn_sm_rp5",
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Robot position Sofa1",
+      "display_name": "沙發1",
+      "marker_id": "label_rp_4",
+      "room_id": "OR07",
+      "map_button_id": "btn_sm_rp4",
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Robot position Reception V2",
+      "display_name": "櫃台",
+      "marker_id": "label_rp_7",
+      "room_id": "OR08",
+      "map_button_id": "btn_sm_rp7",
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_MiR Charge 48V V2",
+      "display_name": "充電樁",
+      "marker_id": null,
+      "room_id": "OR09",
+      "map_button_id": null,
+      "is_charging_station": true
+    },
+    {
+      "mir_name": "LbV2_Robot position Elv  Bridge Map",
+      "display_name": "電梯橋",
+      "marker_id": null,
+      "room_id": "OR10",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Shelf position Hua",
+      "display_name": "車架位置(華陀)",
+      "marker_id": "label_rp_1",
+      "room_id": "OR01",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Shelf position lecture hall 02",
+      "display_name": "車架位置(演講廳_02)",
+      "marker_id": "label_rp_2",
+      "room_id": "OR02",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Shelf position lecture hall 01",
+      "display_name": "車架位置(演講廳_01)",
+      "marker_id": "label_rp_3",
+      "room_id": "OR03",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Shelf position Sofa3",
+      "display_name": "車架位置(沙發3)",
+      "marker_id": "label_rp_6",
+      "room_id": "OR05",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Shelf position Sofa2",
+      "display_name": "車架位置(沙發2)",
+      "marker_id": "label_rp_5",
+      "room_id": "OR06",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Shelf position Sofa1",
+      "display_name": "車架位置(沙發1)",
+      "marker_id": "label_rp_4",
+      "room_id": "OR07",
+      "map_button_id": null,
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Shelf position Reception V2",
+      "display_name": "車架位置(櫃台)",
+      "marker_id": "label_rp_7",
+      "room_id": "OR08",
+      "map_button_id": null,
+      "is_charging_station": false
+    }
+  ],
+  "_comment_missions": "missions 負責 mission 名稱對照。scheduler_enabled = true 代表這筆會出現在目前 scheduler 任務下拉選單。",
+  "missions": [
+    {
+      "mir_name": "ACE_Elv_0625",
+      "display_name": "電梯",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Reception to lecture hall 01",
+      "display_name": "Demo_櫃台到演講廳_01並返回櫃台",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Reception to lecture hall 02",
+      "display_name": "Demo_櫃台到演講廳_02並返回櫃台",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Reception to Sofa1",
+      "display_name": "Demo_櫃台到沙發1並返回櫃台",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Reception to Sofa2",
+      "display_name": "Demo_櫃台到沙發2並返回櫃台",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Reception to Sofa3",
+      "display_name": "Demo_櫃台到沙發3並返回櫃台",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Seminar Presentation Jordan",
+      "display_name": "Demo_櫃台出發大廳繞一圈",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Lobby Demo Cart Transport",
+      "display_name": "Demo_載貨運輸",
+      "scheduler_enabled": true
+    },
+    {
+      "mir_name": "Lobby Demo Empty Cart Transport",
+      "display_name": "Demo_空車運輸",
+      "scheduler_enabled": true
+    }
+  ]
+}

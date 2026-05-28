@@ -40,6 +40,272 @@ from ui_admin_panel import Ui_Form_AdminPanel
 # 引入 PySide6 的 QThread 和 Signal
 from PySide6.QtCore import QThread, Signal
 
+
+def _get_runtime_search_dirs():
+    # 同時搜尋 PyInstaller 解包資料夾與 exe 所在資料夾，
+    # 讓同一份程式在開發環境與打包後都能找到資源檔。
+    search_dirs = []
+
+    if getattr(sys, "frozen", False):
+        meipass_dir = getattr(sys, "_MEIPASS", None)
+        if meipass_dir:
+            search_dirs.append(Path(meipass_dir))
+        search_dirs.append(Path(sys.executable).resolve().parent)
+    else:
+        search_dirs.append(Path(__file__).resolve().parent)
+
+    return search_dirs
+
+
+# 設定檔與圖片路徑共用的搜尋根目錄。
+# 開發時會指向專案目錄；打包後則會額外檢查解包目錄與 exe 目錄。
+RUNTIME_SEARCH_DIRS = _get_runtime_search_dirs()
+
+# 提供給一般使用者的啟動預設值。
+# 正常情況下應修改 app_settings.json，而不是直接改 main.py。
+DEFAULT_APP_SETTINGS = {
+    "site_profile": "company",
+}
+
+DEFAULT_DB_CONFIG = {
+    "user": "postgres",
+    "host": "localhost",
+    "database": "military_mir250_project",
+    "password": "123456",
+    "port": 5432,
+}
+
+# 保底用的資源路徑。
+# 只有當 site 設定檔缺欄位，或完全找不到設定檔時才會用到。
+DEFAULT_SITE_ASSETS = {
+    "main_map": "picture/pure_dilated_map_dark.png",
+    "selected_map": "picture/pure_dilated_map_dark.png",
+    "logo": "picture/aceicon1.png",
+}
+
+# 保底用的地圖校正點。
+# 只有當 site 設定檔尚未提供 image_pts / world_pts 時才會使用。
+DEFAULT_SITE_CALIBRATION = {
+    "image_pts": [[933, 552], [567, 1381], [2635, 950]],
+    "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]],
+}
+
+MIR_STATE_UI = {
+    1: {
+        "name": "Starting",
+        "label_color": "#D4A017",
+        "map_ring_color": "#C88A00",
+        "summary_variant": "warning",
+    },
+    2: {
+        "name": "ShuttingDown",
+        "label_color": "#C23B22",
+        "map_ring_color": "#B22222",
+        "summary_variant": "danger",
+    },
+    3: {
+        "name": "Ready",
+        "label_color": "#1F9D55",
+        "map_ring_color": "#178A4D",
+        "summary_variant": "success",
+    },
+    4: {
+        "name": "Pause",
+        "label_color": "#E0A800",
+        "map_ring_color": "#C89200",
+        "summary_variant": "warning",
+    },
+    5: {
+        "name": "Executing",
+        "label_color": "#00897B",
+        "map_ring_color": "#00796B",
+        "summary_variant": "success",
+    },
+    6: {
+        "name": "Aborted",
+        "label_color": "#F57C00",
+        "map_ring_color": "#E56B00",
+        "summary_variant": "warning",
+    },
+    7: {
+        "name": "GoalReached",
+        "label_color": "#2E7D32",
+        "map_ring_color": "#256A29",
+        "summary_variant": "success",
+    },
+    8: {
+        "name": "Docked",
+        "label_color": "#1565C0",
+        "map_ring_color": "#0F56A8",
+        "summary_variant": "success",
+    },
+    9: {
+        "name": "Docking",
+        "label_color": "#00ACC1",
+        "map_ring_color": "#0097A7",
+        "summary_variant": "success",
+    },
+    10: {
+        "name": "EmergencyStop",
+        "label_color": "#D32F2F",
+        "map_ring_color": "#C62828",
+        "summary_variant": "danger",
+    },
+    11: {
+        "name": "ManualControl",
+        "label_color": "#8E24AA",
+        "map_ring_color": "#7B1FA2",
+        "summary_variant": "danger",
+    },
+    12: {
+        "name": "Error",
+        "label_color": "#AD1457",
+        "map_ring_color": "#880E4F",
+        "summary_variant": "danger",
+    },
+}
+
+UNKNOWN_MIR_STATE_UI = {
+    "name": "Unknown/Offline",
+    "label_color": "#7A7F87",
+    "map_ring_color": "#5C6570",
+    "summary_variant": "neutral",
+}
+
+
+def resolve_runtime_path(relative_path):
+    # 把像 picture/xxx.png 這種相對路徑轉成實際可讀取的路徑，
+    # 讓執行前與打包後都能共用同一種寫法。
+    if not relative_path:
+        return None
+
+    if isinstance(relative_path, str) and relative_path.startswith(":/"):
+        return relative_path
+
+    relative_path = Path(relative_path)
+    for base_dir in RUNTIME_SEARCH_DIRS:
+        candidate = base_dir / relative_path
+        if candidate.exists():
+            return str(candidate)
+
+    return str(RUNTIME_SEARCH_DIRS[0] / relative_path)
+
+
+def load_app_settings():
+    # app_settings.json 是一般使用者切換場域的入口；
+    # 環境變數則保留給開發與測試時臨時覆蓋用。
+    settings_relative_path = Path("app_settings.json")
+
+    for base_dir in RUNTIME_SEARCH_DIRS:
+        candidate = base_dir / settings_relative_path
+        if not candidate.exists():
+            continue
+
+        try:
+            with candidate.open("r", encoding="utf-8") as settings_file:
+                app_settings = json.load(settings_file)
+        except (json.JSONDecodeError, OSError) as exc:
+            print(f"app_settings.json 讀取失敗，改用預設值: {exc}")
+            return DEFAULT_APP_SETTINGS.copy()
+
+        merged_settings = DEFAULT_APP_SETTINGS.copy()
+        merged_settings.update(app_settings)
+        return merged_settings
+
+    return DEFAULT_APP_SETTINGS.copy()
+
+
+def load_db_config():
+    db_config_relative_path = Path("db_config.json")
+
+    for base_dir in RUNTIME_SEARCH_DIRS:
+        candidate = base_dir / db_config_relative_path
+        if not candidate.exists():
+            continue
+
+        try:
+            with candidate.open("r", encoding="utf-8") as db_config_file:
+                loaded_config = json.load(db_config_file)
+        except (json.JSONDecodeError, OSError) as exc:
+            print(f"db_config.json 讀取失敗，改用預設值: {exc}")
+            return DEFAULT_DB_CONFIG.copy()
+
+        if isinstance(loaded_config, dict):
+            merged_config = DEFAULT_DB_CONFIG.copy()
+            merged_config.update(loaded_config)
+            return merged_config
+
+        print("db_config.json 格式錯誤，改用預設值。")
+        return DEFAULT_DB_CONFIG.copy()
+
+    return DEFAULT_DB_CONFIG.copy()
+
+
+# 啟動時的場域決策優先順序：
+# 1. AMR_SITE_PROFILE 環境變數（開發 / 測試臨時覆蓋）
+# 2. app_settings.json（一般使用者設定）
+# 3. DEFAULT_APP_SETTINGS 內建保底值
+APP_SETTINGS = load_app_settings()
+DEFAULT_SITE_PROFILE = os.environ.get(
+    "AMR_SITE_PROFILE",
+    APP_SETTINGS.get("site_profile", "company"),
+)
+
+
+def load_site_config(site_profile=None):
+    # site_profile 只負責決定「要載入哪一個場域」；
+    # 真正的地圖與 Logo 路徑都放在 site/<profile>.json 裡。
+    # 從這一步開始，location / mission / quick action 也逐漸往 site config 集中。
+    site_profile = site_profile or DEFAULT_SITE_PROFILE
+    site_config_relative_path = Path("site") / f"{site_profile}.json"
+    site_config_path = Path(resolve_runtime_path(site_config_relative_path))
+
+    if not site_config_path.exists():
+        # 如果指定場域不存在，先退回 company，至少保有可用的基準設定。
+        if site_profile != "company":
+            print(f"找不到 site profile: {site_profile}，改用 company 設定。")
+            return load_site_config("company")
+        # 如果連 company.json 都不存在，就退回程式內建的保底圖片路徑。
+        print("找不到 company site config，改用內建預設地圖資源。")
+        return {
+            "site_id": "company",
+            "assets": DEFAULT_SITE_ASSETS.copy(),
+            "calibration": DEFAULT_SITE_CALIBRATION.copy(),
+            "locations": [],
+            "missions": [],
+        }
+
+    try:
+        with site_config_path.open("r", encoding="utf-8") as config_file:
+            site_config = json.load(config_file)
+    except (json.JSONDecodeError, OSError) as exc:
+        if site_profile != "company":
+            print(f"site profile 讀取失敗: {site_profile}，改用 company 設定。原因: {exc}")
+            return load_site_config("company")
+        print(f"company site config 讀取失敗，改用內建預設設定。原因: {exc}")
+        return {
+            "site_id": "company",
+            "assets": DEFAULT_SITE_ASSETS.copy(),
+            "calibration": DEFAULT_SITE_CALIBRATION.copy(),
+            "locations": [],
+            "missions": [],
+        }
+
+    assets = DEFAULT_SITE_ASSETS.copy()
+    assets.update(site_config.get("assets", {}))
+    site_config["assets"] = assets
+
+    calibration = DEFAULT_SITE_CALIBRATION.copy()
+    calibration.update(site_config.get("calibration", {}))
+    site_config["calibration"] = calibration
+
+    # 這三個欄位是新 schema。
+    # 就算 hospital 還沒補資料，也先保證程式拿得到空陣列，不會直接噴錯。
+    site_config.setdefault("locations", [])
+    site_config.setdefault("missions", [])
+    site_config.setdefault("site_id", site_profile)
+    return site_config
+
 # ----------------------------------------------------------------------
 # 1. 數據層：定義 MiR 英文代碼與中文名稱的對應關係
 # 這是你的「翻譯字典」英翻中，工程語言轉user語言
@@ -116,7 +382,7 @@ ROOM_ID_MAP = {
     "電梯橋": "OR10",
 
     "車架位置(華陀)": "OR01",
-    "車架位置(演講廳_02)": "OR2",
+    "車架位置(演講廳_02)": "OR02",
     "車架位置(演講廳_01)": "OR03",
     "車架位置(沙發3)": "OR05",
     "車架位置(沙發2)": "OR06",
@@ -147,6 +413,96 @@ MIR_LOCATION_MAP = {v: k for k, v in USER_LOCATION_MAP.items()}
 MIR_MISSION_GROUP_MAP = {v: k for k, v in USER_MISSION_GROUP_MAP.items()}
 
 CHARGING_STATION_NAME = "充電樁"
+
+
+def build_site_runtime_maps(site_config):
+    """
+    將 site/<profile>.json 的新結構，轉回目前程式既有邏輯可直接使用的 map。
+
+    目的：
+    1. 讓資料來源改成 site config
+    2. 但暫時不要一次重寫所有舊流程
+    3. 缺資料時仍保留舊 hardcode 當 fallback
+    """
+    runtime_maps = {
+        # 先以舊 hardcode 當保底值，避免某個場域尚未補完整時整段功能失效。
+        "user_location_map": USER_LOCATION_MAP.copy(),
+        "mir_location_map": MIR_LOCATION_MAP.copy(),
+        "user_mission_group_map": USER_MISSION_GROUP_MAP.copy(),
+        "mir_mission_group_map": MIR_MISSION_GROUP_MAP.copy(),
+        "room_id_map": ROOM_ID_MAP.copy(),
+        "location_to_marker": LOCATION_TO_MARKER.copy(),
+        "required_mission_codes": set(REQUIRED_MISSION_CODES),
+        "charging_station_name": CHARGING_STATION_NAME,
+    }
+
+    location_records = site_config.get("locations") or []
+    mission_records = site_config.get("missions") or []
+
+    user_location_map = {}
+    location_to_marker = {}
+    room_id_map = {}
+    charging_station_name = None
+
+    for location in location_records:
+        # 每一筆 location 同時承載：
+        # MiR 名稱、UI 顯示名稱、marker 對應、room_id、以及是否為充電站。
+        mir_name = location.get("mir_name")
+        display_name = location.get("display_name")
+        if not mir_name or not display_name:
+            continue
+
+        user_location_map[mir_name] = display_name
+
+        marker_id = location.get("marker_id")
+        if marker_id:
+            location_to_marker[display_name] = marker_id
+
+        room_id = location.get("room_id")
+        if room_id:
+            room_id_map[display_name] = room_id
+
+        # 這裡不是用 display_name == "充電樁" 判斷，
+        # 而是明確看 is_charging_station，之後不同場域可自由換名字。
+        if location.get("is_charging_station"):
+            charging_station_name = display_name
+
+    if user_location_map:
+        # 由 locations 陣列組回舊程式常用的兩張表：
+        # 1. MiR name -> UI name
+        # 2. UI name -> MiR name
+        runtime_maps["user_location_map"] = user_location_map
+        runtime_maps["mir_location_map"] = {v: k for k, v in user_location_map.items()}
+    if location_to_marker:
+        runtime_maps["location_to_marker"] = location_to_marker
+    if room_id_map:
+        runtime_maps["room_id_map"] = room_id_map
+    if charging_station_name:
+        runtime_maps["charging_station_name"] = charging_station_name
+
+    user_mission_group_map = {}
+    required_mission_codes = set()
+
+    for mission in mission_records:
+        # 每一筆 mission 目前先保留兩種角色：
+        # 1. 下拉選單顯示名稱
+        # 2. 是否納入 scheduler 任務清單
+        mir_name = mission.get("mir_name")
+        display_name = mission.get("display_name")
+        if not mir_name or not display_name:
+            continue
+
+        user_mission_group_map[mir_name] = display_name
+        if mission.get("scheduler_enabled"):
+            required_mission_codes.add(mir_name)
+
+    if user_mission_group_map:
+        runtime_maps["user_mission_group_map"] = user_mission_group_map
+        runtime_maps["mir_mission_group_map"] = {v: k for k, v in user_mission_group_map.items()}
+    if required_mission_codes:
+        runtime_maps["required_mission_codes"] = required_mission_codes
+
+    return runtime_maps
 
 # ------------將「耗時操作」丟到背景 thread 執行----------
 class DBWorker(QThread):
@@ -405,22 +761,32 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
     location_selected = Signal(str)
 
 
-    def __init__(self):
+    def __init__(self, map_image_path=None):
         super().__init__()
         self.setupUi(self)
 
-        map_pixmap = QPixmap("./picture/pure_dilated_map") 
-        if not map_pixmap.isNull():
-            self.label_sm_map_1.setPixmap(map_pixmap)
-            self.label_sm_map_1.setScaledContents(True) # 允許縮放
-        else:
-            print("錯誤：無法加載地圖圖片！")
+        # 小地圖不再固定寫死公司版圖片，而是改由目前場域設定決定。
+        self.set_map_image(map_image_path)
 
         # 連接地圖上的地點按鈕
         self._connect_location_buttons()
         # 連接「確定」按鈕到發送信號的方法
         self.btn_sm_enter.clicked.connect(self._confirm_selection)
         self.btn_sm_cancel.clicked.connect(self.close)
+
+    def set_map_image(self, map_image_path):
+        if not map_image_path:
+            return
+
+        # 保留 Qt Designer 裡的預設圖當 fallback，
+        # 但實際執行時會改成目前場域設定的小地圖。
+        map_pixmap = QPixmap(map_image_path)
+        if map_pixmap.isNull():
+            print(f"小地圖載入失敗: {map_image_path}")
+            return
+
+        self.label_sm_map_1.setPixmap(map_pixmap)
+        self.label_sm_map_1.setScaledContents(True)
 
     def _update_selected_point(self, location_name):
         """
@@ -538,6 +904,93 @@ class NotificationItem(QWidget):
         # 將關閉按鈕存為屬性，供外部連接訊號
         self.close_button = close_btn
 
+class CompactNotificationItem(QWidget):
+    def __init__(self, notification_type, message, parent=None):
+        super().__init__(parent)
+
+        palette_map = {
+            "完成": {
+                "bg": "#DFF3E5",
+                "border": "#79CEA0",
+                "text": "#183926",
+                "icon_bg": "#EFFAF2",
+                "icon_fg": "#1E8E52",
+                "close": "#4B6B56",
+                "icon": "✓",
+            },
+            "警告": {
+                "bg": "#FFF4D6",
+                "border": "#F1C96A",
+                "text": "#5D4513",
+                "icon_bg": "#FFF9EB",
+                "icon_fg": "#B7791F",
+                "close": "#7A622B",
+                "icon": "!",
+            },
+            "取消": {
+                "bg": "#F9E1E6",
+                "border": "#E59AA9",
+                "text": "#5B2732",
+                "icon_bg": "#FDF1F4",
+                "icon_fg": "#B54863",
+                "close": "#7B4552",
+                "icon": "×",
+            },
+            "錯誤": {
+                "bg": "#F9E1E6",
+                "border": "#E59AA9",
+                "text": "#5B2732",
+                "icon_bg": "#FDF1F4",
+                "icon_fg": "#B54863",
+                "close": "#7B4552",
+                "icon": "×",
+            },
+        }
+        palette = palette_map.get(notification_type, palette_map["錯誤"])
+
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {palette["bg"]};
+                border: 1px solid {palette["border"]};
+                border-radius: 10px;
+                color: {palette["text"]};
+            }}
+        """)
+
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(10, 6, 10, 6)
+        main_layout.setSpacing(10)
+
+        icon_label = QLabel(palette["icon"])
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setFixedSize(20, 20)
+        icon_label.setStyleSheet(
+            f"font-size: 11px; font-weight: 700; color: {palette['icon_fg']}; "
+            f"background-color: {palette['icon_bg']}; border: 1px solid {palette['border']}; "
+            "border-radius: 10px;"
+        )
+        main_layout.addWidget(icon_label)
+
+        message_label = QLabel(message)
+        message_label.setWordWrap(True)
+        message_label.setTextFormat(Qt.RichText)
+        message_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        message_label.setStyleSheet(
+            "font-size: 12px; color: #F4F7FB; background: transparent; border: none;"
+        )
+        main_layout.addWidget(message_label)
+
+        close_btn = QPushButton("×")
+        close_btn.setFixedSize(18, 18)
+        close_btn.setStyleSheet(
+            f"QPushButton {{ border: none; font-size: 13px; font-weight: 700; "
+            f"color: {palette['close']}; background-color: transparent; }}"
+            f"QPushButton:hover {{ color: {palette['text']}; }}"
+        )
+        main_layout.addWidget(close_btn)
+
+        self.close_button = close_btn
+
 class MainWindow(QMainWindow, Ui_MainWindow):
     # 主函式
     def __init__(self, username, user_db_manager, task_db_manager):
@@ -553,6 +1006,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowFlag(Qt.FramelessWindowHint)
 
         self.setupUi(self) #這會設定 self.centralWidget 為您的原有內容容器。
+        # 啟動時先決定本次執行要使用哪個場域，
+        # 之後主地圖、小地圖、Logo 都從同一份設定讀取。
+        # self.site_profile = 最終決定目前跑 company 還是 hospital 的值
+        # self.site_config = 對應的 site/<profile>.json 內容
+        # self.site_assets = 本次先抽出的地圖/Logo 資源包
+        # self.site_calibration = 本次抽出的 image_pts / world_pts 校正資料
+        self.site_profile = DEFAULT_SITE_PROFILE
+        self.site_config = load_site_config(self.site_profile)
+        self.site_assets = self.site_config["assets"]
+        self.site_calibration = self.site_config["calibration"]
+        # site_runtime_maps = 新舊架構之間的過渡層。
+        # UI / TaskThread 仍吃熟悉的 map，但來源已經優先改成 site config。
+        self.site_runtime_maps = build_site_runtime_maps(self.site_config)
         #########################################客製化title：穩健 ToolBar 方案########################################
         # 1. 創建客製化標題列的 QFrame
         #    這個 QFrame 包含了您設計的標題文字和最小化/最大化/關閉按鈕。
@@ -626,8 +1092,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 設定列寬度的自適應策略
         self.header = self.tableWidget_pending_mission_list.horizontalHeader()
-        self.header.setSectionResizeMode(4, QHeaderView.Stretch)
-        self.header.setSectionResizeMode(5, QHeaderView.Stretch)
+        self._configure_pending_mission_table()
         
         # 設置表格行高
         self.tableWidget_pending_mission_list.setWordWrap(True)
@@ -653,14 +1118,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.is_test_mode = True
         
 
-        # 【新增：將全局常數賦值給 MainWindow 實例的屬性】
-        # 輔助常數
-        self.MIR_LOCATION_MAP = MIR_LOCATION_MAP
-        self.MIR_MISSION_GROUP_MAP = MIR_MISSION_GROUP_MAP
-        self.CHARGING_STATION_NAME = CHARGING_STATION_NAME
-        self.USER_LOCATION_MAP = USER_LOCATION_MAP
-        self.USER_MISSION_GROUP_MAP = USER_MISSION_GROUP_MAP
-        self.ROOM_ID_MAP = ROOM_ID_MAP
+        # 將場域設定轉出的 runtime map 掛到 self。
+        # 後面如果還看到 self.MIR_LOCATION_MAP / self.ROOM_ID_MAP，
+        # 代表那段舊流程已經開始吃 site config 了。
+        self.MIR_LOCATION_MAP = self.site_runtime_maps["mir_location_map"]
+        self.MIR_MISSION_GROUP_MAP = self.site_runtime_maps["mir_mission_group_map"]
+        self.CHARGING_STATION_NAME = self.site_runtime_maps["charging_station_name"]
+        self.USER_LOCATION_MAP = self.site_runtime_maps["user_location_map"]
+        self.USER_MISSION_GROUP_MAP = self.site_runtime_maps["user_mission_group_map"]
+        self.ROOM_ID_MAP = self.site_runtime_maps["room_id_map"]
+        self.LOCATION_TO_MARKER = self.site_runtime_maps["location_to_marker"]
+        self.REQUIRED_MISSION_CODES = self.site_runtime_maps["required_mission_codes"]
 
         # 初始化 MiR 函數
         # 將您已經導入的 functions 模組，作為一個屬性(attribute)賦值給 MainWindow 實例 (self)
@@ -677,7 +1145,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.comboBox_destination = self.findChild(QComboBox, 'cmb_location')
 
         # 🥇 僅創建一次 SelectedMap 實例
-        self.map_dialog = SelectedMap() 
+        # 右上 MAP 彈窗使用目前場域的小地圖資源，
+        # 之後只要切 site_profile 就能換圖，不必再改程式。
+        selected_map_path = resolve_runtime_path(self.site_assets.get("selected_map"))
+        self.map_dialog = SelectedMap(selected_map_path) 
         # 隱藏地圖選擇對話框
         self.map_dialog.hide()
 
@@ -758,9 +1229,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         
         # 讀圖
-        self.original_pixmap = QPixmap("./picture/pure_dilated_map")
+        # 左側主地圖與小地圖共用同一組場域資源設定。
+        # 這裡就是主畫面「依設定換地圖」的主要入口。
+        main_map_path = resolve_runtime_path(self.site_assets.get("main_map"))
+        self.original_pixmap = QPixmap(main_map_path)
         if self.original_pixmap.isNull():
-            print("圖片讀取失敗！")
+            print(f"主地圖載入失敗: {main_map_path}")
         else:
             self.label_map_1.setPixmap(self.original_pixmap)
             self.label_map_1.resize(self.original_pixmap.size())
@@ -781,6 +1255,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 【關鍵修正】設置窗口標誌，使其忽略滑鼠事件
         # Qt.WA_TransparentForMouseEvents 是用於 QWidget 的屬性，但 QLabel 繼承自 QWidget
         self.label_car_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.current_mir_state_id = None
+        self.map_overlay_frames = {}
+        self.map_overlay_content_widgets = {}
+        self.map_overlay_collapsed = {
+            "map_overlay_top_right": True,
+            "map_overlay_bottom_right": True,
+            "map_overlay_bottom_left": True,
+        }
+        self.map_overlay_summary_widgets = {}
+        self.map_overlay_toggle_buttons = {}
+        self._setup_main_map_overlay_containers()
+        self._apply_main_map_overlay_theme()
+        self._setup_overlay_edge_cards()
+        self._refresh_overlay_card_summaries()
                 
         # # 讀logo 暫時沒用到
         # self.icon_pixmap = QPixmap("./picture/aceicon1.png")
@@ -791,29 +1279,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Flag
         self.clicked_enabled = False
+        self.sent_robot_to_in_progress = False
         self.last_click_overlay_pos = None
         self.last_robot_world_pos = None
-        self.current_mir_state_id = None
         self.robot_glow_phase = 0
+        self._apply_main_map_shell_layout()
 
-        ##############換地圖時除了這邊的座標，也要到draw_car_position裡面改原始圖片尺寸(load的那一張)##############
-
-        # 三個對應點（像素座標）充電站，左下角牆角，櫃台上方 706 649 MiR floor plan_V0
-        # self.image_pts = np.array([[200,130],[126,355],[563,274],],dtype = np.float32)
-        # 三個對應點 3*3 正方形
-        # self.image_pts = np.array([[347,209],[538,216],[440,128],],dtype = np.float32)
-        # 三個對應點（像素座標）充電站，左下角牆角，櫃台上方 3216 1824 pure_dilated_map
-        self.image_pts = np.array([[933,552],[567,1381],[2635,950],],dtype = np.float32)
-        
-        # 三個對應點（MiR 世界座標）
-        # 地圖"Lobby"座標 
-        # self.world_pts = np.array([[-0.867, 27.335], [-7.411, 7.937],[31.021, 15.012],], dtype=np.float32)
-        # 地圖"Lobby_V2"座標 
-        self.world_pts = np.array([[1.465, 28.374], [-5.091, 9.006],[34.138, 17.249],], dtype=np.float32)
-        # # 地圖"ACE Exhibition 3x3 Test01"座標 
-        # self.world_pts = np.array([[-0.858, 22.619], [1.915, 22.447],[-1.344, 19.359],], dtype=np.float32)
-        # 醫療展現場
-        # self.world_pts = np.array([[11.65, 10.49], [13.564, 10.529],[12.777, 11.656],], dtype=np.float32)
+        # image_pts / world_pts 已從 main.py 硬編碼抽離到 site config。
+        # 這裡只負責讀取目前場域的校正點，不改動後續 affine 計算邏輯。
+        self.image_pts = np.array(
+            self.site_calibration["image_pts"],
+            dtype=np.float32,
+        )
+        self.world_pts = np.array(
+            self.site_calibration["world_pts"],
+            dtype=np.float32,
+        )
 
         # 建立仿射轉換矩陣
         self.affine_matrix = self.compute_affine_transform()
@@ -830,8 +1311,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.btn_GetPM.hide() # 暫時隱藏
         self.btn_StopMission1.clicked.connect(self.on_stop_mission_clicked)
         self.btn_StopMission2.clicked.connect(self.on_stop_mission_clicked)
-        self.btn_Start_Exhibition_Drink.clicked.connect(self.on_start_mission_clicked_exhibition_drink)
-        self.btn_Start_Exhibition_Military.clicked.connect(self.on_start_mission_clicked_exhibition_military)
         self.btn_Reset.clicked.connect(self.on_reset_status_clicked)
         self.btn_save_ip.clicked.connect(self.on_save_ip_clicked)
         self.btn_IO_Up.clicked.connect(self.on_up_io_clicked)
@@ -858,6 +1337,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 padding: 0px; /* 移除項目本身的內邊距 */
             }
         """)
+        self._apply_main_map_overlay_theme()
+        self._refresh_overlay_card_summaries()
 
         # self.setStyleSheet(tooltip_reset_style)
         # self.add_notification_item("錯誤", "9999 任務失敗：目標點座標錯誤。")
@@ -865,6 +1346,1031 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # ----------------------------------------------------
     # ⭐ 客製化titlebar-標題列輔助方法 ⭐
     # ----------------------------------------------------
+    def _raise_map_foreground_widgets(self):
+        if not hasattr(self, "frame_map") or not hasattr(self, "label_car_overlay"):
+            return
+
+        for child in self.frame_map.children():
+            if not isinstance(child, QWidget):
+                continue
+            if child in {self.label_map_1, self.label_car_overlay}:
+                continue
+            child.raise_()
+
+    def _create_map_overlay_frame(self, object_name):
+        overlay = QFrame(self.frame_map)
+        overlay.setObjectName(object_name)
+        overlay.setFrameShape(QFrame.StyledPanel)
+        overlay.setFrameShadow(QFrame.Raised)
+        overlay.setAttribute(Qt.WA_StyledBackground, True)
+        overlay.setStyleSheet(self._build_overlay_frame_qss(object_name))
+        overlay.show()
+        return overlay
+
+    def _build_overlay_button_qss(self, variant="secondary", icon_only=False):
+        if variant == "primary":
+            bg_color = "#1790FF"
+            hover_color = "#36A1FF"
+            border_color = "#1790FF"
+            text_color = "#FFFFFF"
+        elif variant == "danger":
+            bg_color = "rgba(184, 49, 75, 0.18)"
+            hover_color = "rgba(208, 68, 96, 0.28)"
+            border_color = "rgba(255, 132, 157, 0.56)"
+            text_color = "#FFD8DE"
+        elif variant == "ghost":
+            bg_color = "rgba(255, 255, 255, 0.06)"
+            hover_color = "rgba(255, 255, 255, 0.12)"
+            border_color = "rgba(149, 190, 225, 0.28)"
+            text_color = "#EAF2FD"
+        else:
+            bg_color = "rgba(23, 144, 255, 0.12)"
+            hover_color = "rgba(23, 144, 255, 0.22)"
+            border_color = "rgba(95, 178, 255, 0.42)"
+            text_color = "#EAF4FF"
+
+        radius = 11 if not icon_only else 10
+        padding = "0px" if icon_only else "0 12px"
+        font_size = "13px" if not icon_only else "12px"
+
+        return f"""
+        QPushButton {{
+            background-color: {bg_color};
+            color: {text_color};
+            border: 1px solid {border_color};
+            border-radius: {radius}px;
+            padding: {padding};
+            font-size: {font_size};
+            font-weight: 600;
+        }}
+        QPushButton:hover {{
+            background-color: {hover_color};
+        }}
+        QPushButton:disabled {{
+            background-color: rgba(255, 255, 255, 0.05);
+            color: rgba(234, 244, 255, 0.36);
+            border: 1px solid rgba(149, 190, 225, 0.16);
+        }}
+        """
+
+    def _build_overlay_input_qss(self, title=False):
+        if title:
+            return """
+            QLineEdit {
+                color: #F2F7FF;
+                background: transparent;
+                border: none;
+                font-size: 18px;
+                font-weight: 700;
+                padding: 0px;
+            }
+            """
+
+        return """
+        QLineEdit {
+            color: #EAF4FF;
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(150, 190, 225, 0.22);
+            border-radius: 10px;
+            font-size: 13px;
+            padding: 0 12px;
+        }
+        """
+
+    def _build_overlay_combo_qss(self):
+        return """
+        QComboBox {
+            color: #EAF4FF;
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(150, 190, 225, 0.22);
+            border-radius: 10px;
+            font-size: 13px;
+            padding: 0 12px;
+        }
+        QComboBox::drop-down {
+            border: none;
+            width: 24px;
+            background: transparent;
+        }
+        QComboBox QAbstractItemView {
+            background-color: #0B1828;
+            color: #EAF4FF;
+            border: 1px solid rgba(95, 178, 255, 0.30);
+            selection-background-color: rgba(23, 144, 255, 0.28);
+        }
+        """
+
+    def _build_compact_status_label_qss(self, color):
+        return (
+            f"color: {color}; font-size: 18px; font-weight: 700; "
+            "background-color: transparent;"
+        )
+
+    def _heartbeat_label_qss(self, text_color, border_color):
+        return (
+            "color: {text_color}; font-size: 11px; font-weight: 700; "
+            "background-color: rgba(255, 255, 255, 0.92); "
+            "border: 1px solid {border_color}; border-radius: 8px; padding: 2px 4px;"
+        ).format(text_color=text_color, border_color=border_color)
+
+    def _set_battery_progress_style(self, color):
+        self.progressBar_battery.setStyleSheet(f"""
+        QProgressBar {{
+            color: #EAF4FF;
+            background-color: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(150, 190, 225, 0.24);
+            border-radius: 9px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+        }}
+        QProgressBar::chunk {{
+            background-color: {color};
+            border-radius: 8px;
+        }}
+        """)
+
+    def _apply_main_map_overlay_theme(self):
+        self.label_Status_1.setMinimumWidth(280)
+        self.label_Status_1.setMaximumWidth(320)
+        self.label_Status_1.setMinimumHeight(44)
+        self.label_Status_1.setMaximumHeight(56)
+        self.label_Status_1.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.label_Status_1.setStyleSheet(
+            self._build_compact_status_label_qss(UNKNOWN_MIR_STATE_UI["label_color"])
+        )
+
+        self.lineEdit_MiR250_A.setStyleSheet(
+            "color: #F2F7FF; font-size: 24px; font-weight: 700; background: transparent;"
+        )
+        self.lineEdit_MiR250_A.setMinimumSize(QSize(128, 40))
+        self.lineEdit_MiR250_A.setMaximumSize(QSize(140, 40))
+
+        self.progressBar_battery.setMinimumSize(QSize(88, 20))
+        self.progressBar_battery.setMaximumSize(QSize(96, 20))
+        self._set_battery_progress_style("#3DDC97")
+
+        self.horizontalLayout_7.setSpacing(4)
+
+        self.btn_ChargeMission.setMinimumSize(QSize(112, 32))
+        self.btn_ChargeMission.setMaximumSize(QSize(112, 32))
+        self.btn_ChargeMission.setStyleSheet(self._build_overlay_button_qss("danger"))
+
+        self.btn_Reset.setMinimumSize(QSize(88, 32))
+        self.btn_Reset.setMaximumSize(QSize(96, 32))
+        self.btn_Reset.setStyleSheet(self._build_overlay_button_qss("danger"))
+
+        self.lineEdit_IP.setMinimumSize(QSize(126, 34))
+        self.lineEdit_IP.setMaximumSize(QSize(150, 34))
+        self.lineEdit_IP.setStyleSheet(self._build_overlay_input_qss())
+        self.btn_save_ip.setMinimumSize(QSize(34, 34))
+        self.btn_save_ip.setMaximumSize(QSize(34, 34))
+        self.btn_save_ip.setStyleSheet(self._build_overlay_button_qss("ghost", icon_only=True))
+
+        for label in (self.label_6, self.label, self.label_3):
+            label.setMinimumSize(QSize(90, 20))
+            label.setMaximumSize(QSize(110, 20))
+            label.setStyleSheet("color: rgba(226, 236, 248, 0.78); font-size: 13px; font-weight: 600;")
+
+        for combo in (self.cmb_location2, self.cmb_location, self.cmb_mission):
+            combo.setMinimumHeight(38)
+            combo.setMaximumHeight(38)
+            combo.setMinimumWidth(0)
+            combo.setMaximumWidth(16777215)
+            combo.setStyleSheet(self._build_overlay_combo_qss())
+
+        for button in (self.btn_SelectStart, self.btn_SelectDestination):
+            button.setMinimumSize(QSize(64, 32))
+            button.setMaximumSize(QSize(64, 32))
+            button.setStyleSheet(self._build_overlay_button_qss("ghost"))
+
+        self.btn_Emergency_Cut_Line.setStyleSheet(self._build_overlay_button_qss("danger"))
+        self.btn_Add_New_Mission.setStyleSheet(self._build_overlay_button_qss("primary"))
+
+        self.lineEdit_PendingMission.setStyleSheet(self._build_overlay_input_qss(title=True))
+        self.lineEdit_PendingMission.setMinimumSize(QSize(180, 32))
+        self.lineEdit_PendingMission.setMaximumSize(QSize(220, 32))
+
+        for button in (self.btn_StartMission, self.btn_StopMission1):
+            button.setMinimumSize(QSize(34, 34))
+            button.setMaximumSize(QSize(34, 34))
+        self.btn_StartMission.setStyleSheet(self._build_overlay_button_qss("primary", icon_only=True))
+        self.btn_StopMission1.setStyleSheet(self._build_overlay_button_qss("danger", icon_only=True))
+
+        self.frame_pending_mission_list.setStyleSheet("border: none; background: transparent;")
+        self.tableWidget_pending_mission_list.setStyleSheet("""
+        QTableWidget {
+            background-color: rgba(7, 16, 27, 0.76);
+            alternate-background-color: rgba(255, 255, 255, 0.03);
+            color: #EAF4FF;
+            border: 1px solid rgba(150, 190, 225, 0.18);
+            border-radius: 12px;
+            gridline-color: rgba(150, 190, 225, 0.10);
+            font-size: 11px;
+        }
+        QTableWidget::item {
+            padding: 4px;
+            border-bottom: 1px solid rgba(150, 190, 225, 0.08);
+        }
+        QHeaderView::section {
+            background-color: rgba(255, 255, 255, 0.06);
+            color: rgba(234, 244, 255, 0.82);
+            padding: 4px;
+            border: none;
+            border-bottom: 1px solid rgba(150, 190, 225, 0.16);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        """)
+        self.tableWidget_pending_mission_list.setAlternatingRowColors(True)
+        self.tableWidget_pending_mission_list.verticalHeader().setDefaultSectionSize(42)
+        self.tableWidget_pending_mission_list.horizontalHeader().setDefaultSectionSize(68)
+        self.tableWidget_pending_mission_list.horizontalHeader().setMinimumSectionSize(22)
+
+        self.lineEdit_MessageAnnounce.setStyleSheet(
+            "color: rgba(226, 236, 248, 0.78); font-size: 12px; font-weight: 700; background: transparent;"
+        )
+        self.lineEdit_MessageAnnounce.setMinimumSize(QSize(100, 20))
+        self.lineEdit_MessageAnnounce.setMaximumSize(QSize(120, 20))
+
+        for layout in (self.horizontalLayout_4, self.horizontalLayout_8):
+            layout.setSpacing(6)
+
+        for dot, color in (
+            (self.lineEdit_MessageAnnounce_6, "#42BE57"),
+            (self.lineEdit_MessageAnnounce_7, "#FF9D2F"),
+        ):
+            dot.setMinimumSize(QSize(10, 10))
+            dot.setMaximumSize(QSize(10, 10))
+            dot.setAlignment(Qt.AlignCenter)
+            dot.setStyleSheet(
+                f"background-color: {color}; color: transparent; border-radius: 5px; border: none;"
+            )
+
+        for label in (self.lineEdit_current_tasks, self.lineEdit_pending_tasks):
+            label.setMinimumHeight(20)
+            label.setMaximumHeight(20)
+            label.setStyleSheet(
+                "color: rgba(226, 236, 248, 0.78); font-size: 12px; font-weight: 600; background: transparent;"
+            )
+
+        self.chb_map.setMinimumSize(QSize(120, 30))
+        self.chb_map.setMaximumSize(QSize(126, 30))
+        self.chb_map.setStyleSheet("""
+        QCheckBox {
+            color: #EAF4FF;
+            background-color: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(150, 190, 225, 0.22);
+            border-radius: 10px;
+            padding: 0 10px;
+            font-size: 12px;
+            spacing: 8px;
+        }
+        QCheckBox::indicator {
+            width: 14px;
+            height: 14px;
+            background-color: transparent;
+            border: 1px solid rgba(234, 244, 255, 0.72);
+            border-radius: 4px;
+        }
+        QCheckBox::indicator:checked {
+            background-color: #1790FF;
+            image: url(:/icons/icons/check.svg);
+        }
+        """)
+
+        self.btn_SentRobotTo.setMinimumSize(QSize(34, 30))
+        self.btn_SentRobotTo.setMaximumSize(QSize(34, 30))
+        self.btn_SentRobotTo.setStyleSheet(self._build_overlay_button_qss("primary", icon_only=True))
+
+        for index in range(1, 14):
+            label = getattr(self, f"lbl_OR_Heartbeat_{index}")
+            label.setWordWrap(True)
+            label.setAlignment(Qt.AlignCenter)
+            label.setMinimumSize(QSize(56, 34))
+            label.setMaximumSize(QSize(60, 34))
+            label.setStyleSheet(self._heartbeat_label_qss("#5A6573", "#B7C7D9"))
+
+        self.listWidget_msg.setStyleSheet("""
+        QListWidget {
+            border: 1px solid rgba(150, 190, 225, 0.20);
+            border-radius: 12px;
+            padding: 0px;
+            background-color: rgba(7, 16, 27, 0.86);
+        }
+        QListWidget::item {
+            margin: 2px;
+            padding: 0px;
+        }
+        """)
+        self.listWidget_msg.setSpacing(2)
+
+    def _build_overlay_summary_title_qss(self):
+        return (
+            "color: #F3F8FF; background: transparent; "
+            "font-size: 15px; font-weight: 700;"
+        )
+
+    def _build_overlay_summary_chip_qss(self, variant="neutral"):
+        if variant == "success":
+            background = "rgba(61, 220, 151, 0.20)"
+            border = "rgba(124, 255, 178, 0.48)"
+            color = "#D8FFE7"
+        elif variant == "warning":
+            background = "rgba(255, 157, 47, 0.18)"
+            border = "rgba(255, 191, 116, 0.42)"
+            color = "#FFEBD2"
+        elif variant == "danger":
+            background = "rgba(184, 49, 75, 0.18)"
+            border = "rgba(255, 132, 157, 0.42)"
+            color = "#FFD8DE"
+        else:
+            background = "rgba(23, 144, 255, 0.18)"
+            border = "rgba(95, 178, 255, 0.42)"
+            color = "#EAF4FF"
+
+        return (
+            "background-color: {background}; color: {color}; "
+            "border: 1px solid {border}; border-radius: 11px; "
+            "padding: 0 10px; font-size: 12px; font-weight: 700;"
+        ).format(background=background, color=color, border=border)
+
+    def _create_overlay_summary_label(self, parent, object_name, chip=False, variant="neutral"):
+        label = QLabel(parent)
+        label.setObjectName(object_name)
+        label.setAlignment((Qt.AlignCenter if chip else Qt.AlignLeft) | Qt.AlignVCenter)
+        label.setStyleSheet(
+            self._build_overlay_summary_chip_qss(variant)
+            if chip
+            else self._build_overlay_summary_title_qss()
+        )
+        label.hide()
+        return label
+
+    def _build_overlay_frame_qss(self, object_name, collapsed=False):
+        background_alpha = 232 if collapsed else 218
+        border_alpha = 138 if collapsed else 118
+        radius = 18 if collapsed else 16
+        return f"""
+            QFrame#{object_name} {{
+                background-color: rgba(7, 15, 26, {background_alpha});
+                border: 1px solid rgba(138, 182, 219, {border_alpha});
+                border-radius: {radius}px;
+            }}
+        """
+
+    def _set_overlay_frame_style(self, object_name):
+        overlay = self.map_overlay_frames.get(object_name)
+        if overlay is None:
+            return
+        overlay.setStyleSheet(
+            self._build_overlay_frame_qss(
+                object_name,
+                self.map_overlay_collapsed.get(object_name, False),
+            )
+        )
+
+    def _setup_overlay_edge_cards(self):
+        if not self.map_overlay_frames:
+            return
+
+        for object_name, overlay in self.map_overlay_frames.items():
+            toggle_button = QPushButton(overlay)
+            toggle_button.setObjectName(f"{object_name}_toggle")
+            toggle_button.setCursor(Qt.PointingHandCursor)
+            toggle_button.clicked.connect(
+                lambda _checked=False, key=object_name: self._toggle_map_overlay_collapsed(key)
+            )
+            toggle_button.show()
+            self.map_overlay_toggle_buttons[object_name] = toggle_button
+
+            summary_widgets = {}
+            if object_name == "map_overlay_top_right":
+                summary_widgets["title"] = self._create_overlay_summary_label(overlay, f"{object_name}_title")
+                summary_widgets["status"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_status", chip=True, variant="success"
+                )
+                summary_widgets["battery"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_battery", chip=True
+                )
+                summary_widgets["tasks"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_tasks", chip=True
+                )
+            elif object_name == "map_overlay_bottom_right":
+                summary_widgets["title"] = self._create_overlay_summary_label(overlay, f"{object_name}_title")
+                summary_widgets["count"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_count", chip=True, variant="warning"
+                )
+                summary_widgets["active"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_active", chip=True
+                )
+            elif object_name == "map_overlay_bottom_left":
+                summary_widgets["current"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_current", chip=True, variant="success"
+                )
+                summary_widgets["pending"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_pending", chip=True, variant="warning"
+                )
+                summary_widgets["notice"] = self._create_overlay_summary_label(
+                    overlay, f"{object_name}_notice", chip=True
+                )
+
+            self.map_overlay_summary_widgets[object_name] = summary_widgets
+            self._set_overlay_frame_style(object_name)
+            self._apply_overlay_card_state(object_name)
+
+    def _toggle_map_overlay_collapsed(self, object_name):
+        self.map_overlay_collapsed[object_name] = not self.map_overlay_collapsed.get(object_name, False)
+        self._apply_overlay_card_state(object_name)
+        self._apply_main_map_overlay_panel_layouts()
+        self._refresh_overlay_card_summaries()
+
+    def _raise_overlay_card_chrome(self, object_name):
+        for widget in self.map_overlay_summary_widgets.get(object_name, {}).values():
+            widget.raise_()
+
+        toggle_button = self.map_overlay_toggle_buttons.get(object_name)
+        if toggle_button is not None:
+            toggle_button.raise_()
+
+    def _apply_overlay_card_state(self, object_name):
+        overlay = self.map_overlay_frames.get(object_name)
+        if overlay is None:
+            return
+
+        collapsed = self.map_overlay_collapsed.get(object_name, False)
+
+        for widget in self.map_overlay_content_widgets.get(object_name, []):
+            widget.setVisible(not collapsed)
+
+        for widget in self.map_overlay_summary_widgets.get(object_name, {}).values():
+            widget.setVisible(collapsed)
+
+        toggle_button = self.map_overlay_toggle_buttons.get(object_name)
+        if toggle_button is not None:
+            toggle_button.setText("+" if collapsed else "-")
+            toggle_button.setToolTip("Expand" if collapsed else "Collapse")
+            toggle_button.setStyleSheet(self._build_overlay_button_qss("ghost", icon_only=True))
+
+        self._set_overlay_frame_style(object_name)
+        self._raise_overlay_card_chrome(object_name)
+
+    def _get_task_status_counts(self):
+        if not hasattr(self, "tableWidget_pending_mission_list"):
+            return {"total": 0, "pending": 0, "executing": 0}
+
+        total = self.tableWidget_pending_mission_list.rowCount()
+        pending = 0
+        executing = 0
+        for row in range(total):
+            item = self.tableWidget_pending_mission_list.item(row, 6)
+            status_text = item.text().strip() if item else ""
+            if status_text == "Executing":
+                executing += 1
+            elif status_text == "Pending":
+                pending += 1
+
+        return {"total": total, "pending": pending, "executing": executing}
+
+    def _has_mir_state_connection_issue(self):
+        return bool(
+            getattr(self, "api_error", False)
+            or getattr(self, "mir_status_poll_disconnected", False)
+        )
+
+    def _get_mir_state_ui(self, state_id):
+        if self._has_mir_state_connection_issue():
+            return UNKNOWN_MIR_STATE_UI
+        return MIR_STATE_UI.get(state_id, UNKNOWN_MIR_STATE_UI)
+
+    def _get_robot_state_summary(self):
+        state_ui = self._get_mir_state_ui(getattr(self, "current_mir_state_id", None))
+        return state_ui["name"], state_ui["summary_variant"]
+
+    def _refresh_robot_status_presentation(self):
+        self._update_status_label(self.current_mir_state_id)
+        if self.last_robot_world_pos is not None:
+            self.draw_car_position(*self.last_robot_world_pos)
+
+    def _refresh_overlay_card_summaries(self):
+        if not getattr(self, "map_overlay_summary_widgets", None):
+            return
+
+        task_counts = self._get_task_status_counts()
+        notification_count = self.listWidget_msg.count() if hasattr(self, "listWidget_msg") else 0
+
+        top_right = self.map_overlay_summary_widgets.get("map_overlay_top_right", {})
+        if top_right:
+            robot_name = self.lineEdit_MiR250_A.text().strip() if hasattr(self, "lineEdit_MiR250_A") else ""
+            status_text, status_variant = self._get_robot_state_summary()
+            battery_value = self.progressBar_battery.value() if hasattr(self, "progressBar_battery") else 0
+
+            top_right["title"].setText(robot_name or "MiR250-A")
+            top_right["status"].setText(status_text)
+            top_right["status"].setStyleSheet(self._build_overlay_summary_chip_qss(status_variant))
+            top_right["battery"].setText(f"{battery_value}%")
+            top_right["tasks"].setText(f"Pending {task_counts['pending']}")
+
+        bottom_right = self.map_overlay_summary_widgets.get("map_overlay_bottom_right", {})
+        if bottom_right:
+            bottom_right["title"].setText("Tasks")
+            bottom_right["count"].setText(f"List {task_counts['total']}")
+            bottom_right["active"].setText(f"Run {task_counts['executing']}")
+
+        bottom_left = self.map_overlay_summary_widgets.get("map_overlay_bottom_left", {})
+        if bottom_left:
+            bottom_left["current"].setText(f"Now {task_counts['executing']}")
+            bottom_left["pending"].setText(f"Wait {task_counts['pending']}")
+            bottom_left["notice"].setText(f"Notice {notification_count}")
+
+    def _build_main_map_overlay_specs(self):
+        top_right_widgets = [
+            self.horizontalLayoutWidget_6,
+            self.horizontalLayoutWidget_5,
+            self.horizontalLayoutWidget_4,
+            self.btn_SelectStart,
+            self.horizontalLayoutWidget_2,
+            self.btn_SelectDestination,
+            self.horizontalLayoutWidget,
+            self.btn_Emergency_Cut_Line,
+            self.btn_Add_New_Mission,
+        ]
+        bottom_right_widgets = [
+            self.lineEdit_PendingMission,
+            self.btn_StartMission,
+            self.btn_StopMission1,
+            self.frame_pending_mission_list,
+        ]
+        bottom_left_widgets = [
+            self.horizontalLayoutWidget_7,
+            self.horizontalLayoutWidget_8,
+            self.chb_map,
+            self.btn_SentRobotTo,
+            *(getattr(self, f"lbl_OR_Heartbeat_{index}") for index in range(1, 14)),
+            self.lineEdit_MessageAnnounce,
+            self.verticalLayoutWidget,
+        ]
+
+        return [
+            ("map_overlay_top_right", top_right_widgets, (20, 18, 20, 24)),
+            ("map_overlay_bottom_right", bottom_right_widgets, (20, 18, 20, 20)),
+            ("map_overlay_bottom_left", bottom_left_widgets, (20, 18, 20, 20)),
+        ]
+
+    def _get_widgets_bounds_in_frame_map(self, widgets):
+        bounds = None
+        for widget in widgets:
+            if widget is None:
+                continue
+            top_left = widget.mapTo(self.frame_map, QPoint(0, 0))
+            widget_rect = QRect(top_left, widget.size())
+            bounds = widget_rect if bounds is None else bounds.united(widget_rect)
+
+        return bounds if bounds is not None else QRect()
+
+    def _rehost_widget_into_overlay(self, widget, overlay):
+        top_left = widget.mapTo(self.frame_map, QPoint(0, 0))
+        local_top_left = top_left - overlay.pos()
+        widget.setParent(overlay)
+        widget.move(local_top_left)
+        widget.show()
+        widget.raise_()
+
+    def _set_frame_map_relative_geometry(self, widget, rect):
+        parent_widget = widget.parentWidget()
+        if parent_widget is None or parent_widget is self.centralwidget:
+            widget.setGeometry(rect)
+            return
+
+        if parent_widget is self.frame_map:
+            widget.setGeometry(rect)
+            return
+
+        local_top_left = parent_widget.mapFrom(self.frame_map, rect.topLeft())
+        widget.setGeometry(QRect(local_top_left, rect.size()))
+
+    def _get_main_map_overlay_panel_rects(self):
+        if not hasattr(self, "frame_map"):
+            return {}
+
+        frame_width = self.frame_map.width()
+        frame_height = self.frame_map.height()
+        if frame_width <= 0 or frame_height <= 0:
+            return {}
+
+        margin = 16
+        panel_gap = 14
+
+        top_right_collapsed = self.map_overlay_collapsed.get("map_overlay_top_right", False)
+        bottom_right_collapsed = self.map_overlay_collapsed.get("map_overlay_bottom_right", False)
+        bottom_left_collapsed = self.map_overlay_collapsed.get("map_overlay_bottom_left", False)
+
+        top_right_width = (
+            min(440, max(420, frame_width // 5 + 60))
+            if top_right_collapsed
+            else min(560, max(520, frame_width // 4 + 72))
+        )
+        bottom_right_width = 260 if bottom_right_collapsed else min(560, max(520, frame_width // 4 + 72))
+
+        top_right_height = 68 if top_right_collapsed else 346
+        bottom_right_height = 64 if bottom_right_collapsed else 314
+        top_right_rect = QRect(frame_width - top_right_width - margin, margin, top_right_width, top_right_height)
+        bottom_right_rect = QRect(
+            frame_width - bottom_right_width - margin,
+            frame_height - bottom_right_height - margin,
+            bottom_right_width,
+            bottom_right_height,
+        )
+
+        available_left_width = (
+            360
+            if bottom_left_collapsed
+            else max(520, min(880, bottom_right_rect.left() - margin - panel_gap))
+        )
+        bottom_left_height = 64 if bottom_left_collapsed else 198
+        bottom_left_rect = QRect(
+            margin,
+            frame_height - bottom_left_height - margin,
+            available_left_width,
+            bottom_left_height,
+        )
+
+        return {
+            "map_overlay_top_right": top_right_rect,
+            "map_overlay_bottom_right": bottom_right_rect,
+            "map_overlay_bottom_left": bottom_left_rect,
+        }
+
+    def _apply_top_right_overlay_layout(self, overlay_rect):
+        overlay_name = "map_overlay_top_right"
+        collapsed = self.map_overlay_collapsed.get(overlay_name, False)
+        toggle_button = self.map_overlay_toggle_buttons.get(overlay_name)
+        summary_widgets = self.map_overlay_summary_widgets.get(overlay_name, {})
+        panel_padding = 16
+
+        if collapsed:
+            if toggle_button is not None:
+                self._set_frame_map_relative_geometry(
+                    toggle_button,
+                    QRect(overlay_rect.right() - 42, overlay_rect.top() + 18, 26, 26),
+                )
+
+            title_width = min(120, max(108, overlay_rect.width() - 292))
+            start_x = overlay_rect.left() + panel_padding + title_width + 8
+            chip_y = overlay_rect.top() + 17
+            self._set_frame_map_relative_geometry(
+                summary_widgets["title"],
+                QRect(overlay_rect.left() + panel_padding, overlay_rect.top() + 14, title_width, 38),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["status"],
+                QRect(start_x, chip_y, 84, 30),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["battery"],
+                QRect(start_x + 92, chip_y, 52, 30),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["tasks"],
+                QRect(start_x + 152, chip_y, 64, 30),
+            )
+            return
+
+        panel_padding = 16
+        row_gap = 8
+        button_gap = 10
+        map_button_width = 64
+        row_height = 40
+        header_height = 42
+        status_height = 52
+        content_width = overlay_rect.width() - panel_padding * 2
+        control_width = content_width - map_button_width - 10
+        button_x = overlay_rect.right() - panel_padding - map_button_width + 1
+        primary_button_width = (content_width - button_gap) // 2
+        secondary_button_width = content_width - primary_button_width - button_gap
+        top_y = overlay_rect.top() + panel_padding
+        row_2_y = top_y + header_height + row_gap
+        row_3_y = row_2_y + status_height + row_gap
+        row_4_y = row_3_y + row_height + row_gap
+        row_5_y = row_4_y + row_height + row_gap
+        button_y = overlay_rect.bottom() - panel_padding - 40 + 1
+        if toggle_button is not None:
+            self._set_frame_map_relative_geometry(
+                toggle_button,
+                QRect(overlay_rect.right() - 38, overlay_rect.top() + 14, 22, 22),
+            )
+
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_6,
+            QRect(overlay_rect.left() + panel_padding, top_y, content_width - 28, header_height),
+        )
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_5,
+            QRect(overlay_rect.left() + panel_padding, row_2_y, content_width, status_height),
+        )
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_4,
+            QRect(overlay_rect.left() + panel_padding, row_3_y, control_width, row_height),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_SelectStart,
+            QRect(button_x, row_3_y + 4, map_button_width, 32),
+        )
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_2,
+            QRect(overlay_rect.left() + panel_padding, row_4_y, control_width, row_height),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_SelectDestination,
+            QRect(button_x, row_4_y + 4, map_button_width, 32),
+        )
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget,
+            QRect(overlay_rect.left() + panel_padding, row_5_y, content_width, row_height),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_Emergency_Cut_Line,
+            QRect(overlay_rect.left() + panel_padding, button_y, primary_button_width, 40),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_Add_New_Mission,
+            QRect(
+                overlay_rect.left() + panel_padding + primary_button_width + button_gap,
+                button_y,
+                secondary_button_width,
+                40,
+            ),
+        )
+
+    def _apply_bottom_right_overlay_layout(self, overlay_rect):
+        overlay_name = "map_overlay_bottom_right"
+        collapsed = self.map_overlay_collapsed.get(overlay_name, False)
+        toggle_button = self.map_overlay_toggle_buttons.get(overlay_name)
+        summary_widgets = self.map_overlay_summary_widgets.get(overlay_name, {})
+        panel_padding = 16
+
+        if collapsed:
+            if toggle_button is not None:
+                self._set_frame_map_relative_geometry(
+                    toggle_button,
+                    QRect(overlay_rect.right() - 38, overlay_rect.top() + 17, 22, 22),
+                )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["title"],
+                QRect(overlay_rect.left() + panel_padding, overlay_rect.top() + 14, 64, 34),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["count"],
+                QRect(overlay_rect.left() + 88, overlay_rect.top() + 17, 58, 30),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["active"],
+                QRect(overlay_rect.left() + 154, overlay_rect.top() + 17, 54, 30),
+            )
+            return
+
+        title_y = overlay_rect.top() + panel_padding
+        list_y = overlay_rect.top() + 58
+        list_height = overlay_rect.height() - 74
+
+        self._set_frame_map_relative_geometry(
+            self.lineEdit_PendingMission,
+            QRect(overlay_rect.left() + panel_padding, title_y, 220, 32),
+        )
+        if toggle_button is not None:
+            self._set_frame_map_relative_geometry(
+                toggle_button,
+                QRect(overlay_rect.right() - 124, title_y, 34, 34),
+            )
+        self._set_frame_map_relative_geometry(
+            self.btn_StartMission,
+            QRect(overlay_rect.right() - 84, title_y, 34, 34),
+        )
+        self._set_frame_map_relative_geometry(
+            self.btn_StopMission1,
+            QRect(overlay_rect.right() - 44, title_y, 34, 34),
+        )
+        self._set_frame_map_relative_geometry(
+            self.frame_pending_mission_list,
+            QRect(overlay_rect.left() + panel_padding, list_y, overlay_rect.width() - panel_padding * 2, list_height),
+        )
+        self._sync_pending_mission_table_geometry()
+
+    def _sync_pending_mission_table_geometry(self):
+        if not hasattr(self, "frame_pending_mission_list") or not hasattr(self, "tableWidget_pending_mission_list"):
+            return
+
+        self.tableWidget_pending_mission_list.setGeometry(self.frame_pending_mission_list.rect())
+
+    def _configure_pending_mission_table(self):
+        header = self.tableWidget_pending_mission_list.horizontalHeader()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(1, QHeaderView.Fixed)
+        header.setSectionResizeMode(2, QHeaderView.Fixed)
+        header.setSectionResizeMode(3, QHeaderView.Fixed)
+        header.setSectionResizeMode(4, QHeaderView.Fixed)
+        header.setSectionResizeMode(5, QHeaderView.Stretch)
+        header.setSectionResizeMode(6, QHeaderView.Fixed)
+        header.setSectionResizeMode(7, QHeaderView.Fixed)
+
+        self.tableWidget_pending_mission_list.setColumnWidth(1, 42)
+        self.tableWidget_pending_mission_list.setColumnWidth(2, 62)
+        self.tableWidget_pending_mission_list.setColumnWidth(3, 76)
+        self.tableWidget_pending_mission_list.setColumnWidth(4, 76)
+        self.tableWidget_pending_mission_list.setColumnWidth(6, 62)
+        self.tableWidget_pending_mission_list.setColumnWidth(7, 54)
+        self._sync_pending_mission_table_geometry()
+
+    def _apply_bottom_left_overlay_layout(self, overlay_rect):
+        overlay_name = "map_overlay_bottom_left"
+        collapsed = self.map_overlay_collapsed.get(overlay_name, False)
+        toggle_button = self.map_overlay_toggle_buttons.get(overlay_name)
+        summary_widgets = self.map_overlay_summary_widgets.get(overlay_name, {})
+
+        if collapsed:
+            if toggle_button is not None:
+                self._set_frame_map_relative_geometry(
+                    toggle_button,
+                    QRect(overlay_rect.right() - 38, overlay_rect.top() + 17, 22, 22),
+                )
+            chip_y = overlay_rect.top() + 17
+            self._set_frame_map_relative_geometry(
+                summary_widgets["current"],
+                QRect(overlay_rect.left() + 16, chip_y, 88, 30),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["pending"],
+                QRect(overlay_rect.left() + 112, chip_y, 88, 30),
+            )
+            self._set_frame_map_relative_geometry(
+                summary_widgets["notice"],
+                QRect(overlay_rect.left() + 208, chip_y, 108, 30),
+            )
+            return
+
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_7,
+            QRect(overlay_rect.left() + 58, overlay_rect.top() + 16, 92, 24),
+        )
+        self._set_frame_map_relative_geometry(
+            self.horizontalLayoutWidget_8,
+            QRect(overlay_rect.left() + 156, overlay_rect.top() + 16, 92, 24),
+        )
+        self._set_frame_map_relative_geometry(
+            self.chb_map,
+            QRect(overlay_rect.right() - 178, overlay_rect.top() + 14, 126, 30),
+        )
+        if toggle_button is not None:
+            self._set_frame_map_relative_geometry(
+                toggle_button,
+                QRect(overlay_rect.left() + 16, overlay_rect.top() + 14, 34, 30),
+            )
+        self._set_frame_map_relative_geometry(
+            self.btn_SentRobotTo,
+            QRect(overlay_rect.right() - 42, overlay_rect.top() + 14, 34, 30),
+        )
+
+        heartbeat_top_y = overlay_rect.top() + 12
+        heartbeat_bottom_y = overlay_rect.top() + 52
+        heartbeat_start_x = overlay_rect.left() + 262
+        heartbeat_step = 62
+        for index in range(6):
+            widget = getattr(self, f"lbl_OR_Heartbeat_{index + 1}")
+            self._set_frame_map_relative_geometry(
+                widget,
+                QRect(heartbeat_start_x + index * heartbeat_step, heartbeat_top_y, 56, 34),
+            )
+        for index in range(7):
+            widget = getattr(self, f"lbl_OR_Heartbeat_{index + 7}")
+            self._set_frame_map_relative_geometry(
+                widget,
+                QRect(heartbeat_start_x + index * heartbeat_step, heartbeat_bottom_y, 56, 34),
+            )
+
+        self._set_frame_map_relative_geometry(
+            self.lineEdit_MessageAnnounce,
+            QRect(overlay_rect.left() + 16, overlay_rect.top() + 96, 120, 20),
+        )
+        self._set_frame_map_relative_geometry(
+            self.verticalLayoutWidget,
+            QRect(
+                overlay_rect.left() + 16,
+                overlay_rect.top() + 120,
+                overlay_rect.width() - 32,
+                overlay_rect.height() - 136,
+            ),
+        )
+
+        self.listWidget_msg.setMinimumSize(QSize(0, 0))
+        self.listWidget_msg.setMaximumSize(QSize(16777215, 16777215))
+
+    def _apply_main_map_overlay_panel_layouts(self):
+        if not hasattr(self, "map_overlay_frames"):
+            return
+
+        overlay_rects = self._get_main_map_overlay_panel_rects()
+        if not overlay_rects:
+            return
+
+        top_right_overlay = self.map_overlay_frames.get("map_overlay_top_right")
+        if top_right_overlay is not None:
+            top_right_rect = overlay_rects["map_overlay_top_right"]
+            top_right_overlay.setGeometry(top_right_rect)
+            self._apply_top_right_overlay_layout(top_right_rect)
+            self._raise_overlay_card_chrome("map_overlay_top_right")
+
+        bottom_right_overlay = self.map_overlay_frames.get("map_overlay_bottom_right")
+        if bottom_right_overlay is not None:
+            bottom_right_rect = overlay_rects["map_overlay_bottom_right"]
+            bottom_right_overlay.setGeometry(bottom_right_rect)
+            self._apply_bottom_right_overlay_layout(bottom_right_rect)
+            self._raise_overlay_card_chrome("map_overlay_bottom_right")
+
+        bottom_left_overlay = self.map_overlay_frames.get("map_overlay_bottom_left")
+        if bottom_left_overlay is not None:
+            bottom_left_rect = overlay_rects["map_overlay_bottom_left"]
+            bottom_left_overlay.setGeometry(bottom_left_rect)
+            self._apply_bottom_left_overlay_layout(bottom_left_rect)
+            self._raise_overlay_card_chrome("map_overlay_bottom_left")
+
+    def _setup_main_map_overlay_containers(self):
+        if self.map_overlay_frames:
+            return
+
+        for object_name, widgets, padding in self._build_main_map_overlay_specs():
+            overlay_bounds = self._get_widgets_bounds_in_frame_map(widgets)
+            if overlay_bounds.isNull():
+                continue
+
+            left_pad, top_pad, right_pad, bottom_pad = padding
+            overlay_rect = overlay_bounds.adjusted(
+                -left_pad,
+                -top_pad,
+                right_pad,
+                bottom_pad,
+            )
+            overlay = self._create_map_overlay_frame(object_name)
+            overlay.setGeometry(overlay_rect)
+
+            for widget in widgets:
+                self._rehost_widget_into_overlay(widget, overlay)
+
+            overlay.raise_()
+            self.map_overlay_frames[object_name] = overlay
+            self.map_overlay_content_widgets[object_name] = list(widgets)
+            setattr(self, object_name, overlay)
+
+    def _get_main_map_scale(self):
+        if not hasattr(self, "original_pixmap") or self.original_pixmap.isNull():
+            return 1.0, 1.0
+
+        pixmap_width = max(1, self.original_pixmap.width())
+        pixmap_height = max(1, self.original_pixmap.height())
+        return (
+            self.label_map_1.width() / pixmap_width,
+            self.label_map_1.height() / pixmap_height,
+        )
+
+    def _apply_main_map_shell_layout(self):
+        if not hasattr(self, "centralwidget") or not hasattr(self, "frame_map"):
+            return
+
+        shell_rect = self.centralwidget.rect()
+        if shell_rect.isNull():
+            return
+
+        self.frame_map.setMinimumSize(QSize(0, 0))
+        self.frame_map.setMaximumSize(QSize(16777215, 16777215))
+        self.frame_map.setGeometry(shell_rect)
+        self.frame_map.setStyleSheet("background-color: transparent;")
+
+        self.label_map_1.setMinimumSize(QSize(0, 0))
+        self.label_map_1.setMaximumSize(QSize(16777215, 16777215))
+        self.label_map_1.setGeometry(self.frame_map.rect())
+        self.label_map_1.setStyleSheet("border: none; background-color: #050B12;")
+        self.label_map_1.lower()
+
+        if hasattr(self, "label_car_overlay"):
+            self.label_car_overlay.setGeometry(self.label_map_1.geometry())
+            self.label_car_overlay.raise_()
+            if hasattr(self, "map_overlay_frames"):
+                self._apply_main_map_overlay_panel_layouts()
+            self._raise_map_foreground_widgets()
+
+            if self.last_robot_world_pos is not None:
+                self.draw_car_position(*self.last_robot_world_pos)
+            elif self.last_click_overlay_pos is not None:
+                marker_pixmap = QPixmap(self.label_car_overlay.size())
+                marker_pixmap.fill(Qt.transparent)
+                marker_painter = QPainter(marker_pixmap)
+                self.draw_click_marker(marker_painter, *self.last_click_overlay_pos)
+                marker_painter.end()
+                self.label_car_overlay.setPixmap(marker_pixmap)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._apply_main_map_shell_layout()
+
     def _create_control_button(self, name, text):
         """創建視窗控制按鈕 (最小化, 最大化, 關閉)"""
 
@@ -901,12 +2407,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.appLogoLabel.setObjectName("appLogoLabel")
         self.appLogoLabel.setFixedSize(24, 24)
 
-        if getattr(sys, "frozen", False):
-            base_dir = os.path.dirname(sys.executable)
-        else:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-
-        logo_path = os.path.join(base_dir, "picture", "aceicon1.png")
+        # Logo 也放進同一份資源設定，避免場域路徑分散在不同地方。
+        # 之後若某個場域要換 Logo，只需要修改 site/<profile>.json。
+        logo_path = resolve_runtime_path(self.site_assets.get("logo"))
         logo_pixmap = QPixmap(logo_path)
         if not logo_pixmap.isNull():
             self.appLogoLabel.setPixmap(
@@ -1188,7 +2691,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             label_text = f"{label_text}\nMission: {self.current_mission_text}"
 
         self.label_Status_1.setText(label_text)
-        self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+        self.label_Status_1.setStyleSheet(self._build_compact_status_label_qss(color))
 
 
     def _update_status_label(self, state_id):
@@ -1216,7 +2719,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             label_text = f"{label_text}\nMission: {self.current_mission_text}"
 
         self.label_Status_1.setText(label_text)
-        self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+        self.label_Status_1.setStyleSheet(self._build_compact_status_label_qss(color))
 
     def _update_status_label(self, state_id):
         # Final status renderer used by the UI: line 1 = robot state, line 2 = mission text.
@@ -1240,30 +2743,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         label_text = f"Status: {status_name}\nMission: {mission_line}"
 
         self.label_Status_1.setText(label_text)
-        self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+        self.label_Status_1.setStyleSheet(self._build_compact_status_label_qss(color))
         self.label_Status_1.setToolTip(f"Mission: {mission_line}")
+        self._refresh_overlay_card_summaries()
+
+    def _update_status_label(self, state_id):
+        # Final status renderer used by the UI: line 1 = robot state, line 2 = mission text.
+        state_ui = self._get_mir_state_ui(state_id)
+        status_name = state_ui["name"]
+        mission_line = self.current_mission_text or "-"
+        label_text = f"Status: {status_name}\nMission: {mission_line}"
+
+        self.label_Status_1.setText(label_text)
+        self.label_Status_1.setStyleSheet(
+            self._build_compact_status_label_qss(state_ui["label_color"])
+        )
+        self.label_Status_1.setToolTip(f"Mission: {mission_line}")
+        self._refresh_overlay_card_summaries()
 
     def _adjust_status_area_layout(self):
-        # Expand the status container so the second "Mission" line is not clipped.
-        self.horizontalLayoutWidget_5.setGeometry(QRect(1220, 60, 661, 86))
-
-        # Push the controls below the status area downward to avoid overlap.
-        self.horizontalLayoutWidget_4.setGeometry(QRect(1220, 155, 561, 51))
-        self.btn_SelectStart.setGeometry(QRect(1790, 165, 91, 30))
-
-        self.horizontalLayoutWidget_2.setGeometry(QRect(1220, 215, 559, 51))
-        self.btn_SelectDestination.setGeometry(QRect(1790, 225, 91, 30))
-
-        self.horizontalLayoutWidget.setGeometry(QRect(1220, 275, 561, 51))
-        self.btn_Start_Exhibition_Drink.setGeometry(QRect(1560, 355, 121, 30))
-        self.btn_Start_Exhibition_Military.setGeometry(QRect(1720, 355, 121, 30))
-
-        self.btn_Emergency_Cut_Line.setGeometry(QRect(1220, 405, 316, 48))
-        self.btn_Add_New_Mission.setGeometry(QRect(1560, 405, 316, 48))
-        self.btn_StartMission.setGeometry(QRect(1740, 490, 31, 30))
-        self.btn_StopMission1.setGeometry(QRect(1780, 490, 31, 30))
-        self.lineEdit_PendingMission.setGeometry(QRect(1220, 475, 224, 40))
-        self.frame_pending_mission_list.setGeometry(QRect(1200, 535, 656, 476))
+        self._apply_main_map_overlay_panel_layouts()
 
     def api_error_handler(self):
         print("❌ API 異常")
@@ -1272,6 +2771,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.api_error:
             self.task_db_manager.mark_room_error("MASTER", "API_ERROR")
             self.api_error = True
+
+    def api_ok(self, status=None):
+        self.task_db_manager.clear_room_error("MASTER")
+        self.api_error = False
+        self._print_mission_text(status)
+        self._refresh_robot_status_presentation()
+
+    def api_error_handler(self):
+        print("??API ?啣虜")
+        if not self.api_error:
+            self.task_db_manager.mark_room_error("MASTER", "API_ERROR")
+            self.api_error = True
+            self.current_mir_state_id = None
+            self._refresh_robot_status_presentation()
 
     def _setup_worker(self, worker, success_cb, error_cb):
         self.active_workers += 1 # ⭐ 記錄目前有幾個 worker 在跑
@@ -1396,6 +2909,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 設置佈局的間距和邊界為 0，讓按鈕可以置中 (這是對的)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(Qt.AlignCenter)
      
         # 建立一個 QPushButton
         delete_btn = QPushButton("")
@@ -1448,7 +2962,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         將客製化的 NotificationItem 加入到 self.listWidget_msg 中
         """
         # 1. 創建客製化 Widget
-        notification_widget = NotificationItem(type, message)
+        notification_widget = CompactNotificationItem(type, message)
         
         # 2. 創建 QListWidgetItem 作為容器
         list_item = QListWidgetItem(self.listWidget_msg)
@@ -1467,8 +2981,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         # 這是關鍵步驟：點擊按鈕時，取得 list_item 的行號並刪除
         close_btn.clicked.connect(
-            lambda: self.listWidget_msg.takeItem(self.listWidget_msg.row(list_item))
+            lambda: (
+                self.listWidget_msg.takeItem(self.listWidget_msg.row(list_item)),
+                self._refresh_overlay_card_summaries(),
+            )
         )
+        self._refresh_overlay_card_summaries()
 
     def closeEvent(self, event):
         """
@@ -1603,6 +3121,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.refresh_label_tooltip(tasks) 
 
         if not tasks:
+            self._refresh_overlay_card_summaries()
             return
         
         self.tableWidget_pending_mission_list.setRowCount(len(tasks))
@@ -1650,6 +3169,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.set_table_items_center(self.tableWidget_pending_mission_list)
             self.tableWidget_pending_mission_list.resizeRowsToContents()
 
+        self._refresh_overlay_card_summaries()
+
     #######################刷新label&tooltip#######################
     def create_tooltip_html(self, task, role):
         """
@@ -1672,7 +3193,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 步驟 1: 清空所有可能的標記狀態 (重置)
         # ----------------------------------------------------
         # 遍歷所有已知地點標記的名稱
-        for marker_name in LOCATION_TO_MARKER.values():
+        for marker_name in self.LOCATION_TO_MARKER.values():
             # 這一行程式碼讓您能夠用一個簡單的迴圈，遍歷地圖上所有名稱有規律的標記
             marker_label = getattr(self, marker_name, None)
             if marker_label:
@@ -1713,7 +3234,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # ----------------------------------
             # 更新起點標記
             # ----------------------------------
-            start_marker_name = LOCATION_TO_MARKER.get(start_point)
+            start_marker_name = self.LOCATION_TO_MARKER.get(start_point)
             if start_marker_name:
                 marker_label = getattr(self, start_marker_name, None)
                 if marker_label:
@@ -1727,7 +3248,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # ----------------------------------
             # 更新目的地標記
             # ----------------------------------
-            target_marker_name = LOCATION_TO_MARKER.get(target_point)
+            target_marker_name = self.LOCATION_TO_MARKER.get(target_point)
             if target_marker_name and target_marker_name != start_marker_name:
                 marker_label = getattr(self, target_marker_name, None)
                 if marker_label:
@@ -1825,10 +3346,85 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.refresh_task_list() 
 
     # 自動詢問Sent robot to車子狀態
+    def query_mir_info(self):
+        try:
+            status_info = functions.check_MiR_status()
+            status_info_str = json.dumps(status_info, indent=4)
+            self.current_mission_text = status_info.get("mission_text", self.current_mission_text)
+            timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
+            full_message = f"[{timestamp}] 狀態：\n{status_info_str}\n{'-' * 40}"
+            self.plntxtEdit_Info.appendPlainText(full_message)
+
+            pm_names = functions.get_pending_mission_names()
+            if pm_names:
+                pm_names_with_index = [f"任務{index + 1} {name}" for index, name in enumerate(pm_names)]
+                self.txtEdit_GetPM.setPlainText("\n".join(pm_names_with_index))
+            else:
+                self.txtEdit_GetPM.setPlainText("No pending missions")
+
+            self.current_mir_state_id = functions.check_MiR_status_state_ID()
+            self.api_error = False
+        except Exception:
+            self.api_error = True
+            self.current_mir_state_id = None
+
+        self._refresh_robot_status_presentation()
+
+    def query_mir_status_db(self):
+        executing_task_data = self.task_db_manager.get_currently_executing_task()
+        if not executing_task_data:
+            if self.mir_status_poll_disconnected:
+                self.mir_status_poll_disconnected = False
+                self._refresh_robot_status_presentation()
+            else:
+                self.mir_status_poll_disconnected = False
+            return
+
+        task_id = executing_task_data["id"]
+        start_point = executing_task_data["start_point"]
+        target_point = executing_task_data["target_point"]
+        mq_id = executing_task_data.get("mq_id")
+
+        if not mq_id:
+            latest_mq_id = functions.get_mission_queue_max_id()
+            if latest_mq_id:
+                self.task_db_manager.update_task_mq_id(task_id, latest_mq_id)
+                mq_id = latest_mq_id
+            else:
+                return
+
+        state = functions.get_mission_queue_id_state(mq_id)
+        if state is None:
+            if not self.mir_status_poll_disconnected:
+                print(f"[MIR RECONCILE] mission queue state unavailable for mq_id={mq_id}")
+            self.mir_status_poll_disconnected = True
+            self._refresh_robot_status_presentation()
+            return
+
+        if self.mir_status_poll_disconnected:
+            print(f"[MIR RECONCILE] mission queue connection restored for mq_id={mq_id}")
+            self.mir_status_poll_disconnected = False
+            self._refresh_robot_status_presentation()
+
+        if state == "Done":
+            self._finalize_task_result(task_id, "Completed", start_point, target_point)
+            return
+
+        if state == "Aborted":
+            self._finalize_task_result(task_id, "Aborted", start_point, target_point)
+            return
+
+        self.refresh_task_list()
+
     def query_mir_status(self):
         self.status_timer = QTimer()
         self.status_timer.timeout.connect(self.query_mir_status_ready)
         self.status_timer.start(5000)
+
+    def _update_sent_robot_to_button_state(self):
+        self.btn_SentRobotTo.setEnabled(
+            self.clicked_enabled and not self.sent_robot_to_in_progress
+        )
         
     # 自動詢問到了沒
     def query_mir_status_ready(self):
@@ -1837,6 +3433,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             print("導航完成，刪除位置")
             self.status_timer.stop()
             functions.delete_srt_position()
+            self.sent_robot_to_in_progress = False
+            self._update_sent_robot_to_button_state()
         self.load_map_positions()
 
 
@@ -1864,19 +3462,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
         # 設定進度條顏色。沒有設定 ::chunk 樣式時，Qt 有時會不渲染 chunk 或讓它預設尺寸極小
-        self.progressBar_battery.setStyleSheet(f"""
-        QProgressBar {{
-            color: black;  
-            border: 2px solid grey; 
-            border-radius: 5px;
-            text-align: center;
-            font-size: 16px;
-        }}
-        QProgressBar::chunk {{
-            background-color: {color};
-        }}
-        """)
+        self._set_battery_progress_style(color)
         self.progressBar_battery.setValue(battery_level)
+        self._refresh_overlay_card_summaries()
         
     # 自動取得歷史錯誤資料
     def query_his_data(self):
@@ -1940,6 +3528,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         if label:
                             # 從房間 ID 提取房間號 (例如 'OR01' → '01')
                             room_number = room_id[2:] if room_id.startswith('OR') else room_id
+
+                            if error_status:
+                                label.setStyleSheet(self._heartbeat_label_qss("#C06A00", "#FD7E14"))
+                                label.setText(f"{room_number}\n異常")
+                                continue
+                            if is_online:
+                                label.setStyleSheet(self._heartbeat_label_qss("#1F8A4D", "#28A745"))
+                                label.setText(f"{room_number}\n線上")
+                                continue
+                            label.setStyleSheet(self._heartbeat_label_qss("#5A6573", "#6C757D"))
+                            label.setText(f"{room_number}\n離線")
+                            continue
                             
                             # 設定標籤的樣式（背景白色，用文字和邊框顏色表示狀態）
                             # 優先級: 異常 > 離線 > 在線
@@ -2027,14 +3627,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
     # 按鈕(回去充電站)
     def on_start_chargestation_clicked(self):
-        # 嘗試從字典中獲取充電站的英文代碼
-        # 如果找不到 "充電樁" 這個 Key，就回傳 None
-        charge_code = MIR_LOCATION_MAP.get(CHARGING_STATION_NAME)
+        # 先拿到「本場域定義的充電站顯示名稱」，
+        # 再反查對應的 MiR position name 後送出。
+        charge_code = self.MIR_LOCATION_MAP.get(self.CHARGING_STATION_NAME)
         if charge_code:
             functions.run_combo_location(charge_code)
             print(f"✅ 已送出任務到充電站代碼: {charge_code}")
         else:
-            QMessageBox.critical(self, "錯誤！", "🚨 請檢查 MiR 名稱是否被更改，或字典是否遺漏了 '充電樁' 的定義。")
+            QMessageBox.critical(
+                self,
+                "錯誤！",
+                f"🚨 請檢查場域設定是否有定義充電站: {self.CHARGING_STATION_NAME}",
+            )
             
             
             
@@ -2159,7 +3763,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_stop_mission_clicked(self):
         self.btn_StartMission.setDisabled(False)
         self.btn_StopMission1.setDisabled(True)
-        self.btn_SentRobotTo.setEnabled(True)
+        self._update_sent_robot_to_button_state()
         # 不要馬上停止
         # functions.stop_the_mission()
         # 2. 停止排程執行緒
@@ -2178,19 +3782,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         mission_guid = functions.get_mission_id(self.cmb_mission.currentText())
         functions.start_the_mission(mission_guid)
     
-    # 按鈕(執行大廳或展場任務) 
-    def on_start_mission_clicked_exhibition_drink(self):
-        # 取得任務ID(GUID)
-        mission_guid = functions.get_mission_id("Lobby Demo Seminar Presentation Jordan")
-        functions.start_the_mission(mission_guid)
-
-    def on_start_mission_clicked_exhibition_military(self):
-        # 取得任務ID(GUID)
-        mission_guid = functions.get_mission_id("Lobby Exhibition Demo Cart Transport")
-        functions.start_the_mission(mission_guid)
-
-
-
     # 按鈕(執行相對移動任務)
     def on_relative_move_clicked(self):
         x = self.dsb_x.value()
@@ -2249,10 +3840,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # 按鈕(Sent robot to go)
     def on_sent_robot_to_clicked(self):
+        if self.sent_robot_to_in_progress:
+            print("Sent robot to 導航尚未完成，暫不接受第二次送車。")
+            return
+
         X=self.dsb_x_m.value()
         Y=self.dsb_y_m.value()
         Z=self.dsb_ori_m.value()
         print(f"派送車子到:{X},{Y},{Z}")
+        self.sent_robot_to_in_progress = True
+        self._update_sent_robot_to_button_state()
         functions.post_position(X,Y,Z)
         self.load_map_positions()
         functions.run_combo_location("Sent robot to")
@@ -2303,7 +3900,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         print("state =", state)
         self.clicked_enabled = (state == 2)
         if state == 2:
-            self.btn_SentRobotTo.setEnabled(True)
+            self._update_sent_robot_to_button_state()
         else:
             self.clear_click_marker()
             self.btn_SentRobotTo.setEnabled(False)
@@ -2362,7 +3959,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if mir_codes_list:
             for mir_code in mir_codes_list:
                 # 名稱轉換，查找中文名稱，如果找不到，就顯示原始的英文代碼
-                user_name = USER_LOCATION_MAP.get(mir_code, mir_code)
+                user_name = self.USER_LOCATION_MAP.get(mir_code, mir_code)
                 # --- 關鍵去重邏輯 ---
                 if user_name not in unique_user_names:
                     unique_user_names.add(user_name)
@@ -2427,12 +4024,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             for mir_code in mir_codes_list:
 
                 # 【篩選步驟】：只處理你想要的兩種任務代碼
-                if mir_code in REQUIRED_MISSION_CODES:
+                if mir_code in self.REQUIRED_MISSION_CODES:
 
                     # 1. 翻譯：使用你的字典來獲取中文名稱 (Value)
                     # 字典名稱.get(Key,Default Value)。
                     # A (第一個參數)，Python 會嘗試將這個值作為 Key 去字典裡查找；B (第二個參數)，如果找不到 Key 的值，則返回這個預設值
-                    user_name = USER_MISSION_GROUP_MAP.get(mir_code, mir_code)
+                    user_name = self.USER_MISSION_GROUP_MAP.get(mir_code, mir_code)
                     
                     # 2. 載入 ComboBox (加蓋)
                     # 顯示給使用者看中文 (user_name)，隱藏 MiR 英文代碼 (mir_code)
@@ -2522,19 +4119,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         painter.drawLine(x - 12, y, x + 12, y)
         painter.drawLine(x, y - 12, x, y + 12)
 
-    def is_robot_in_motion_state(self):
-        return self.current_mir_state_id in {5, 9}
-
     def draw_robot_marker(self, painter, x, y):
         painter.setRenderHint(QPainter.Antialiasing, True)
 
-        if self.is_robot_in_motion_state():
-            glow_alpha = 120 + (self.robot_glow_phase % 3) * 35
-            glow_pen = QPen(QColor(57, 255, 20, glow_alpha))
-            glow_pen.setWidth(6)
-            painter.setPen(glow_pen)
-            painter.setBrush(Qt.NoBrush)
-            painter.drawEllipse(x - 18, y - 18, 36, 36)
+        state_ui = self._get_mir_state_ui(self.current_mir_state_id)
+        ring_pen = QPen(QColor(state_ui["map_ring_color"]))
+        ring_pen.setWidth(5)
+        painter.setPen(ring_pen)
+        painter.setBrush(Qt.NoBrush)
+        painter.drawEllipse(x - 18, y - 18, 36, 36)
 
         body_rect = QRect(x - 11, y - 9, 22, 18)
         painter.setPen(QPen(QColor("#0B1F33"), 2))
@@ -2567,8 +4160,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # orig_width = 706  
         # orig_height = 469 
 
-        orig_width = 3216 
-        orig_height = 1824
+        orig_width = max(1, self.original_pixmap.width())
+        orig_height = max(1, self.original_pixmap.height())
 
         # 3. 繪圖畫布的當前尺寸 (self.label_car_overlay 的尺寸)
         current_width = self.label_car_overlay.width() # 應該是 1072
@@ -2684,8 +4277,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # 進行座標轉換和設定值
             relative_pos = self.label_map_1.mapFrom(self, event.pos())
             # 請保留您原有的縮放係數 (1.48 和 1.26)
-            x = relative_pos.x()/0.333
-            y = relative_pos.y()/0.333
+            scale_x, scale_y = self._get_main_map_scale()
+            x = relative_pos.x() / scale_x
+            y = relative_pos.y() / scale_y
             world_x, world_y = self.image_to_world(x, y)
             
             self.dsb_x_m.setValue(world_x)
@@ -2735,13 +4329,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 # main.py (程式進入點)
 
-DB_CONFIG = {
-        'user': 'postgres',
-        'host': 'localhost',
-        'database': 'military_mir250_project',
-        'password': '123456',
-        'port': 5432
-    }
+DB_CONFIG = load_db_config()
 
 if __name__ == "__main__":
     

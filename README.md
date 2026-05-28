@@ -1,58 +1,62 @@
-# 🛠 Linux GUI 拖曳失效修復紀錄
+# AMR Task System
 
-### 🚩 問題狀況
+## 啟動方式
 
-* **現象**：打包到 Linux 後，自定義標題列無法拖動。
-* **原因**：Linux **Wayland** 協定基於安全機制，封鎖了應用程式直接控制視窗座標的權限。
+一般啟動：
 
----
+```powershell
+python main.py
+```
 
-### 🚀 解決方案
+## Site Profile 切換
 
-#### 1. 外部修正：使用 `.sh` 啟動腳本 (不需重改程式碼)
+程式啟動時會依照下列優先順序決定要載入哪個場域設定：
 
-此方法強制程式在 X11 相容模式下執行，繞過 Wayland 限制。
+1. `AMR_SITE_PROFILE` 環境變數
+2. `app_settings.json` 內的 `site_profile`
 
-**步驟：**
+目前可用值：
 
-1. 在終端機輸入： `nano start.sh`
-2. 貼上以下內容：
+- `company`
+- `hospital`
+
+### 方式 1: 固定使用 `hospital.json`
+
+修改 [app_settings.json](./app_settings.json)：
+
+```json
+{
+  "site_profile": "hospital"
+}
+```
+
+然後照原本方式啟動：
+
+```powershell
+python main.py
+```
+
+### 方式 2: 單次啟動臨時切換到 hospital
+
+```powershell
+$env:AMR_SITE_PROFILE="hospital"
+python main.py
+```
+
+如果有設定 `AMR_SITE_PROFILE`，它會覆蓋 `app_settings.json` 的值。
+
+## 設定檔
+
+- [app_settings.json](./app_settings.json): 場域切換設定
+- [config.json](./config.json): MiR IP 與其他執行期設定
+- [site/hospital.json](./site/hospital.json): hospital 場域設定
+- [site/company.json](./site/company.json): company 場域設定
+
+## Linux / Wayland 備註
+
+如果在 Linux 的 Wayland 環境遇到 Qt 視窗問題，可以先用 X11 相容模式啟動：
+
 ```bash
-#!/bin/bash
 export QT_QPA_PLATFORM=xcb
-./main
-
+python main.py
 ```
-
-
-3. 存檔離開： `Ctrl+O` -> `Enter` -> `Ctrl+X`
-4. 賦予執行權限：
-```bash
-chmod +x start.sh
-
-```
-
-
-5. 執行方法： ` ./start.sh`
-
-#### 2. 內部修正：程式碼內嵌 (推薦，使用者可直接點擊 main)
-
-在 `main.py` 最頂端（必須在 import Qt 套件之前）加入：
-
-```python
-import os
-os.environ["QT_QPA_PLATFORM"] = "xcb"
-
-```
-
-#### 3. 最佳實作：改用系統原生拖曳 API
-
-若不想依賴相容模式，應修改 `mouseMoveEvent` 邏輯：
-
-```python
-# 讓系統接管拖曳，不手動計算座標
-self.windowHandle().startSystemMove()
-
-```
-
----
