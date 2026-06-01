@@ -1255,6 +1255,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 【關鍵修正】設置窗口標誌，使其忽略滑鼠事件
         # Qt.WA_TransparentForMouseEvents 是用於 QWidget 的屬性，但 QLabel 繼承自 QWidget
         self.label_car_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.mapSubtitleLabel = QLabel("智慧無人車操作系統", self.frame_map)
+        self.mapSubtitleLabel.setObjectName("mapSubtitleLabel")
+        self.mapSubtitleLabel.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.mapSubtitleLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.mapSubtitleLabel.setStyleSheet(
+            "background-color: transparent;"
+            "color: #5B6572;"
+            "font-size: 30px;"
+            "font-weight: 700;"
+        )
         self.current_mir_state_id = None
         self.map_overlay_frames = {}
         self.map_overlay_content_widgets = {}
@@ -1356,6 +1366,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if child in {self.label_map_1, self.label_car_overlay}:
                 continue
             child.raise_()
+
+    def _position_map_subtitle_label(self):
+        if not hasattr(self, "frame_map") or not hasattr(self, "mapSubtitleLabel"):
+            return
+
+        left = 56
+        top = 16
+        available_width = max(420, self.frame_map.width() - left - 24)
+        self.mapSubtitleLabel.setGeometry(left, top, min(760, available_width), 46)
+        self.mapSubtitleLabel.raise_()
 
     def _create_map_overlay_frame(self, object_name):
         overlay = QFrame(self.frame_map)
@@ -1508,7 +1528,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.progressBar_battery.setMinimumSize(QSize(88, 20))
         self.progressBar_battery.setMaximumSize(QSize(96, 20))
-        self._set_battery_progress_style("#3DDC97")
+        self._set_battery_progress_style("#06C755")
 
         self.horizontalLayout_7.setSpacing(4)
 
@@ -2356,6 +2376,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if hasattr(self, "map_overlay_frames"):
                 self._apply_main_map_overlay_panel_layouts()
             self._raise_map_foreground_widgets()
+            self._position_map_subtitle_label()
 
             if self.last_robot_world_pos is not None:
                 self.draw_car_position(*self.last_robot_world_pos)
@@ -2416,7 +2437,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 logo_pixmap.scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
 
-        self.appNameLabel = QLabel("ACE Solution - MiR")
+        self.appNameLabel = QLabel("智行中控")
         self.appNameLabel.setObjectName("appNameLabel")
         
         # 視窗控制按鈕
@@ -3451,12 +3472,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 如果電量已經達到 100%， 並且 AMR 之前確實因為電量低於 20% 而被標記為低電量，狀態 (正在充電)， 那麼就發送「充電完成」的通知，並重置低電量狀態旗標。」
         elif battery_level == 100 and self.is_low_battery_notified:
-            color = "#085508"
+            color = "#06C755"
             self.add_notification_item("完成", f"電量已恢復到 {battery_level}%，接續執行。")
             self.is_low_battery=False  #低電量旗標設定 1010
             self.is_low_battery_notified = False
         else:
-            color = "orange" if battery_level <= 50 else "#085508"
+            color = "orange" if battery_level <= 50 else "#06C755"
             self.is_low_battery=False  #低電量旗標設定 1010
              
 
