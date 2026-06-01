@@ -117,8 +117,8 @@ MIR_STATE_UI = {
     },
     5: {
         "name": "Executing",
-        "label_color": "#00897B",
-        "map_ring_color": "#00796B",
+        "label_color": "#06C755",
+        "map_ring_color": "#06C755",
         "summary_variant": "success",
     },
     6: {
@@ -4129,22 +4129,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         painter.setBrush(Qt.NoBrush)
         painter.drawEllipse(x - 18, y - 18, 36, 36)
 
-        body_rect = QRect(x - 11, y - 9, 22, 18)
-        painter.setPen(QPen(QColor("#0B1F33"), 2))
-        painter.setBrush(QColor("#E84C3D"))
-        painter.drawRoundedRect(body_rect, 5, 5)
+        body_rect = QRect(x - 8, y - 12, 16, 24)
+        painter.setPen(QPen(QColor("#3E4349"), 2))
+        painter.setBrush(QColor("#656B72"))
+        painter.drawRoundedRect(body_rect, 4, 4)
 
-        painter.setBrush(QColor("#DFF6FF"))
-        painter.drawRoundedRect(QRect(x - 6, y - 6, 12, 7), 2, 2)
-
-        painter.setBrush(QColor("#2F3B45"))
-        painter.drawEllipse(x - 9, y + 6, 5, 5)
-        painter.drawEllipse(x + 4, y + 6, 5, 5)
+        painter.setBrush(QColor("#595F66"))
+        painter.drawRoundedRect(QRect(x - 6, y - 9, 12, 18), 3, 3)
 
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor("#FFD166"))
-        painter.drawEllipse(x - 13, y - 2, 4, 4)
-        painter.drawEllipse(x + 9, y - 2, 4, 4)
+        painter.setBrush(QColor("#E7EDF3"))
+        for bolt_x, bolt_y in ((x - 4, y - 7), (x + 4, y - 7), (x - 4, y + 7), (x + 4, y + 7)):
+            painter.drawEllipse(bolt_x - 1, bolt_y - 1, 3, 3)
 
     def draw_car_position(self, world_x, world_y):
         # 確保兩個 QLabel 的位置和尺寸對齊 (雖然尺寸不同，但它們必須重疊)
