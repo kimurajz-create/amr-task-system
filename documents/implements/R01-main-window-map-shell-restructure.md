@@ -1,7 +1,7 @@
 ---
 author: Codex
 date: 2026-05-25
-title: Main Window Map Shell Restructure
+title: 主畫面地圖骨架重組
 uuid: 665d0d866b8e449ca854f15554af3655
 version: v1
 planning: documents/planning/P01-main-window-map-overlay-redesign.md
@@ -25,9 +25,9 @@ P01 的第一階段目標是把主畫面的主要內容區改成由主地圖主�
 
 ## 2. 使用者故事
 
-- **As a** 主畫面操作人員
-- **I want** 主地圖成為整個主畫面主要內容區的骨架背景
-- **So that** 後續右上、右下、左下浮層可以疊在同一個地圖視覺容器上，而不必維持現在左右分離的拼接版面
+- **作為** 主畫面操作人員
+- **我希望** 主地圖成為整個主畫面主要內容區的骨架背景
+- **如此一來** 後續右上、右下、左下浮層可以疊在同一個地圖視覺容器上，而不必維持現在左右分離的拼接版面
 
 ## 3. 模組地圖與範疇確認
 
@@ -76,29 +76,29 @@ P01 的第一階段目標是把主畫面的主要內容區改成由主地圖主�
 
 ## 5. 驗收標準
 
-- **Scenario 1: 主地圖成為主內容骨架**
-  - **Given** 使用者啟動主畫面
-  - **When** 主畫面完成初始化並顯示
-  - **Then** 地圖區域應成為主畫面的主要背景，不再只是左側固定框中的局部區塊
+- **情境 1：主地圖成為主內容骨架**
+  - **前提** 使用者啟動主畫面
+  - **當** 主畫面完成初始化並顯示
+  - **則** 地圖區域應成為主畫面的主要背景，不再只是左側固定框中的局部區塊
 
-- **Scenario 2: 視窗尺寸改變仍維持骨架**
-  - **Given** 主畫面已開啟並顯示地圖
-  - **When** 使用者最大化或還原主視窗
-  - **Then** 主地圖仍維持主視覺骨架，不會被原本左右拼接式版面切開
+- **情境 2：視窗尺寸改變仍維持骨架**
+  - **前提** 主畫面已開啟並顯示地圖
+  - **當** 使用者最大化或還原主視窗
+  - **則** 主地圖仍維持主視覺骨架，不會被原本左右拼接式版面切開
 
-- **Scenario 3: Marker 顯示未被骨架改壞**
-  - **Given** 主畫面已顯示且 MiR 位置輪詢正常
-  - **When** 主畫面顯示機器人位置
-  - **Then** marker 仍能出現在地圖上，而不是消失或落在地圖容器外
+- **情境 3：Marker 顯示未被骨架改壞**
+  - **前提** 主畫面已顯示且 MiR 位置輪詢正常
+  - **當** 主畫面顯示機器人位置
+  - **則** marker 仍能出現在地圖上，而不是消失或落在地圖容器外
 
-- **Scenario 4: 不影響既有初始化流程**
-  - **Given** 使用者正常登入並進入主畫面
-  - **When** 主畫面載入既有 site config 與地圖資產
-  - **Then** 不需改動任務資料流即可完成主畫面載入
+- **情境 4：不影響既有初始化流程**
+  - **前提** 使用者正常登入並進入主畫面
+  - **當** 主畫面載入既有 site config 與地圖資產
+  - **則** 不需改動任務資料流即可完成主畫面載入
 
 ## 6. 測試場景 / 驗證表
 
-| ID | Scenario | Given | When | Then | Priority |
+| ID | 情境 | 前提 | 動作 | 預期結果 | 優先級 |
 |---|---|---|---|---|---|
 | TC1 | 地圖骨架滿版 | 主畫面可正常開啟 | 進入主畫面 | 地圖成為主要內容區背景 | High |
 | TC2 | 視窗最大化 / 還原 | 主畫面已顯示地圖 | 切換視窗大小 | 地圖骨架不崩壞、不露大片空白 | High |
@@ -149,34 +149,34 @@ P01 的第一階段目標是把主畫面的主要內容區改成由主地圖主�
 
 ---
 
-## 11. Implementation Record
+## 11. 實作紀錄
 
-### Final Behavior
+### 最終行為
 
 - The main map now fills the primary content area and acts as the P1 shell background.
 - `label_car_overlay` now follows the resized map container geometry.
 - Map click conversion and robot marker scaling now derive from the displayed map size instead of fixed constants.
 
-### Changed Files
+### 異動檔案
 
 - `main.py`
 
-### Verification
+### 驗證
 
 - Syntax validation passed for `main.py`, `ui_main.py`, and `functions.py` using in-memory compilation.
 - Manual UI check confirmed the map now occupies the main content area.
 - Manual UI check confirmed the existing right-side controls still render and initialize.
 
-### Known Limits
+### 已知限制
 
 - The top-right, bottom-right, and bottom-left sections still use the old visual grouping and are not yet true overlays.
 - Transparency styling and panel-scale behavior are still deferred to P2 and P3.
 
-### Next Step
+### 下一步
 
 - Proceed to P2 and re-host the right-top, right-bottom, and left-bottom sections into overlay containers.
 
-## TDD Refactoring Workflow
+## TDD 重構流程
 
 1. 先為主畫面骨架重組補上可手動驗收的檢查點，避免直接動手改 layout。
 2. 以最小範圍調整主容器與地圖承載層，確認主畫面仍可啟動。

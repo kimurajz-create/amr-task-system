@@ -1,14 +1,14 @@
 ---
 author: Codex
 date: 2026-05-25
-title: Main Window Overlay Container Rehost
+title: 主畫面浮層容器重掛
 uuid: 7f7e4f3452f4478c9c0ff26b28c5d5ad
 version: v1
 planning: documents/planning/P01-main-window-map-overlay-redesign.md
 status: completed
 ---
 
-# R02 主畫面 Overlay 容器重掛
+# R02 主畫面浮層容器重掛
 
 ## 1. 背景
 
@@ -19,9 +19,9 @@ R01 已完成主地圖骨架重整，讓 `frame_map` 成為可承載 overlay 的
 
 ## 2. 使用者故事
 
-- **As a** 主畫面操作人員
-- **I want** 右上、右下與左下資訊面板都成為疊在主地圖上的 overlay 容器
-- **So that** 後續樣式、尺寸規則與互動區域可以用容器為單位一致管理，而不必再分散修改個別 widget
+- **作為** 主畫面操作人員
+- **我希望** 右上、右下與左下資訊面板都成為疊在主地圖上的浮層容器
+- **如此一來** 後續樣式、尺寸規則與互動區域可以用容器為單位一致管理，而不必再分散修改個別 widget
 
 ## 3. 重構範圍與邊界
 
@@ -57,25 +57,25 @@ R01 已完成主地圖骨架重整，讓 `frame_map` 成為可承載 overlay 的
 
 ## 5. 驗收情境
 
-- **Scenario 1: 右上任務區進入 overlay**
-  - **Given** 主畫面完成初始化
-  - **When** 右上任務設定 widgets 被重掛
-  - **Then** 這些 widgets 應共同位於同一個半透明 overlay 容器內，且原本按鈕與下拉選單仍可操作
+- **情境 1：右上任務區進入浮層**
+  - **前提** 主畫面完成初始化
+  - **當** 右上任務設定 widgets 被重掛
+  - **則** 這些 widgets 應共同位於同一個半透明浮層容器內，且原本按鈕與下拉選單仍可操作
 
-- **Scenario 2: 右下待辦清單維持可用**
-  - **Given** 待辦任務區已載入表格與按鈕
-  - **When** 待辦區被重掛到 overlay 容器
-  - **Then** 清單內容、刪除按鈕與啟停按鈕仍可正常顯示與觸發
+- **情境 2：右下待辦清單維持可用**
+  - **前提** 待辦任務區已載入表格與按鈕
+  - **當** 待辦區被重掛到浮層容器
+  - **則** 清單內容、刪除按鈕與啟停按鈕仍可正常顯示與觸發
 
-- **Scenario 3: 左下通知與狀態列維持可用**
-  - **Given** 左下通知與地圖下方狀態列已建立
-  - **When** 它們被包入 overlay 容器
-  - **Then** 通知清單、心跳標籤、點擊模式 checkbox 與送點按鈕都仍可正常更新
+- **情境 3：左下通知與狀態列維持可用**
+  - **前提** 左下通知與地圖下方狀態列已建立
+  - **當** 它們被包入浮層容器
+  - **則** 通知清單、心跳標籤、點擊模式 checkbox 與送點按鈕都仍可正常更新
 
-- **Scenario 4: 地圖點擊與 marker 不受影響**
-  - **Given** 主地圖與 marker overlay 已建立
-  - **When** 畫面完成 overlay 重掛
-  - **Then** 地圖點擊、marker 重繪與機器人位置更新仍依附 `label_map_1` / `label_car_overlay` 正常運作
+- **情境 4：地圖點擊與 marker 不受影響**
+  - **前提** 主地圖與 marker overlay 已建立
+  - **當** 畫面完成浮層重掛
+  - **則** 地圖點擊、marker 重繪與機器人位置更新仍依附 `label_map_1` / `label_car_overlay` 正常運作
 
 ## 6. 影響檔案
 
@@ -100,31 +100,31 @@ R01 已完成主地圖骨架重整，讓 `frame_map` 成為可承載 overlay 的
 3. 保留所有既有 widget 實例與 signal/slot，只改掛載層級與局部幾何。
 4. 將 `_adjust_status_area_layout()` 改為可同時支援重掛前後的座標設定。
 
-## 9. Implementation Record
+## 9. 實作紀錄
 
-### Final Behavior
+### 最終行為
 
 - The top-right task controls now render inside a shared map overlay container.
 - The bottom-right pending-mission header, action buttons, and list now render inside a shared map overlay container.
 - The bottom-left notification and map status strip now render inside a shared map overlay container.
 - Map click handling and robot marker rendering continue to use `label_map_1` and `label_car_overlay`.
 
-### Changed Files
+### 異動檔案
 
 - `main.py`
 - `documents/planning/P01-main-window-map-overlay-redesign.md`
 
-### Verification
+### 驗證
 
 - Syntax validation passes for `main.py`.
-- Overlay rehost logic preserves the existing widget instances instead of replacing them.
+- 浮層重掛邏輯保留既有 widget instances，而不是重新建立一份新的元件樹。
 - The map overlay layer still raises above the map and below the foreground panels.
 
-### Next Step
+### 下一步
 
 - Proceed to P3 to unify overlay visual style details and define panel scaling / responsive geometry rules.
 
-## TDD Refactoring Workflow
+## TDD 重構流程
 
 1. 先鎖定不變的資料流與 widget 實例，再處理 parent/geometry 重掛。
 2. 先讓容器可建立與可承載，再逐區塊搬移既有 widget。

@@ -1,7 +1,7 @@
 ---
 author: Codex
 date: 2026-05-25
-title: Main Window Map Overlay Redesign Planning
+title: 主畫面地圖浮層改版規劃
 status: draft
 version: v1
 ---
@@ -27,9 +27,9 @@ version: v1
 
 | 模組 | 主要檔案 | 改動類型 | 說明 |
 |---|---|---|---|
-| UI Application Shell | `main.py`, `ui_main.py` | RXX | 重組主視覺容器、overlay 佈局、樣式與幾何管理 |
-| Site Configuration and Runtime Mapping | `main.py`, `site/*.json` | RXX | 只允許讀取既有地圖資產與校正資料，不更動 schema |
-| MiR API Adapter | `functions.py` | — | 不改 API 呼叫與資料流 |
+| 介面應用殼層 | `main.py`, `ui_main.py` | RXX | 重組主視覺容器、浮層佈局、樣式與幾何管理 |
+| 場域設定與執行期對映 | `main.py`, `site/*.json` | RXX | 只允許讀取既有地圖資產與校正資料，不更動 schema |
+| MiR API 介接層 | `functions.py` | — | 不改 API 呼叫與資料流 |
 | Task Scheduler | `task_thread.py` | — | 不改任務派送流程 |
 | Persistence Layer | `TaskDBManager.py`, `UserDBManager.py` | — | 不改資料結構與狀態流轉 |
 
@@ -56,7 +56,7 @@ version: v1
 | 階段 | 狀態 | 名稱 | 核心目標 | 建議文檔類型 | 關聯文檔 |
 |---|---|---|---|---|---|
 | P1 | [x] 已完成 | 主畫面骨架重組 | 讓地圖吃滿主要內容區，建立可承載 overlay 的主容器 | RXX | `documents/implements/R01-main-window-map-shell-restructure.md` |
-| P2 | [x] 已完成 | Overlay 區塊重新掛載 | 保留右上、右下、左下功能，但改成疊在地圖上的浮層區塊 | RXX | `documents/implements/R02-main-window-overlay-container-rehost.md` |
+| P2 | [x] 已完成 | 浮層區塊重新掛載 | 保留右上、右下、左下功能，但改成疊在地圖上的浮層區塊 | RXX | `documents/implements/R02-main-window-overlay-container-rehost.md` |
 | P3 | [ ] 未開始 | 浮層縮放與視覺主題 | 建立半透明樣式與緊湊版規則，讓浮層隨視窗尺寸維持可讀性 | RXX | — |
 | P4 | [ ] 未開始 | 回歸驗收與幾何校準 | 驗證地圖、marker、任務操作與通知顯示在新骨架下維持可用 | RXX | — |
 
@@ -87,7 +87,7 @@ version: v1
 
 ---
 
-## P2 — Overlay 區塊重新掛載
+## P2 — 浮層區塊重新掛載
 
 ### 目標
 
@@ -193,7 +193,7 @@ version: v1
 目前 `CONTEXT.md` 還是空白模板。後續若要持續做主畫面改版，建議補上至少這些詞：
 
 - 主地圖區
-- Overlay 浮層
+- 浮層
 - 右上狀態區
 - 右下待執行任務清單
 - 左下通知區

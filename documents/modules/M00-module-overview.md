@@ -1,45 +1,45 @@
-# Module Overview
+# 模組總覽
 
-## Purpose
+## 目的
 
-This project is a PySide6 desktop application for dispatching MiR robot missions, tracking task execution, and reflecting robot/task state in the UI.
+本專案是一套以 PySide6 建置的桌面應用程式，用來派送 MiR 機器人任務、追蹤任務執行狀態，並把機器人與任務狀態反映到操作介面上。
 
-## Current Module Map
+## 目前模組地圖
 
-| Module | Primary Files | Responsibility |
+| 模組 | 主要檔案 | 職責 |
 |---|---|---|
-| UI Application Shell | `main.py`, `ui_main.py`, `ui_login_window.py`, `ui_admin_panel.py`, `ui_selected_map.py` | Compose screens, bind widgets, react to timers, and orchestrate DB/API/thread usage |
-| Site Configuration and Runtime Mapping | `main.py`, `site/*.json`, `app_settings.json` | Load site profile, assets, calibration, location names, mission names, marker mapping, and charging-station rules |
-| MiR API Adapter | `functions.py`, `config.json` | Wrap MiR HTTP APIs for status, missions, maps, positions, lift, sound, and mission queue state |
-| Task Scheduler | `task_thread.py` | Pull pending tasks from DB, send MiR missions, wait for mission queue completion, and handle charge fallback |
-| Persistence Layer | `TaskDBManager.py`, `UserDBManager.py` | Read/write task queue data, user data, sequencing, execution state, and room heartbeat-related data |
+| 介面應用殼層 | `main.py`, `ui_main.py`, `ui_login_window.py`, `ui_admin_panel.py`, `ui_selected_map.py` | 組合畫面、綁定 widget、處理計時器，並協調資料庫、MiR API 與背景執行緒 |
+| 場域設定與執行期對映 | `main.py`, `site/*.json`, `app_settings.json` | 載入場域 profile、地圖資產、校正資料、地點名稱、任務名稱、marker 對映與充電站規則 |
+| MiR API 介接層 | `functions.py`, `config.json` | 封裝 MiR HTTP API，提供狀態查詢、任務送出、地圖位置、升降與音效等操作 |
+| 任務排程器 | `task_thread.py` | 從資料庫提取待辦任務、送出 MiR 任務、等待 mission queue 完成並處理充電回退 |
+| 持久化層 | `TaskDBManager.py`, `UserDBManager.py` | 讀寫任務佇列、使用者資料、排序、執行狀態與 room heartbeat 相關資料 |
 
-## High-Level Runtime Flow
+## 高層執行流程
 
-1. `main.py` boots the application, creates DB managers, and opens the login flow.
-2. `MainWindow` loads site configuration and derives runtime maps for UI labels and MiR identifiers.
-3. UI timers poll MiR status, battery, room state, task list, and mission reconciliation.
-4. `TaskThread` continuously fetches the highest-priority pending task from PostgreSQL.
-5. `TaskThread` uses `functions.py` to submit MiR missions and monitor mission queue state.
-6. `TaskDBManager` persists task lifecycle changes such as `Pending`, `Executing`, `Completed`, and `Aborted`.
+1. `main.py` 啟動應用程式、建立資料庫 manager，並進入登入流程。
+2. `MainWindow` 載入場域設定，產生 UI 顯示名稱與 MiR 識別碼之間的執行期對映。
+3. UI 計時器定期輪詢 MiR 狀態、電量、房間狀態、任務清單與 mission 對帳結果。
+4. `TaskThread` 持續從 PostgreSQL 取得最高優先序的待辦任務。
+5. `TaskThread` 透過 `functions.py` 送出 MiR 任務並監看 mission queue 狀態。
+6. `TaskDBManager` 持久化任務生命週期變化，例如 `Pending`、`Executing`、`Completed` 與 `Aborted`。
 
-## Boundaries
+## 邊界
 
-- `main.py` is currently both application shell and feature orchestration layer.
-- `functions.py` is the external-integration layer for MiR.
-- `task_thread.py` owns background scheduling behavior.
-- `TaskDBManager.py` and `UserDBManager.py` own database access concerns.
-- `site/*.json` and `app_settings.json` provide environment/site variability without code changes.
+- `main.py` 目前同時扮演應用殼層與功能協調層。
+- `functions.py` 是 MiR 外部整合層。
+- `task_thread.py` 擁有背景排程行為。
+- `TaskDBManager.py` 與 `UserDBManager.py` 擁有資料庫存取職責。
+- `site/*.json` 與 `app_settings.json` 提供不改程式碼即可切換的環境與場域差異。
 
-## Current Architectural Risks
+## 目前架構風險
 
-- `main.py` contains multiple responsibilities and is the biggest coordination hotspot.
-- `functions.py` relies on module-level globals such as MiR IP and credentials, which increases coupling.
-- UI logic, runtime mapping, and operational policies are partially mixed together in `main.py`.
-- Scheduler behavior depends on both MiR API state and DB state reconciliation, which makes failures subtle.
+- `main.py` 職責過多，是目前最大的協調熱點。
+- `functions.py` 依賴 MiR IP 與帳密等模組層級全域變數，耦合度偏高。
+- UI 邏輯、執行期對映與操作策略部分混在 `main.py` 中。
+- 排程器同時依賴 MiR API 狀態與 DB 對帳結果，失敗情境不容易看出來。
 
-## Suggested Next Documentation
+## 建議下一步文件
 
-- A screen/module document for each major UI surface if the team plans active UI changes.
-- A task lifecycle document describing all task states and transitions.
-- A site-profile schema document for `site/*.json` and `app_settings.json`.
+- 若團隊會持續調整 UI，可為主要畫面各自建立更細的模組文件。
+- 補一份任務生命週期文件，描述所有任務狀態與轉換。
+- 補一份 `site/*.json` 與 `app_settings.json` 的場域設定結構文件。

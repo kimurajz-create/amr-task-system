@@ -1,79 +1,79 @@
-# Task Scheduler
+# 任務排程器
 
-## Scope
+## 範圍
 
-Primary file: `task_thread.py`
+主要檔案：`task_thread.py`
 
-## Responsibility
+## 職責
 
-This module owns background task dispatch execution outside the UI thread.
+本模組負責 UI 執行緒之外的背景任務派送流程。
 
-It is responsible for:
+主要職責包括：
 
-- polling PostgreSQL for the highest-priority pending task
-- translating task data into MiR mission submission calls
-- waiting for mission queue completion
-- updating task execution state through the DB manager
-- sending the robot back to the charging station when no work exists or battery is low
-- surfacing execution logs and completion signals back to the UI
+- 從 PostgreSQL 輪詢最高優先序的待辦任務
+- 將任務資料翻譯成 MiR 任務派送呼叫
+- 等待 mission queue 完成
+- 透過 DB manager 更新任務執行狀態
+- 當沒有任務或電量過低時，把機器人送回充電站
+- 把執行紀錄與完成訊號回傳給 UI
 
-## Main Runtime Object
+## 主要執行期物件
 
-| Object | Purpose |
+| 物件 | 用途 |
 |---|---|
-| `TaskThread` | Long-running scheduler thread that dispatches and monitors tasks |
+| `TaskThread` | 長時間運行的排程執行緒，負責派送並監看任務 |
 
-## Dependencies
+## 依賴
 
-- `main.py` for runtime maps and shared flags
-- `functions.py` for MiR dispatch and mission queue state
-- `TaskDBManager.py` for task selection and task-state persistence
+- `main.py`：提供 runtime maps 與共用旗標
+- `functions.py`：提供 MiR 任務派送與 mission queue 狀態查詢
+- `TaskDBManager.py`：提供任務挑選與任務狀態持久化
 
-## Execution Flow
+## 執行流程
 
-1. Read highest-priority pending task from DB.
-2. If no task exists, mark no-mission state and send MiR to charge station.
-3. Translate `start_point`, `target_point`, and `mission_content` through runtime maps.
-4. Submit a combined mission to MiR.
-5. Resolve the resulting MiR mission queue id.
-6. Mark task as `Executing` and persist `mq_id` when available.
-7. Wait until mission queue state becomes `Done` or `Aborted`.
-8. Emit completion back to the UI and continue the loop.
+1. 從 DB 讀取最高優先序的待辦任務。
+2. 若目前沒有任務，標記無任務狀態並將 MiR 送回充電站。
+3. 透過 runtime maps 轉換 `start_point`、`target_point` 與 `mission_content`。
+4. 向 MiR 送出整合後的任務。
+5. 取得對應的 MiR mission queue id。
+6. 在可取得 `mq_id` 的情況下，將任務標記為 `Executing` 並持久化。
+7. 等待 mission queue 狀態變成 `Done` 或 `Aborted`。
+8. 將完成事件回傳給 UI，然後繼續下一輪。
 
-## Inputs
+## 輸入
 
-- pending task rows from PostgreSQL
-- runtime mappings from `MainWindow`
-- battery and idle flags shared by the UI
+- 來自 PostgreSQL 的待辦任務資料列
+- 來自 `MainWindow` 的 runtime mapping
+- 由 UI 共用的電量與 idle 旗標
 
-## Outputs
+## 輸出
 
-- DB status updates such as `Executing`
-- `finished_task` signal to the UI
-- log messages describing scheduler state
-- MiR mission submissions and charge-station fallback commands
+- 寫回 DB 的狀態更新，例如 `Executing`
+- 傳回 UI 的 `finished_task` 訊號
+- 描述排程狀態的紀錄訊息
+- 派送到 MiR 的 mission 與回充 fallback 指令
 
-## Operational Policies Currently Embedded Here
+## 目前內嵌於此的操作策略
 
-- No pending work means send MiR to the charging station.
-- Missing runtime mission/location mapping causes the cycle to be skipped.
-- Temporary MiR disconnection is tolerated and retried while waiting for queue state.
-- Low battery triggers a return-to-charge behavior after mission handling.
+- 沒有待辦任務時就把 MiR 送回充電站。
+- 缺少 mission / location runtime mapping 時跳過本輪。
+- 等待 queue 狀態時容忍暫時性的 MiR 斷線並重試。
+- 低電量會在任務處理後觸發回充行為。
 
-## Boundaries
+## 邊界
 
-- The scheduler owns dispatch sequencing and mission-completion waiting.
-- It should not own widget manipulation beyond emitting signals.
-- It depends on `MainWindow` state today, which is practical but tightly coupled.
+- 排程器擁有派送順序與 mission 完成等待邏輯。
+- 它不應直接操作 widget，只應透過訊號回傳結果。
+- 它目前依賴 `MainWindow` 狀態，實務上可行，但耦合偏高。
 
-## Known Risks
+## 已知風險
 
-- `TaskThread` reaches into `MainWindow` for shared flags and maps, which reduces independence.
-- Reconciliation depends on external MiR queue availability and can leave tasks in uncertain intermediate states.
-- No-mission and low-battery policies are embedded as thread behavior rather than explicit domain rules.
+- `TaskThread` 直接讀取 `MainWindow` 的共用旗標與 maps，降低獨立性。
+- 對帳結果依賴外部 MiR queue 可用性，可能讓任務落在不明確的中間狀態。
+- 「無任務回充」與「低電量回充」目前是 thread 行為，而不是清楚分離的領域規則。
 
-## Refactor Seams
+## 可重構接縫
 
-- Inject a narrower scheduler context instead of the full `MainWindow`.
-- Separate dispatch policy from thread lifecycle.
-- Add a formal task-state machine document and implementation guardrails.
+- 注入更窄的排程上下文，而不是整個 `MainWindow`。
+- 將派送策略與執行緒生命週期拆開。
+- 補上正式的任務狀態機文件與對應的實作守門機制。

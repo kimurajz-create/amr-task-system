@@ -1,84 +1,84 @@
-# Persistence Layer
+# 持久化層
 
-## Scope
+## 範圍
 
-Primary files:
+主要檔案：
 
 - `TaskDBManager.py`
 - `UserDBManager.py`
 
-## Responsibility
+## 職責
 
-This module encapsulates PostgreSQL access for operational data.
+本模組封裝操作資料的 PostgreSQL 存取行為。
 
-It is responsible for:
+主要職責包括：
 
-- creating and reusing DB connections
-- executing SQL queries and batch inserts
-- persisting task queue lifecycle data
-- sequencing pending tasks
-- storing task mission queue identifiers and statuses
-- maintaining user records and password hashes
-- supporting room heartbeat-related data access used by the application
+- 建立與重用資料庫連線
+- 執行 SQL 查詢與批次寫入
+- 持久化任務佇列生命週期資料
+- 排定待辦任務順序
+- 保存任務對應的 MiR mission queue 識別碼與狀態
+- 維護使用者資料與密碼雜湊
+- 支援應用程式使用的 room heartbeat 相關資料查詢
 
-## Main Runtime Objects
+## 主要執行期物件
 
-| Object | Purpose |
+| 物件 | 用途 |
 |---|---|
-| `TaskDBManager` | General task and operational DB access layer |
-| `UserDBManager` | User-focused extension built on top of `TaskDBManager` |
+| `TaskDBManager` | 一般任務與操作資料的資料庫存取層 |
+| `UserDBManager` | 建立在 `TaskDBManager` 之上的使用者資料存取層 |
 
-## Task Data Responsibilities
+## 任務資料職責
 
-Observed task responsibilities include:
+目前可觀察到的任務職責包括：
 
-- add single task
-- add emergency task
-- add batch tasks
-- read highest-priority pending task
-- update task status
-- persist MiR mission queue id
-- reorder or resequence pending tasks
-- query currently executing task
+- 新增單筆任務
+- 新增緊急任務
+- 批次新增任務
+- 讀取最高優先序待辦任務
+- 更新任務狀態
+- 保存 MiR mission queue id
+- 重排待辦任務順序
+- 查詢目前正在執行的任務
 
-## User Data Responsibilities
+## 使用者資料職責
 
-Observed user responsibilities include:
+目前可觀察到的使用者職責包括：
 
-- initialize default admin account
-- retrieve stored password hash
-- list all usernames
-- add user
-- delete user
-- update user password
+- 初始化預設管理者帳號
+- 取得已存的密碼雜湊
+- 列出所有使用者名稱
+- 新增使用者
+- 刪除使用者
+- 更新使用者密碼
 
-## Inputs
+## 輸入
 
-- PostgreSQL connection configuration
-- task creation data from UI
-- task execution results from scheduler/UI reconciliation
-- user-management requests from admin features
+- PostgreSQL 連線設定
+- 來自 UI 的任務建立資料
+- 來自排程器或 UI 對帳流程的任務執行結果
+- 來自管理功能的使用者管理請求
 
-## Outputs
+## 輸出
 
-- persisted rows in task-related and user-related tables
-- task/user query results returned as dictionaries or lists
+- 寫入任務相關與使用者相關資料表的持久化結果
+- 以字典或串列形式回傳的任務／使用者查詢結果
 
-## Boundaries
+## 邊界
 
-- This module should own SQL and transaction behavior.
-- It should not know about widget concerns.
-- It currently returns simple Python structures that upper layers interpret.
+- 本模組應該擁有 SQL 與交易行為。
+- 本模組不應理解 widget 呈現。
+- 目前它回傳簡單的 Python 結構，交由上層自行解讀。
 
-## Known Risks
+## 已知風險
 
-- Connection lifecycle appears manual and may be fragile under long-running failures.
-- Error handling is largely print-based and may hide important operational problems.
-- The DB manager mixes generic DB utilities with domain-specific task logic in the same class.
-- `UserDBManager` inherits from `TaskDBManager`, which is convenient but couples two different subdomains.
+- 連線生命週期看起來偏手動，長時間失敗時可能不夠穩定。
+- 錯誤處理多半以 `print` 為主，容易讓重要問題被吞掉。
+- DB manager 在同一個類別裡混合了一般資料庫工具與任務領域邏輯。
+- `UserDBManager` 繼承 `TaskDBManager` 雖然方便，但把兩個不同子領域綁得更緊。
 
-## Refactor Seams
+## 可重構接縫
 
-- Split generic DB session handling from task/user repositories.
-- Introduce explicit repository interfaces for tasks and users.
-- Standardize error signaling so callers can distinguish retryable vs terminal failures.
+- 把通用 DB session 管理與 task / user repository 分開。
+- 為任務與使用者建立更明確的 repository 介面。
+- 標準化錯誤訊號，讓呼叫端能區分可重試與不可重試失敗。

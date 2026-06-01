@@ -1,7 +1,7 @@
 ---
 author: Codex
 date: 2026-06-01
-title: 地圖 Marker 外部化與縮放定位規劃
+title: 地圖標記外部化與縮放定位規劃
 status: draft
 version: v1
 ---
@@ -45,10 +45,10 @@ version: v1
 
 | 區域 | 檔案 | 預計文件類型 | 需要變更的原因 |
 |---|---|---|---|
-| Site Configuration and Runtime Mapping | `site/*.json`, `main.py`, `documents/modules/M02-site-configuration-and-runtime-mapping.md` | RXX | Marker 幾何資訊必須變成 runtime configuration，而不是只存在於 UI 幾何座標裡。 |
-| UI Application Shell | `main.py`, `main.ui`, `ui_main.py` | RXX | Marker widget 必須改成從 config 動態建立與定位。 |
-| MiR API Adapter | `functions.py` | None | 這次 marker 重構不需要更改 API contract。 |
-| Task Scheduler / Persistence | `task_thread.py`, `TaskDBManager.py`, `UserDBManager.py` | None | Marker 渲染應該仍屬於 presentation concern。 |
+| 場域設定與執行期對映 | `site/*.json`, `main.py`, `documents/modules/M02-site-configuration-and-runtime-mapping.md` | RXX | Marker 幾何資訊必須變成執行期設定，而不是只存在於 UI 幾何座標裡。 |
+| 介面應用殼層 | `main.py`, `main.ui`, `ui_main.py` | RXX | Marker widget 必須改成從設定動態建立與定位。 |
+| MiR API 介接層 | `functions.py` | 無 | 這次 marker 重構不需要更改 API 契約。 |
+| 任務排程 / 持久化 | `task_thread.py`, `TaskDBManager.py`, `UserDBManager.py` | 無 | Marker 渲染應該仍屬於呈現層關注點。 |
 
 ## 設計方向
 
@@ -87,7 +87,7 @@ version: v1
 - `draw_car_position()` 已經有一套適合縮放安全渲染的比例換算模式
 - 當 site 更換底圖時，校正與 marker 擷取都能在同一個座標系統中進行
 
-### Runtime Widget 策略
+### 執行期 Widget 策略
 
 在地圖 pixmap 載入完成後，由程式動態建立 map marker widget，並在地圖顯示尺寸變更時重新定位。
 
@@ -103,14 +103,14 @@ version: v1
 
 | 階段 | 狀態 | 名稱 | 產出 | 後續文件類型 | 預期文件 |
 |---|---|---|---|---|---|
-| P1 | [x] Completed | Site marker schema and runtime map | 由 site config 接管 marker 幾何資訊與 location-to-marker 綁定。 | R03 | `documents/implements/R03-site-marker-schema-and-runtime-maps.md` |
-| P2 | [ ] Proposed | Dynamic marker layer in MainWindow | Marker widget 改成由 site data 動態建立與重新定位，不再依賴 Designer 幾何座標。 | RXX | `documents/implements/R04-dynamic-map-marker-layer.md` |
-| P3 | [ ] Proposed | Designer marker cleanup and maintenance workflow | 專案可透過編輯 config 來增減 marker，並加入缺漏參照的保護機制。 | RXX | `documents/implements/R05-map-marker-maintenance-cleanup.md` |
-| P4 | [ ] Optional | Marker capture helper | 為新場域提供更快速的座標擷取工作流。 | FXX or RXX | TBD after P1-P3 land |
+| P1 | [x] 已完成 | 場域 marker 結構與執行期對映 | 由 site config 接管 marker 幾何資訊與 location-to-marker 綁定。 | R03 | `documents/implements/R03-site-marker-schema-and-runtime-maps.md` |
+| P2 | [ ] 提議中 | MainWindow 動態 marker 圖層 | Marker widget 改成由 site data 動態建立與重新定位，不再依賴 Designer 幾何座標。 | RXX | `documents/implements/R04-dynamic-map-marker-layer.md` |
+| P3 | [ ] 提議中 | Designer marker 清理與維護流程 | 專案可透過編輯 config 來增減 marker，並加入缺漏參照的保護機制。 | RXX | `documents/implements/R05-map-marker-maintenance-cleanup.md` |
+| P4 | [ ] 可選 | Marker 座標擷取輔助 | 為新場域提供更快速的座標擷取工作流。 | FXX 或 RXX | P1-P3 落地後再定 |
 
 ---
 
-## P1 Site Marker Schema And Runtime Map
+## P1 場域 Marker 結構與執行期對映
 
 ### 目標
 
