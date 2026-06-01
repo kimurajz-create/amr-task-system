@@ -1374,19 +1374,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             border_color = "#1790FF"
             text_color = "#FFFFFF"
         elif variant == "danger":
-            bg_color = "rgba(184, 49, 75, 0.18)"
-            hover_color = "rgba(208, 68, 96, 0.28)"
-            border_color = "rgba(255, 132, 157, 0.56)"
+            bg_color = "rgba(184, 49, 75, 0.12)"
+            hover_color = "rgba(208, 68, 96, 0.20)"
+            border_color = "rgba(255, 132, 157, 0.42)"
             text_color = "#FFD8DE"
         elif variant == "ghost":
-            bg_color = "rgba(255, 255, 255, 0.06)"
-            hover_color = "rgba(255, 255, 255, 0.12)"
-            border_color = "rgba(149, 190, 225, 0.28)"
+            bg_color = "rgba(255, 255, 255, 0.04)"
+            hover_color = "rgba(255, 255, 255, 0.08)"
+            border_color = "rgba(149, 190, 225, 0.22)"
             text_color = "#EAF2FD"
         else:
-            bg_color = "rgba(23, 144, 255, 0.12)"
-            hover_color = "rgba(23, 144, 255, 0.22)"
-            border_color = "rgba(95, 178, 255, 0.42)"
+            bg_color = "rgba(23, 144, 255, 0.08)"
+            hover_color = "rgba(23, 144, 255, 0.16)"
+            border_color = "rgba(95, 178, 255, 0.32)"
             text_color = "#EAF4FF"
 
         radius = 11 if not icon_only else 10
@@ -1429,8 +1429,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return """
         QLineEdit {
             color: #EAF4FF;
-            background-color: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(150, 190, 225, 0.22);
+            background-color: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(150, 190, 225, 0.18);
             border-radius: 10px;
             font-size: 13px;
             padding: 0 12px;
@@ -1441,8 +1441,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return """
         QComboBox {
             color: #EAF4FF;
-            background-color: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(150, 190, 225, 0.22);
+            background-color: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(150, 190, 225, 0.18);
             border-radius: 10px;
             font-size: 13px;
             padding: 0 12px;
@@ -1477,8 +1477,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.progressBar_battery.setStyleSheet(f"""
         QProgressBar {{
             color: #EAF4FF;
-            background-color: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(150, 190, 225, 0.24);
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(150, 190, 225, 0.18);
             border-radius: 9px;
             text-align: center;
             font-size: 11px;
@@ -1560,24 +1560,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.frame_pending_mission_list.setStyleSheet("border: none; background: transparent;")
         self.tableWidget_pending_mission_list.setStyleSheet("""
         QTableWidget {
-            background-color: rgba(7, 16, 27, 0.76);
-            alternate-background-color: rgba(255, 255, 255, 0.03);
+            background-color: rgba(7, 16, 27, 0.56);
+            alternate-background-color: rgba(255, 255, 255, 0.02);
             color: #EAF4FF;
-            border: 1px solid rgba(150, 190, 225, 0.18);
+            border: 1px solid rgba(150, 190, 225, 0.14);
             border-radius: 12px;
-            gridline-color: rgba(150, 190, 225, 0.10);
+            gridline-color: rgba(150, 190, 225, 0.08);
             font-size: 11px;
         }
         QTableWidget::item {
             padding: 4px;
-            border-bottom: 1px solid rgba(150, 190, 225, 0.08);
+            border-bottom: 1px solid rgba(150, 190, 225, 0.06);
         }
         QHeaderView::section {
-            background-color: rgba(255, 255, 255, 0.06);
+            background-color: rgba(255, 255, 255, 0.04);
             color: rgba(234, 244, 255, 0.82);
             padding: 4px;
             border: none;
-            border-bottom: 1px solid rgba(150, 190, 225, 0.16);
+            border-bottom: 1px solid rgba(150, 190, 225, 0.12);
             font-size: 11px;
             font-weight: 700;
         }
@@ -1619,8 +1619,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.chb_map.setStyleSheet("""
         QCheckBox {
             color: #EAF4FF;
-            background-color: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(150, 190, 225, 0.22);
+            background-color: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(150, 190, 225, 0.18);
             border-radius: 10px;
             padding: 0 10px;
             font-size: 12px;
@@ -1653,10 +1653,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.listWidget_msg.setStyleSheet("""
         QListWidget {
-            border: 1px solid rgba(150, 190, 225, 0.20);
+            border: 1px solid rgba(150, 190, 225, 0.14);
             border-radius: 12px;
             padding: 0px;
-            background-color: rgba(7, 16, 27, 0.86);
+            background-color: rgba(7, 16, 27, 0.60);
         }
         QListWidget::item {
             margin: 2px;
@@ -1673,20 +1673,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _build_overlay_summary_chip_qss(self, variant="neutral"):
         if variant == "success":
-            background = "rgba(61, 220, 151, 0.20)"
-            border = "rgba(124, 255, 178, 0.48)"
+            background = "rgba(61, 220, 151, 0.14)"
+            border = "rgba(124, 255, 178, 0.38)"
             color = "#D8FFE7"
         elif variant == "warning":
-            background = "rgba(255, 157, 47, 0.18)"
-            border = "rgba(255, 191, 116, 0.42)"
+            background = "rgba(255, 157, 47, 0.12)"
+            border = "rgba(255, 191, 116, 0.34)"
             color = "#FFEBD2"
         elif variant == "danger":
-            background = "rgba(184, 49, 75, 0.18)"
-            border = "rgba(255, 132, 157, 0.42)"
+            background = "rgba(184, 49, 75, 0.12)"
+            border = "rgba(255, 132, 157, 0.34)"
             color = "#FFD8DE"
         else:
-            background = "rgba(23, 144, 255, 0.18)"
-            border = "rgba(95, 178, 255, 0.42)"
+            background = "rgba(23, 144, 255, 0.12)"
+            border = "rgba(95, 178, 255, 0.34)"
             color = "#EAF4FF"
 
         return (
@@ -1708,8 +1708,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return label
 
     def _build_overlay_frame_qss(self, object_name, collapsed=False):
-        background_alpha = 232 if collapsed else 218
-        border_alpha = 138 if collapsed else 118
+        background_alpha = 180 if collapsed else 160
+        border_alpha = 112 if collapsed else 88
         radius = 18 if collapsed else 16
         return f"""
             QFrame#{object_name} {{
