@@ -103,7 +103,7 @@ version: v1
 
 | 階段 | 狀態 | 名稱 | 產出 | 後續文件類型 | 預期文件 |
 |---|---|---|---|---|---|
-| P1 | [ ] Proposed | Site marker schema and runtime map | 由 site config 接管 marker 幾何資訊與 location-to-marker 綁定。 | RXX | `documents/implements/R03-site-marker-schema-and-runtime-maps.md` |
+| P1 | [x] Completed | Site marker schema and runtime map | 由 site config 接管 marker 幾何資訊與 location-to-marker 綁定。 | R03 | `documents/implements/R03-site-marker-schema-and-runtime-maps.md` |
 | P2 | [ ] Proposed | Dynamic marker layer in MainWindow | Marker widget 改成由 site data 動態建立與重新定位，不再依賴 Designer 幾何座標。 | RXX | `documents/implements/R04-dynamic-map-marker-layer.md` |
 | P3 | [ ] Proposed | Designer marker cleanup and maintenance workflow | 專案可透過編輯 config 來增減 marker，並加入缺漏參照的保護機制。 | RXX | `documents/implements/R05-map-marker-maintenance-cleanup.md` |
 | P4 | [ ] Optional | Marker capture helper | 為新場域提供更快速的座標擷取工作流。 | FXX or RXX | TBD after P1-P3 land |

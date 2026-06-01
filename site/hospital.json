@@ -13,6 +13,117 @@
     "image_pts": [[892, 411], [325, 361], [325, 113]],
     "world_pts": [[-7.209, 18.944], [27.55, 15.386], [27.683, -1.588]]
   },
+  "_comment_markers": "markers were derived from hospital world coordinates and converted into top-left pixel geometry using the site calibration affine transform.",
+  "markers": [
+    {
+      "marker_id": "label_rp_1",
+      "x_px": 329,
+      "y_px": 104,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 26.626,
+      "world_y_m": -1.611
+    },
+    {
+      "marker_id": "label_rp_2",
+      "x_px": 309,
+      "y_px": 314,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 27.76,
+      "world_y_m": 12.788
+    },
+    {
+      "marker_id": "label_rp_3",
+      "x_px": 313,
+      "y_px": 380,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 27.498,
+      "world_y_m": 17.275
+    },
+    {
+      "marker_id": "label_rp_5",
+      "x_px": 392,
+      "y_px": 386,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 22.639,
+      "world_y_m": 17.76
+    },
+    {
+      "marker_id": "label_rp_6",
+      "x_px": 559,
+      "y_px": 389,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 12.394,
+      "world_y_m": 17.984
+    },
+    {
+      "marker_id": "label_rp_7",
+      "x_px": 619,
+      "y_px": 354,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 8.717,
+      "world_y_m": 15.599
+    },
+    {
+      "marker_id": "label_rp_8",
+      "x_px": 841,
+      "y_px": 392,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": -4.893,
+      "world_y_m": 18.252
+    },
+    {
+      "marker_id": "label_rp_9",
+      "x_px": 863,
+      "y_px": 374,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": -6.22,
+      "world_y_m": 17.033
+    },
+    {
+      "marker_id": "label_rp_10",
+      "x_px": 765,
+      "y_px": 351,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": -0.209,
+      "world_y_m": 15.449
+    },
+    {
+      "marker_id": "label_rp_11",
+      "x_px": 619,
+      "y_px": 354,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 8.752,
+      "world_y_m": 15.607
+    },
+    {
+      "marker_id": "label_rp_12",
+      "x_px": 554,
+      "y_px": 355,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 12.707,
+      "world_y_m": 15.635
+    },
+    {
+      "marker_id": "label_rp_13",
+      "x_px": 342,
+      "y_px": 316,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 25.742,
+      "world_y_m": 12.946
+    }
+  ],
   "_comment_locations": "locations 會轉成 user_location_map / room_id_map / location_to_marker。is_charging_station = true 的那筆會被當作回充站。",
   "locations": [
     {
@@ -36,14 +147,6 @@
       "display_name": "手術室3",
       "marker_id": "label_rp_3",
       "room_id": "OR03",
-      "map_button_id": null,
-      "is_charging_station": false
-    },
-    {
-      "mir_name": "MH_Robot position OR 4",
-      "display_name": "手術室4",
-      "marker_id": "label_rp_4",
-      "room_id": "OR04",
       "map_button_id": null,
       "is_charging_station": false
     },
@@ -125,7 +228,9 @@
       "marker_id": null,
       "room_id": null,
       "map_button_id": null,
-      "is_charging_station": true
+      "is_charging_station": true,
+      "world_x_m": 25.307,
+      "world_y_m": -4.069
     },
     {
       "mir_name": "MH_Shelf position SR 1",
@@ -141,7 +246,9 @@
       "marker_id": null,
       "room_id": "SR02",
       "map_button_id": null,
-      "is_charging_station": false
+      "is_charging_station": false,
+      "world_x_m": 22.108,
+      "world_y_m": 1.818
     },
     {
       "mir_name": "MH_Shelf position OR 1",
@@ -164,14 +271,6 @@
       "display_name": "車架位置(手術室3)",
       "marker_id": "label_rp_3",
       "room_id": "OR03",
-      "map_button_id": null,
-      "is_charging_station": false
-    },
-    {
-      "mir_name": "MH_Shelf position OR 4",
-      "display_name": "車架位置(手術室4)",
-      "marker_id": "label_rp_4",
-      "room_id": "OR04",
       "map_button_id": null,
       "is_charging_station": false
     },

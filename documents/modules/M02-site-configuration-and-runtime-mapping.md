@@ -87,4 +87,14 @@
 - `locations`
 - `missions`
 
+## Marker Schema Contract
+
+- `markers[*].marker_id` must be unique within a site profile.
+- `markers[*].x_px` and `markers[*].y_px` are top-left map pixel coordinates for the marker widget.
+- `markers[*].width_px` and `markers[*].height_px` are original marker widget dimensions.
+- `markers[*].world_x_m` and `markers[*].world_y_m` are optional MiR world coordinates for the marker center.
+- When `x_px/y_px` are omitted but `world_x_m/world_y_m` are present, runtime derives top-left pixel geometry through the site calibration.
+- `locations[*].marker_id` may be omitted, but when `markers` are defined every referenced marker id must exist in `markers`.
+- Runtime mapping exposes `location_to_marker`, `marker_locations_by_id`, and `marker_specs_by_id`.
+
 有了這份 schema，新增新場域時會更安全，也更容易維護。

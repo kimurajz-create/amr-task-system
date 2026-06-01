@@ -271,6 +271,7 @@ def load_site_config(site_profile=None):
             "site_id": "company",
             "assets": DEFAULT_SITE_ASSETS.copy(),
             "calibration": DEFAULT_SITE_CALIBRATION.copy(),
+            "markers": [],
             "locations": [],
             "missions": [],
         }
@@ -287,6 +288,7 @@ def load_site_config(site_profile=None):
             "site_id": "company",
             "assets": DEFAULT_SITE_ASSETS.copy(),
             "calibration": DEFAULT_SITE_CALIBRATION.copy(),
+            "markers": [],
             "locations": [],
             "missions": [],
         }
@@ -298,6 +300,7 @@ def load_site_config(site_profile=None):
     calibration = DEFAULT_SITE_CALIBRATION.copy()
     calibration.update(site_config.get("calibration", {}))
     site_config["calibration"] = calibration
+    site_config.setdefault("markers", [])
 
     # 這三個欄位是新 schema。
     # 就算 hospital 還沒補資料，也先保證程式拿得到空陣列，不會直接噴錯。
@@ -415,6 +418,116 @@ MIR_MISSION_GROUP_MAP = {v: k for k, v in USER_MISSION_GROUP_MAP.items()}
 CHARGING_STATION_NAME = "充電樁"
 
 
+def _build_marker_locations_by_id(location_to_marker):
+    marker_locations_by_id = {}
+
+    for location_name, marker_id in location_to_marker.items():
+        marker_locations_by_id.setdefault(marker_id, []).append(location_name)
+
+    return marker_locations_by_id
+
+
+def _require_marker_int(marker_record, field_name, marker_id, *, minimum):
+    value = marker_record.get(field_name)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(
+            f"marker '{marker_id}' field '{field_name}' must be an integer, got {value!r}"
+        )
+    if value < minimum:
+        raise ValueError(
+            f"marker '{marker_id}' field '{field_name}' must be >= {minimum}, got {value}"
+        )
+    return value
+
+
+def _require_marker_number(marker_record, field_name, marker_id):
+    value = marker_record.get(field_name)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(
+            f"marker '{marker_id}' field '{field_name}' must be a number, got {value!r}"
+        )
+    return float(value)
+
+
+def _build_site_affine_matrix(site_config):
+    calibration = site_config.get("calibration") or {}
+    image_pts = np.array(calibration.get("image_pts") or [], dtype=float)
+    world_pts = np.array(calibration.get("world_pts") or [], dtype=float)
+
+    if image_pts.shape != (3, 2) or world_pts.shape != (3, 2):
+        raise ValueError(
+            "site calibration must define exactly three image_pts and three world_pts pairs"
+        )
+
+    affine_input = np.hstack([world_pts, np.ones((3, 1))])
+    affine_matrix, _, _, _ = np.linalg.lstsq(affine_input, image_pts, rcond=None)
+    return affine_matrix
+
+
+def _derive_marker_top_left_from_world(marker_record, marker_id, affine_matrix, width_px, height_px):
+    world_x_m = _require_marker_number(marker_record, "world_x_m", marker_id)
+    world_y_m = _require_marker_number(marker_record, "world_y_m", marker_id)
+    pixel_x, pixel_y = np.array([world_x_m, world_y_m, 1.0]) @ affine_matrix
+
+    return int(round(pixel_x - (width_px / 2))), int(round(pixel_y - (height_px / 2)))
+
+
+def _build_marker_specs_by_id(site_config):
+    marker_specs_by_id = {}
+    marker_records = site_config.get("markers") or []
+    affine_matrix = None
+
+    for marker_record in marker_records:
+        marker_id = marker_record.get("marker_id")
+        if not marker_id:
+            raise ValueError("site marker record is missing required field 'marker_id'")
+        if marker_id in marker_specs_by_id:
+            raise ValueError(f"duplicate marker_id found in site config: {marker_id}")
+
+        width_px = _require_marker_int(marker_record, "width_px", marker_id, minimum=1)
+        height_px = _require_marker_int(marker_record, "height_px", marker_id, minimum=1)
+        x_px = marker_record.get("x_px")
+        y_px = marker_record.get("y_px")
+        has_pixel_geometry = x_px is not None or y_px is not None
+
+        if has_pixel_geometry:
+            if x_px is None or y_px is None:
+                raise ValueError(
+                    f"marker '{marker_id}' must define both 'x_px' and 'y_px' when using pixel geometry"
+                )
+            x_px = _require_marker_int(marker_record, "x_px", marker_id, minimum=0)
+            y_px = _require_marker_int(marker_record, "y_px", marker_id, minimum=0)
+        else:
+            if affine_matrix is None:
+                affine_matrix = _build_site_affine_matrix(site_config)
+            x_px, y_px = _derive_marker_top_left_from_world(
+                marker_record,
+                marker_id,
+                affine_matrix,
+                width_px,
+                height_px,
+            )
+
+        marker_specs_by_id[marker_id] = {
+            "marker_id": marker_id,
+            "x_px": x_px,
+            "y_px": y_px,
+            "width_px": width_px,
+            "height_px": height_px,
+        }
+
+        if "world_x_m" in marker_record:
+            marker_specs_by_id[marker_id]["world_x_m"] = _require_marker_number(
+                marker_record, "world_x_m", marker_id
+            )
+        if "world_y_m" in marker_record:
+            marker_specs_by_id[marker_id]["world_y_m"] = _require_marker_number(
+                marker_record, "world_y_m", marker_id
+            )
+
+    return marker_specs_by_id
+
+
 def build_site_runtime_maps(site_config):
     """
     將 site/<profile>.json 的新結構，轉回目前程式既有邏輯可直接使用的 map。
@@ -432,15 +545,20 @@ def build_site_runtime_maps(site_config):
         "mir_mission_group_map": MIR_MISSION_GROUP_MAP.copy(),
         "room_id_map": ROOM_ID_MAP.copy(),
         "location_to_marker": LOCATION_TO_MARKER.copy(),
+        "marker_specs_by_id": {},
+        "marker_locations_by_id": _build_marker_locations_by_id(LOCATION_TO_MARKER),
         "required_mission_codes": set(REQUIRED_MISSION_CODES),
         "charging_station_name": CHARGING_STATION_NAME,
     }
 
+    site_id = site_config.get("site_id", "<unknown-site>")
     location_records = site_config.get("locations") or []
     mission_records = site_config.get("missions") or []
+    marker_specs_by_id = _build_marker_specs_by_id(site_config)
 
     user_location_map = {}
     location_to_marker = {}
+    marker_locations_by_id = {}
     room_id_map = {}
     charging_station_name = None
 
@@ -456,7 +574,12 @@ def build_site_runtime_maps(site_config):
 
         marker_id = location.get("marker_id")
         if marker_id:
+            if marker_specs_by_id and marker_id not in marker_specs_by_id:
+                raise ValueError(
+                    f"site '{site_id}' location '{display_name}' references unknown marker_id '{marker_id}'"
+                )
             location_to_marker[display_name] = marker_id
+            marker_locations_by_id.setdefault(marker_id, []).append(display_name)
 
         room_id = location.get("room_id")
         if room_id:
@@ -475,6 +598,10 @@ def build_site_runtime_maps(site_config):
         runtime_maps["mir_location_map"] = {v: k for k, v in user_location_map.items()}
     if location_to_marker:
         runtime_maps["location_to_marker"] = location_to_marker
+    if marker_specs_by_id:
+        runtime_maps["marker_specs_by_id"] = marker_specs_by_id
+    if marker_locations_by_id:
+        runtime_maps["marker_locations_by_id"] = marker_locations_by_id
     if room_id_map:
         runtime_maps["room_id_map"] = room_id_map
     if charging_station_name:
@@ -1128,6 +1255,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.USER_MISSION_GROUP_MAP = self.site_runtime_maps["user_mission_group_map"]
         self.ROOM_ID_MAP = self.site_runtime_maps["room_id_map"]
         self.LOCATION_TO_MARKER = self.site_runtime_maps["location_to_marker"]
+        self.MARKER_SPECS_BY_ID = self.site_runtime_maps["marker_specs_by_id"]
+        self.MARKER_LOCATIONS_BY_ID = self.site_runtime_maps["marker_locations_by_id"]
         self.REQUIRED_MISSION_CODES = self.site_runtime_maps["required_mission_codes"]
 
         # 初始化 MiR 函數

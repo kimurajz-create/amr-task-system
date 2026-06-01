@@ -13,6 +13,72 @@
     "image_pts": [[933, 552], [567, 1381], [2635, 950]],
     "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]]
   },
+  "_comment_markers": "markers may store direct pixel geometry and/or world coordinates; when x_px/y_px are omitted, runtime derives top-left pixels from world_x_m/world_y_m through site calibration.",
+  "markers": [
+    {
+      "marker_id": "label_rp_1",
+      "x_px": 290,
+      "y_px": 230,
+      "width_px": 18,
+      "height_px": 26,
+      "world_x_m": -0.004,
+      "world_y_m": 24.154
+    },
+    {
+      "marker_id": "label_rp_2",
+      "x_px": 290,
+      "y_px": 310,
+      "width_px": 18,
+      "height_px": 26,
+      "world_x_m": -0.057,
+      "world_y_m": 18.825
+    },
+    {
+      "marker_id": "label_rp_3",
+      "x_px": 290,
+      "y_px": 410,
+      "width_px": 18,
+      "height_px": 26,
+      "world_x_m": -0.165,
+      "world_y_m": 12.29
+    },
+    {
+      "marker_id": "label_rp_4",
+      "x_px": 410,
+      "y_px": 470,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 18.456,
+      "world_y_m": 9.106
+    },
+    {
+      "marker_id": "label_rp_5",
+      "x_px": 510,
+      "y_px": 470,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 13.188,
+      "world_y_m": 9.187
+    },
+    {
+      "marker_id": "label_rp_6",
+      "x_px": 590,
+      "y_px": 470,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 7.408,
+      "world_y_m": 9.093
+    },
+    {
+      "marker_id": "label_rp_7",
+      "x_px": 870,
+      "y_px": 320,
+      "width_px": 26,
+      "height_px": 18,
+      "world_x_m": 32.743,
+      "world_y_m": 16.955
+    }
+  ],
   "_comment_locations": "locations 是場域的核心資料表。每筆 location 同時描述 MiR 名稱、UI 顯示名稱、marker、room_id，以及是否為充電站。",
   "locations": [
     {
