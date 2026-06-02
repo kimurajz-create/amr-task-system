@@ -542,6 +542,58 @@ def _scale_marker_geometry(marker_spec, scale_x, scale_y, offset_x=0, offset_y=0
     return x_px, y_px, width_px, height_px
 
 
+def _is_map_marker_widget_name(object_name):
+    return isinstance(object_name, str) and object_name.startswith("label_rp_")
+
+
+def _iter_map_marker_widgets(frame_map):
+    if frame_map is None:
+        return []
+
+    marker_widgets = []
+    for child in frame_map.children():
+        if isinstance(child, QLabel) and _is_map_marker_widget_name(child.objectName()):
+            marker_widgets.append(child)
+    return marker_widgets
+
+
+def _clear_runtime_map_marker_widgets(frame_map):
+    removed_ids = set()
+
+    for marker_widget in _iter_map_marker_widgets(frame_map):
+        removed_ids.add(marker_widget.objectName())
+        marker_widget.hide()
+        marker_widget.setParent(None)
+        marker_widget.deleteLater()
+
+    return removed_ids
+
+
+def _build_runtime_map_marker_widgets(frame_map, marker_specs_by_id):
+    widgets_by_id = {}
+
+    if frame_map is None:
+        return widgets_by_id
+
+    for marker_id in marker_specs_by_id:
+        marker_widget = QLabel(frame_map)
+        marker_widget.setObjectName(marker_id)
+        marker_widget.setAlignment(Qt.AlignCenter)
+        marker_widget.setText("")
+        marker_widget.setToolTip("")
+        marker_widget.setStyleSheet(STYLE_DEFAULT)
+        marker_widget.show()
+        widgets_by_id[marker_id] = marker_widget
+
+    return widgets_by_id
+
+
+def _rebuild_runtime_map_marker_widgets(frame_map, marker_specs_by_id):
+    removed_ids = _clear_runtime_map_marker_widgets(frame_map)
+    widgets_by_id = _build_runtime_map_marker_widgets(frame_map, marker_specs_by_id)
+    return widgets_by_id, removed_ids
+
+
 def build_site_runtime_maps(site_config):
     """
     將 site/<profile>.json 的新結構，轉回目前程式既有邏輯可直接使用的 map。
@@ -1272,6 +1324,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.MARKER_SPECS_BY_ID = self.site_runtime_maps["marker_specs_by_id"]
         self.MARKER_LOCATIONS_BY_ID = self.site_runtime_maps["marker_locations_by_id"]
         self.REQUIRED_MISSION_CODES = self.site_runtime_maps["required_mission_codes"]
+        self.map_marker_widgets = {}
 
         # 初始化 MiR 函數
         # 將您已經導入的 functions 模組，作為一個屬性(attribute)賦值給 MainWindow 實例 (self)
@@ -1408,6 +1461,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             "font-size: 30px;"
             "font-weight: 700;"
         )
+        self._build_map_marker_widgets()
         self.current_mir_state_id = None
         self.map_overlay_frames = {}
         self.map_overlay_content_widgets = {}
@@ -2493,6 +2547,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.label_map_1.width() / pixmap_width,
             self.label_map_1.height() / pixmap_height,
         )
+
+    def _clear_map_marker_widgets(self):
+        if not hasattr(self, "frame_map"):
+            return
+
+        removed_ids = _clear_runtime_map_marker_widgets(self.frame_map)
+        removed_ids.update(getattr(self, "map_marker_widgets", {}).keys())
+        self.map_marker_widgets = {}
+
+        for marker_id in removed_ids:
+            setattr(self, marker_id, None)
+
+    def _build_map_marker_widgets(self):
+        if not hasattr(self, "frame_map"):
+            return
+
+        marker_specs_by_id = getattr(self, "MARKER_SPECS_BY_ID", None) or {}
+        self._clear_map_marker_widgets()
+        self.map_marker_widgets = _build_runtime_map_marker_widgets(
+            self.frame_map,
+            marker_specs_by_id,
+        )
+
+        for marker_id, marker_widget in self.map_marker_widgets.items():
+            setattr(self, marker_id, marker_widget)
+
+        self._position_map_marker_widgets()
 
     def _position_map_marker_widgets(self):
         if not getattr(self, "MARKER_SPECS_BY_ID", None):

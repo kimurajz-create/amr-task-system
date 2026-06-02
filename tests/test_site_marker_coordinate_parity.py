@@ -1,11 +1,23 @@
 import json
+import os
 import unittest
 from pathlib import Path
 
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
 import main
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QLabel, QWidget
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def ensure_app():
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    return app
 
 
 def load_site_config(site_id):
@@ -108,6 +120,53 @@ class SiteMarkerCoordinateParityTests(unittest.TestCase):
                     runtime_maps["location_to_marker"][location["display_name"]],
                     expected_marker_id,
                 )
+
+
+class RuntimeMarkerWidgetLifecycleTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = ensure_app()
+
+    def test_rebuild_runtime_map_marker_widgets_replaces_designer_widgets_and_supports_new_ids(self):
+        frame_map = QWidget()
+
+        stale_marker = QLabel(frame_map)
+        stale_marker.setObjectName("label_rp_1")
+        stale_marker.setText("stale")
+
+        removed_marker = QLabel(frame_map)
+        removed_marker.setObjectName("label_rp_2")
+
+        unrelated_label = QLabel(frame_map)
+        unrelated_label.setObjectName("lbl_keep")
+
+        marker_specs_by_id = {
+            "label_rp_1": {"width_px": 18, "height_px": 26, "x_px": 10, "y_px": 20},
+            "label_rp_13": {"width_px": 26, "height_px": 18, "x_px": 30, "y_px": 40},
+        }
+
+        widgets_by_id, removed_ids = main._rebuild_runtime_map_marker_widgets(
+            frame_map,
+            marker_specs_by_id,
+        )
+
+        self.assertEqual(removed_ids, {"label_rp_1", "label_rp_2"})
+        self.assertEqual(set(widgets_by_id), {"label_rp_1", "label_rp_13"})
+
+        runtime_marker_names = {
+            child.objectName()
+            for child in frame_map.findChildren(QLabel)
+            if child.objectName().startswith("label_rp_")
+        }
+        self.assertEqual(runtime_marker_names, {"label_rp_1", "label_rp_13"})
+        self.assertIs(unrelated_label.parentWidget(), frame_map)
+
+        runtime_marker = widgets_by_id["label_rp_13"]
+        self.assertIs(runtime_marker.parentWidget(), frame_map)
+        self.assertEqual(runtime_marker.objectName(), "label_rp_13")
+        self.assertEqual(runtime_marker.text(), "")
+        self.assertEqual(runtime_marker.toolTip(), "")
+        self.assertEqual(runtime_marker.alignment(), Qt.AlignCenter)
 
 
 if __name__ == "__main__":
