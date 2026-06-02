@@ -105,7 +105,7 @@ version: v1
 |---|---|---|---|---|---|
 | P1 | [x] 已完成 | 場域 marker 結構與執行期對映 | 由 site config 接管 marker 幾何資訊與 location-to-marker 綁定。 | R03 | `documents/implements/R03-site-marker-schema-and-runtime-maps.md` |
 | P2 | [x] 已完成 | MainWindow 動態 marker 圖層 | Marker widget 改成由 site data 動態建立與重新定位，不再依賴 Designer 幾何座標。 | R04 | `documents/implements/R04-dynamic-map-marker-layer.md` |
-| P3 | [ ] 提議中 | Designer marker 清理與維護流程 | 專案可透過編輯 config 來增減 marker，並加入缺漏參照的保護機制。 | RXX | `documents/implements/R05-map-marker-maintenance-cleanup.md` |
+| P3 | [x] 已完成 | Designer marker 清理與維護流程 | 專案可透過編輯 config 來增減 marker，並加入缺漏參照的保護機制。 | RXX | `documents/implements/R05-map-marker-maintenance-cleanup.md` |
 | P4 | [ ] 可選 | Marker 座標擷取輔助 | 為新場域提供更快速的座標擷取工作流。 | FXX 或 RXX | P1-P3 落地後再定 |
 
 ---
@@ -191,9 +191,9 @@ version: v1
 
 ### 驗收期望
 
-- [ ] 刪除 marker 不再需要去刪 Qt Designer widget。
-- [ ] 新增 marker 不再需要在 `.ui` 檔裡複製並重新命名 `QLabel`。
-- [ ] 場域維護者只看一份 JSON，就能理解該 site 的 marker 佈局。
+- [x] 刪除 marker 不再需要去刪 Qt Designer widget。
+- [x] 新增 marker 不再需要在 `.ui` 檔裡複製並重新命名 `QLabel`。
+- [x] 場域維護者只看一份 JSON，就能理解該 site 的 marker 佈局。
 
 ### 風險
 
