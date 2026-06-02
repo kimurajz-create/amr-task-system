@@ -17,8 +17,6 @@
   "markers": [
     {
       "marker_id": "label_rp_1",
-      "x_px": 290,
-      "y_px": 230,
       "width_px": 18,
       "height_px": 26,
       "world_x_m": -0.004,
@@ -26,8 +24,6 @@
     },
     {
       "marker_id": "label_rp_2",
-      "x_px": 290,
-      "y_px": 310,
       "width_px": 18,
       "height_px": 26,
       "world_x_m": -0.057,
@@ -35,8 +31,6 @@
     },
     {
       "marker_id": "label_rp_3",
-      "x_px": 290,
-      "y_px": 410,
       "width_px": 18,
       "height_px": 26,
       "world_x_m": -0.165,
@@ -44,8 +38,6 @@
     },
     {
       "marker_id": "label_rp_4",
-      "x_px": 410,
-      "y_px": 470,
       "width_px": 26,
       "height_px": 18,
       "world_x_m": 18.456,
@@ -53,8 +45,6 @@
     },
     {
       "marker_id": "label_rp_5",
-      "x_px": 510,
-      "y_px": 470,
       "width_px": 26,
       "height_px": 18,
       "world_x_m": 13.188,
@@ -62,8 +52,6 @@
     },
     {
       "marker_id": "label_rp_6",
-      "x_px": 590,
-      "y_px": 470,
       "width_px": 26,
       "height_px": 18,
       "world_x_m": 7.408,
@@ -71,8 +59,6 @@
     },
     {
       "marker_id": "label_rp_7",
-      "x_px": 870,
-      "y_px": 320,
       "width_px": 26,
       "height_px": 18,
       "world_x_m": 32.743,
@@ -108,9 +94,9 @@
     {
       "mir_name": "LbV2_Robot position Sofa3",
       "display_name": "沙發3",
-      "marker_id": "label_rp_6",
+      "marker_id": "label_rp_4",
       "room_id": "OR05",
-      "map_button_id": "btn_sm_rp6",
+      "map_button_id": "btn_sm_rp4",
       "is_charging_station": false
     },
     {
@@ -124,9 +110,9 @@
     {
       "mir_name": "LbV2_Robot position Sofa1",
       "display_name": "沙發1",
-      "marker_id": "label_rp_4",
+      "marker_id": "label_rp_6",
       "room_id": "OR07",
-      "map_button_id": "btn_sm_rp4",
+      "map_button_id": "btn_sm_rp6",
       "is_charging_station": false
     },
     {
@@ -180,7 +166,7 @@
     {
       "mir_name": "LbV2_Shelf position Sofa3",
       "display_name": "車架位置(沙發3)",
-      "marker_id": "label_rp_6",
+      "marker_id": "label_rp_4",
       "room_id": "OR05",
       "map_button_id": null,
       "is_charging_station": false
@@ -196,7 +182,7 @@
     {
       "mir_name": "LbV2_Shelf position Sofa1",
       "display_name": "車架位置(沙發1)",
-      "marker_id": "label_rp_4",
+      "marker_id": "label_rp_6",
       "room_id": "OR07",
       "map_button_id": null,
       "is_charging_station": false

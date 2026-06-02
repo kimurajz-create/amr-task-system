@@ -528,6 +528,20 @@ def _build_marker_specs_by_id(site_config):
     return marker_specs_by_id
 
 
+def _scale_marker_geometry(marker_spec, scale_x, scale_y, offset_x=0, offset_y=0):
+    """
+    將 marker spec 的原圖像素幾何，縮放到目前顯示中的地圖座標系。
+
+    marker_spec 內的 x/y/width/height 一律視為原始地圖像素空間；
+    offset_x / offset_y 則代表目前地圖在父容器中的左上角偏移。
+    """
+    width_px = max(1, int(round(marker_spec["width_px"] * scale_x)))
+    height_px = max(1, int(round(marker_spec["height_px"] * scale_y)))
+    x_px = offset_x + int(round(marker_spec["x_px"] * scale_x))
+    y_px = offset_y + int(round(marker_spec["y_px"] * scale_y))
+    return x_px, y_px, width_px, height_px
+
+
 def build_site_runtime_maps(site_config):
     """
     將 site/<profile>.json 的新結構，轉回目前程式既有邏輯可直接使用的 map。
@@ -2480,6 +2494,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.label_map_1.height() / pixmap_height,
         )
 
+    def _position_map_marker_widgets(self):
+        if not getattr(self, "MARKER_SPECS_BY_ID", None):
+            return
+        if not hasattr(self, "label_map_1") or not hasattr(self, "original_pixmap"):
+            return
+        if self.original_pixmap.isNull():
+            return
+
+        map_rect = self.label_map_1.geometry()
+        scale_x, scale_y = self._get_main_map_scale()
+
+        for marker_id, marker_spec in self.MARKER_SPECS_BY_ID.items():
+            marker_widget = getattr(self, marker_id, None)
+            if marker_widget is None:
+                continue
+
+            marker_widget.setMinimumSize(QSize(0, 0))
+            marker_widget.setMaximumSize(QSize(16777215, 16777215))
+
+            x_px, y_px, width_px, height_px = _scale_marker_geometry(
+                marker_spec,
+                scale_x,
+                scale_y,
+                offset_x=map_rect.x(),
+                offset_y=map_rect.y(),
+            )
+            self._set_frame_map_relative_geometry(
+                marker_widget,
+                QRect(x_px, y_px, width_px, height_px),
+            )
+
     def _apply_main_map_shell_layout(self):
         if not hasattr(self, "centralwidget") or not hasattr(self, "frame_map"):
             return
@@ -2498,6 +2543,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_map_1.setGeometry(self.frame_map.rect())
         self.label_map_1.setStyleSheet("border: none; background-color: #050B12;")
         self.label_map_1.lower()
+        self._position_map_marker_widgets()
 
         if hasattr(self, "label_car_overlay"):
             self.label_car_overlay.setGeometry(self.label_map_1.geometry())

@@ -1,10 +1,10 @@
 ---
 author: Codex
-date: 2026-06-01
+date: 2026-06-02
 title: Company 場域標記座標空間不一致
 uuid: 653d2f94f0e3465cb8b69cf9b6fd2b98
-version: v1
-status: draft
+version: v2
+status: in_review
 ---
 # B01 Company 場域標記座標空間不一致
 
@@ -67,11 +67,13 @@ status: draft
 本次修正必須：
 
 - 保留 `world_x_m/world_y_m` 作為 company 的真實世界座標來源
-- 保留 `x_px/y_px`
+- 讓 company marker 在 runtime 依 `world_x_m/world_y_m + calibration` 回推出原圖像素座標
+- 讓 `main.py` 在主地圖顯示與 resize 時，依目前 map 顯示尺寸縮放 marker geometry
 - 保留 `ui_main.py` 既有固定 marker widgets
 - 不把 P2 工作提前拉進來
 - 不在本次迭代改成動態建立 marker widget
 - 不在沒有獨立證據的情況下改寫 company 的世界座標
+- 保留 hospital 既有 `x_px/y_px` 契約，不引入回歸
 
 ## 3. 驗收準則
 
@@ -95,10 +97,10 @@ status: draft
   - **當** 檢查 `label_rp_4/5/6` 與 `Sofa1/2/3` 的左右順序
   - **則** marker 幾何順序、location-to-marker 對映與實際場域名稱語意必須一致；若現況為刻意反向，需明確文件化
 
-- **情境 5：像素幾何資料仍是本迭代契約的一部分**
-  - **前提** 使用 `company` marker schema
-  - **當** 這個 bug 被修正後
-  - **則** `site/company.json` 內仍需保留 `x_px/y_px`，並持續代表本迭代中 UI marker 左上角像素位置
+- **情境 5：Company marker geometry 需在 runtime 套用到實際 UI widget**
+  - **前提** 使用 `company` marker schema 與 `main.py` 的主地圖顯示流程
+  - **當** 應用程式完成主地圖初始化或視窗 resize
+  - **則** `MARKER_SPECS_BY_ID` 內的 marker 幾何必須實際套用到 `label_rp_*` widgets，而不是只保留在 runtime map 中未被畫面使用
 
 - **情境 6：Hospital 行為不可回歸**
   - **前提** 已載入 `hospital` 場域 profile
@@ -113,25 +115,24 @@ status: draft
 | TC2 | 驗證 company 的 UI 像素對齊規則 | 更新後的 `company` marker / 校正資料 / 轉換規則 | 回投影所有 company markers 並轉到目前 UI 顯示尺度 | 每個 marker 的左上角像素都與預期 UI 幾何一致，誤差在 `+/- 1 px` 內 | 高 |
 | TC3 | 驗證 company 世界座標未被錯誤覆寫 | 更新後的 `company` marker schema | 比對修正前後的 `world_x_m/world_y_m` | 原始 MiR 世界座標維持不變，沒有被強制改成小地圖 widget 對應值 | 高 |
 | TC4 | 驗證 sofa marker 語意與幾何一致 | `company` 的 `label_rp_4/5/6` 與 `Sofa1/2/3` 對映 | 檢查左右順序與 location-to-marker 對照 | 幾何順序與名稱語意一致，或明確記錄為刻意設計 | 高 |
-| TC5 | 保持目前 company UI 佈局 | `ui_main.py` 既有固定 `label_rp_*` widgets | 載入 company profile 並檢視 marker | 畫面上的 marker 仍停留在目前小地圖位置 | 高 |
+| TC5 | 驗證 company runtime marker geometry 真的驅動畫面 | `ui_main.py` 既有固定 `label_rp_*` widgets 與 `main.py` 主地圖 layout | 載入 company profile，初始化主地圖，再觸發 resize / layout 重算 | 畫面上的 marker 位置依 `MARKER_SPECS_BY_ID` 縮放後重排，不再停留於 Qt Designer 的舊固定座標 | 高 |
 | TC6 | 防止 hospital 回歸 | 現行 `hospital` 場域 profile | 執行同樣的一致性檢查 | hospital markers 仍通過，不改變既有顯示位置 | 中 |
 
 ## 5. 實作註記
 
 - `ui_main.py` 仍透過固定的 `QLabel` widgets (`label_rp_1` 到 `label_rp_7`) 持有目前 company marker 的可見幾何位置。
 - `refresh_label_tooltip()` 目前只裝飾既有 widget，不會根據 `MARKER_SPECS_BY_ID` 重新定位。
-- `_build_marker_specs_by_id()` 只有在缺少 `x_px/y_px` 時，才會根據 `world_x_m/world_y_m` 回推出像素位置，因此這個不一致目前比較像潛伏中的資料債，而不是已經直接重排畫面的執行期 bug。
+- `_build_marker_specs_by_id()` 會在缺少 `x_px/y_px` 時，根據 `world_x_m/world_y_m` 回推出原圖像素位置；二修前這份幾何沒有真正套到 `label_rp_*` widget 上，造成資料已修正但畫面仍停留在舊的 Qt Designer 固定座標。
 - `company` 的 `calibration.image_pts` 目前對應原始大圖，而 `x_px/y_px` 與固定 widget 幾何對應目前小地圖 UI，因此兩者不能直接互相比較。
 - 目前 `company` 主地圖 `picture/pure_dilated_map.png` 尺寸為 `3216 x 1824`，`ui_main.py` 的地圖顯示區則是 `1072 x 608`，兩者比例為 `3:1`。
 - 目前診斷結果顯示，若先把 world 座標回投影到大圖，再縮回 `1/3` UI 尺度，`label_rp_1`、`label_rp_2`、`label_rp_3`、`label_rp_5`、`label_rp_7` 已接近現有 widget 位置；`label_rp_4` 與 `label_rp_6` 則呈現左右反向的跡象，需回到 sofa 對映語意確認。
-- 修正方向應讓 `company` 的資料內部一致，但不要把 P2 的動態 marker 圖層提早納入。
+- 修正方向應讓 `company` 的資料內部一致，並讓既有固定 widget 也能吃到 runtime marker geometry，但不要把 P2 的動態 marker 圖層提早納入。
 - 可接受的修正方向包括：
   - 在 world 回投影結果與目前 UI 幾何之間建立明確的顯示尺度轉換規則
   - 調整 company 校正資料，讓它直接對應目前實際顯示的小地圖空間
   - 修正 company 的 marker-to-location 配對方式，讓 sofa 名稱語意與實際左右位置一致
 - 本 bug 的範圍外項目：
   - 動態建立 marker widgets
-  - 移除 `x_px/y_px`
   - 更換目前 `ui_main.py` 的 marker 佈局系統
   - 在沒有獨立證據時重寫 company 的真實 MiR 世界座標
 
@@ -140,3 +141,28 @@ status: draft
 - 這個 bug 形式化了 `R03-site-marker-schema-and-runtime-maps.md` 已經提到的 company 風險：company 目前仍把 UI 像素幾何當成工作真相，但保留下來的世界座標資料與校正點實際落在另一個大圖渲染空間。
 - B01 的價值在於先把「世界座標真相」、「大圖 pixel 空間」、「目前 UI pixel 空間」三者的契約講清楚，避免後續 marker layer 工作再次建立在混合語意上。
 - 若 sofa marker 左右反向最終被證實為獨立資料問題，可在後續視複雜度拆成單獨 bug；但在目前診斷下，仍建議將其作為 B01 的同批觀察一併收斂。
+
+## 7. 二修實作結果（2026-06-02）
+
+- `site/company.json` 已移除 company markers 的 `x_px/y_px`，改為由 `world_x_m/world_y_m` 與 calibration 在 runtime 回推出原圖像素座標；`hospital` 仍保留既有 `x_px/y_px`。
+- `main.py` 新增 `_scale_marker_geometry()`，統一將 marker spec 從原圖像素縮放到目前 map 顯示尺寸。
+- `main.py` 新增 `_position_map_marker_widgets()`，在 `_apply_main_map_shell_layout()` 內於主地圖初始化與每次 resize 時，將 `MARKER_SPECS_BY_ID` 實際套用到 `label_rp_*` widget geometry。
+- `company` sofa mapping 已修正為 `Sofa3 -> label_rp_4`、`Sofa2 -> label_rp_5`、`Sofa1 -> label_rp_6`；`Shelf position Sofa3/2/1` 也同步對齊。
+
+### 二修驗證結果
+
+- 自動化測試：`python -m unittest tests.test_site_marker_coordinate_parity -v`
+- 結果：5/5 通過
+- 覆蓋重點：
+  - company marker 會從 world 座標推導原圖像素
+  - company marker 會正確縮放到 legacy `1072 x 608` UI 顯示尺寸，驗證 3x 座標空間轉換
+  - hospital marker 在 `1.0x` legacy UI 尺度下維持既有 `x_px/y_px`
+  - company sofa marker 語意與 widget 對應一致
+
+### 手動驗證狀態
+
+- 尚未執行完整 GUI 手動驗證。
+- 建議至少人工確認：
+  - `company` 主地圖載入後，`label_rp_1`、`label_rp_7` 不再落在舊固定座標，而是跟隨地圖縮放後的新位置。
+  - 視窗 resize 後 marker 會跟著地圖一起縮放與重排。
+  - 沙發區由左到右為 `Sofa3 -> Sofa2 -> Sofa1`。
