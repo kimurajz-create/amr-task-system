@@ -162,7 +162,7 @@ version: v1
 
 - [x] 視窗縮放時，marker widget 仍能保持正確對齊。
 - [x] `refresh_label_tooltip()` 不需要重訂 task-layer contract，也能持續更新 marker 文字、tooltip 與顏色狀態。
-- [ ] 機器人 marker overlay 與點擊 marker 的行為，仍能獨立於停車格 marker 正常運作。
+- [x] 機器人 marker overlay 與點擊 marker 的行為，仍能獨立於停車格 marker 正常運作。
 
 ### 風險
 

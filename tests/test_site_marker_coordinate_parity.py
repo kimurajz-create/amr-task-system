@@ -7,7 +7,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import main
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QLabel, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QWidget
+from ui_main import Ui_MainWindow
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -167,6 +168,25 @@ class RuntimeMarkerWidgetLifecycleTests(unittest.TestCase):
         self.assertEqual(runtime_marker.text(), "")
         self.assertEqual(runtime_marker.toolTip(), "")
         self.assertEqual(runtime_marker.alignment(), Qt.AlignCenter)
+
+
+class MainWindowUiCleanupTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = ensure_app()
+
+    def test_designer_ui_no_longer_instantiates_legacy_label_rp_widgets(self):
+        window = QMainWindow()
+        ui = Ui_MainWindow()
+        ui.setupUi(window)
+
+        legacy_marker_names = {
+            child.objectName()
+            for child in window.findChildren(QLabel)
+            if child.objectName().startswith("label_rp_")
+        }
+
+        self.assertEqual(legacy_marker_names, set())
 
 
 if __name__ == "__main__":

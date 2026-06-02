@@ -1308,6 +1308,8 @@ font-size: 18px; </string>
       <bool>true</bool>
      </property>
     </widget>
+    <!-- Legacy label_rp_* widgets were replaced by runtime-built map markers in P02/P3. -->
+    <!--
     <widget class="QLabel" name="label_rp_1">
      <property name="geometry">
       <rect>
@@ -1824,6 +1826,7 @@ QToolTip {
       <set>Qt::AlignCenter</set>
      </property>
     </widget>
+    -->
     <widget class="QLabel" name="lbl_OR_Heartbeat_1">
      <property name="geometry">
       <rect>
