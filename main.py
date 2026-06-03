@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QLabel, QScrollArea, QFrame, QTableWidgetItem,QHeaderView,QHBoxLayout,QSizePolicy,
     QListWidgetItem,QGraphicsView, QGraphicsScene, QGraphicsProxyWidget,QToolBar,QMenu,
     QWidgetAction,QToolButton,
+    QToolTip,
 )
 from PySide6.QtGui import (
     QPixmap, QPainter, QPen, QIcon, QPalette, 
@@ -1199,9 +1200,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_car_overlay.setStyleSheet("background-color: transparent;") # 設置背景透明
         self.label_car_overlay.raise_()
 
-        # 【關鍵修正】設置窗口標誌，使其忽略滑鼠事件
-        # Qt.WA_TransparentForMouseEvents 是用於 QWidget 的屬性，但 QLabel 繼承自 QWidget
-        self.label_car_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        # Overlay needs mouse events so marker tooltips can fire and map clicks can be handled here.
+        self.label_car_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+        self.label_car_overlay.setMouseTracking(True)
+        self.label_car_overlay.installEventFilter(self)
                 
         # # 讀logo 暫時沒用到
         # self.icon_pixmap = QPixmap("./picture/aceicon1.png")
@@ -1692,7 +1694,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             marker_label.setText("")
             marker_label.setToolTip("")
             marker_label.setStyleSheet(STYLE_DEFAULT)
-            marker_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            # Keep hover events on the marker itself so Qt can show its tooltip.
+            marker_label.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+            marker_label.setMouseTracking(True)
+            marker_label.installEventFilter(self)
 
             self.map_marker_widgets[marker_id] = marker_label
             setattr(self, marker_id, marker_label)
@@ -1734,6 +1739,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             )
             marker_widget.raise_()
             marker_widget.show()
+
+    def _handle_main_map_click(self, overlay_pos):
+        if not self.label_car_overlay.rect().contains(overlay_pos):
+            return False
+
+        if not self.clicked_enabled:
+            print("尚未啟用點擊模式")
+            return True
+
+        x, y = scale_point_to_source(
+            overlay_pos.x(),
+            overlay_pos.y(),
+            self.original_pixmap.width(),
+            self.original_pixmap.height(),
+            self.label_car_overlay.width(),
+            self.label_car_overlay.height(),
+        )
+        world_x, world_y = self.image_to_world(x, y)
+
+        self.dsb_x_m.setValue(world_x)
+        self.dsb_y_m.setValue(world_y)
+        self.last_click_image_pos = (x, y)
+        self._sync_main_map_overlay_geometry()
+        self._redraw_main_map_overlay()
+
+        print(f"{world_x}, {world_y}")
+        print(f"你點了圖片座標 ({x:.1f}, {y:.1f})，對應世界座標為 ({world_x:.2f}, {world_y:.2f})")
+        return True
 
     def _redraw_main_map_overlay(self):
         overlay_width = self.label_car_overlay.width()
@@ -3258,6 +3291,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             event.accept()
         else:
             super().mouseReleaseEvent(event)
+
+    def eventFilter(self, watched, event):
+        if watched is getattr(self, "label_car_overlay", None):
+            if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                if self._handle_main_map_click(event.position().toPoint()):
+                    event.accept()
+                    return True
+            return super().eventFilter(watched, event)
+
+        if watched in getattr(self, "map_marker_widgets", {}).values():
+            if event.type() == QEvent.ToolTip:
+                tooltip_text = watched.toolTip()
+                if tooltip_text:
+                    QToolTip.showText(event.globalPos(), tooltip_text, watched)
+                else:
+                    QToolTip.hideText()
+                return True
+
+            if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                overlay_pos = watched.mapTo(
+                    self.label_car_overlay,
+                    event.position().toPoint(),
+                )
+                if self._handle_main_map_click(overlay_pos):
+                    event.accept()
+                    return True
+
+        return super().eventFilter(watched, event)
 
 
 
