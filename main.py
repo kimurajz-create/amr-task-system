@@ -1077,8 +1077,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.LOCATIONS_WITHOUT_MARKERS = self.site_runtime_maps["locations_without_markers"]
         self.MARKER_CONFIG_WARNINGS = self.site_runtime_maps["marker_config_warnings"]
         self.map_marker_widgets = {}
-        self._legacy_map_marker_widgets = {}
-        self._map_marker_font = None
 
         # 初始化 MiR 函數
         # 將您已經導入的 functions 模組，作為一個屬性(attribute)賦值給 MainWindow 實例 (self)
@@ -1676,18 +1674,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lineEdit_PendingMission.setGeometry(QRect(1220, 475, 224, 40))
         self.frame_pending_mission_list.setGeometry(QRect(1200, 535, 656, 476))
 
-    def _collect_legacy_map_marker_widgets(self):
-        marker_ids = set(self.MARKER_SPECS_BY_ID)
-        marker_ids.update(self.LOCATION_TO_MARKER.values())
-        legacy_widgets = {}
-
-        for marker_id in marker_ids:
-            widget = getattr(self, marker_id, None)
-            if isinstance(widget, QLabel):
-                legacy_widgets[marker_id] = widget
-
-        return legacy_widgets
-
     def _clear_map_marker_widgets(self):
         for marker_id, marker_widget in self.map_marker_widgets.items():
             if getattr(self, marker_id, None) is marker_widget:
@@ -1699,16 +1685,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _build_map_marker_widgets(self):
         self._clear_map_marker_widgets()
 
-        if not self._legacy_map_marker_widgets:
-            self._legacy_map_marker_widgets = self._collect_legacy_map_marker_widgets()
-            if self._legacy_map_marker_widgets and self._map_marker_font is None:
-                self._map_marker_font = next(
-                    iter(self._legacy_map_marker_widgets.values())
-                ).font()
-
-        for legacy_widget in self._legacy_map_marker_widgets.values():
-            legacy_widget.hide()
-
         for marker_id in self.MARKER_SPECS_BY_ID:
             marker_label = QLabel(self.label_car_overlay)
             marker_label.setObjectName(marker_id)
@@ -1717,8 +1693,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             marker_label.setToolTip("")
             marker_label.setStyleSheet(STYLE_DEFAULT)
             marker_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-            if self._map_marker_font is not None:
-                marker_label.setFont(self._map_marker_font)
 
             self.map_marker_widgets[marker_id] = marker_label
             setattr(self, marker_id, marker_label)

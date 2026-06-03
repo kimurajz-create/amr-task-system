@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -55,14 +55,14 @@
     <property name="styleSheet">
      <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 24px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 24px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
     </property>
     <property name="text">
@@ -85,14 +85,14 @@ QPushButton:hover {
     <property name="styleSheet">
      <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 24px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 24px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
     </property>
     <property name="text">
@@ -140,11 +140,11 @@ QPushButton:hover {
      </font>
     </property>
     <property name="styleSheet">
-     <string notr="true">color: white;                  /* 白字 */
+     <string notr="true">color: white;                  /* ?賢? */
 font-size: 32px; </string>
     </property>
     <property name="text">
-     <string>待執行任務清單</string>
+     <string>敺銵遙????/string>
     </property>
     <property name="frame">
      <bool>false</bool>
@@ -187,11 +187,11 @@ font-size: 32px; </string>
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: white;                  /* 白字 */
+        <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
        </property>
        <property name="text">
-        <string>目的地</string>
+        <string>?桃???/string>
        </property>
        <property name="alignment">
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -220,20 +220,20 @@ font-size: 16px; </string>
        </property>
        <property name="styleSheet">
         <string notr="true">QComboBox {
-    color: white;                  /* 白字 */
-    font-size: 16px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    font-size: 16px;               /* 摮?憭批? */
 	background-color:#393939;
 }
 
 QComboBox QAbstractItemView {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
        </property>
        <property name="editable">
         <bool>true</bool>
        </property>
        <property name="currentText">
-        <string>實驗室-B</string>
+        <string>撖阡?摰?B</string>
        </property>
       </widget>
      </item>
@@ -273,11 +273,11 @@ QComboBox QAbstractItemView {
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: white;                  /* 白字 */
+        <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
        </property>
        <property name="text">
-        <string>任務內容</string>
+        <string>隞餃??批捆</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -306,20 +306,20 @@ font-size: 16px; </string>
        </property>
        <property name="styleSheet">
         <string notr="true">QComboBox {
-    color: white;                  /* 白字 */
-    font-size: 16px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    font-size: 16px;               /* 摮?憭批? */
 	background-color:#393939;
 }
 
 QComboBox QAbstractItemView {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
        </property>
        <property name="editable">
         <bool>true</bool>
        </property>
        <property name="currentText">
-        <string>拉車至沙發區</string>
+        <string>???單??澆?</string>
        </property>
        <property name="insertPolicy">
         <enum>QComboBox::InsertAtBottom</enum>
@@ -362,11 +362,11 @@ QComboBox QAbstractItemView {
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: white;                  /* 白字 */
+        <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
        </property>
        <property name="text">
-        <string>起始點</string>
+        <string>韏瑕?暺?/string>
        </property>
        <property name="alignment">
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -395,20 +395,20 @@ font-size: 16px; </string>
        </property>
        <property name="styleSheet">
         <string notr="true">QComboBox {
-    color: white;                  /* 白字 */
-    font-size: 16px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    font-size: 16px;               /* 摮?憭批? */
 	background-color:#393939;
 }
 
 QComboBox QAbstractItemView {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
        </property>
        <property name="editable">
         <bool>true</bool>
        </property>
        <property name="currentText">
-        <string>實驗室-A</string>
+        <string>撖阡?摰?A</string>
        </property>
       </widget>
      </item>
@@ -451,11 +451,11 @@ QComboBox QAbstractItemView {
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: white;                  /* 白字 */
+        <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
        </property>
        <property name="text">
-        <string>Status：Run</string>
+        <string>Status嚗un</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -502,7 +502,7 @@ font-size: 16px; </string>
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: white;                  /* 白字 */
+        <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
        </property>
        <property name="text">
@@ -536,14 +536,14 @@ font-size: 16px; </string>
        <property name="styleSheet">
         <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 24px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 24px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
        </property>
        <property name="text">
@@ -594,7 +594,7 @@ QPushButton:hover {
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: white;                  /* 白字 */
+        <string notr="true">color: white;                  /* ?賢? */
 font-size: 32px; </string>
        </property>
        <property name="text">
@@ -683,19 +683,19 @@ QProgressBar::chunk {
        </property>
        <property name="styleSheet">
         <string notr="true">QPushButton {
-    color: red;                  /* 白字 */
-    border: 2px solid red;      /* 邊框樣式：2px 寬，實線，紅色 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 14px;               /* 字體大小 */
-	border-radius: 5px;         /* 邊角圓弧度 */
+    color: red;                  /* ?賢? */
+    border: 2px solid red;      /* ??璅??嚗?px 撖穿?撖衣?嚗???*/
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 14px;               /* 摮?憭批? */
+	border-radius: 5px;         /* ???憫摨?*/
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
        </property>
        <property name="text">
-        <string>立即返回充電</string>
+        <string>蝡餈??</string>
        </property>
        <property name="checkable">
         <bool>false</bool>
@@ -730,15 +730,15 @@ QPushButton:hover {
        </property>
        <property name="styleSheet">
         <string notr="true">QPushButton {
-    color: red;                  /* 白字 */
-    border: 2px solid red;      /* 邊框樣式：2px 寬，實線，紅色 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 14px;               /* 字體大小 */
-	border-radius: 5px;         /* 邊角圓弧度 */
+    color: red;                  /* ?賢? */
+    border: 2px solid red;      /* ??璅??嚗?px 撖穿?撖衣?嚗???*/
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 14px;               /* 摮?憭批? */
+	border-radius: 5px;         /* ???憫摨?*/
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
        </property>
        <property name="text">
@@ -783,19 +783,19 @@ QPushButton:hover {
     </property>
     <property name="styleSheet">
      <string notr="true">QPushButton {
-    color: white;                  /* 白字 */
-    padding: 6px 12px;             /* 內距 */
-    font-size:18px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size:18px;               /* 摮?憭批? */
 	border: 2px solid white;
 }
 
  /* 
 QPushButton:hover {
-    background-color: #1E70BF;     滑鼠移上去變色 
+    background-color: #1E70BF;     皛?蝘颱??餉???
 }*/</string>
     </property>
     <property name="text">
-     <string>緊急插單</string>
+     <string>蝺交???/string>
     </property>
    </widget>
    <widget class="QPushButton" name="btn_Add_New_Mission">
@@ -834,17 +834,17 @@ QPushButton:hover {
     <property name="styleSheet">
      <string notr="true">QPushButton {
 	background-color:#0678DD;
-    color: white;                  /* 白字 */
-    padding: 6px 12px;             /* 內距 */
-    font-size:18px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size:18px;               /* 摮?憭批? */
 }
  /* 
 QPushButton:hover {
-    background-color: #1E70BF;     滑鼠移上去變色 
+    background-color: #1E70BF;     皛?蝘颱??餉???
 }*/</string>
     </property>
     <property name="text">
-     <string>新增任務</string>
+     <string>?啣?隞餃?</string>
     </property>
    </widget>
    <widget class="QFrame" name="frame_map">
@@ -942,26 +942,26 @@ QPushButton:hover {
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">/* ✅ CheckBox 文字樣式 */
+      <string notr="true">/* ??CheckBox ??璅?? */
 QCheckBox {
     background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size:14px;               /* 字體大小 */
-    spacing: 10px; /* ✅ 推薦加上 spacing，讓框與文字不會太擠 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size:14px;               /* 摮?憭批? */
+    spacing: 10px; /* ???刻?? spacing嚗?獢???銝?憭芣? */
 }
 
-/* ✅ CheckBox 框框大小 + 未勾選時顏色 */
+/* ??CheckBox 獢?憭批? + ?芸?豢?憿 */
 QCheckBox::indicator {
     width: 20px;
     height: 20px;
-    background-color:transparent;   /* 沒勾選時的框色 */
-    border: 1px solid white;     /* 加邊框讓它更清楚 */
-    border-radius: 4px;          /* 圓角（選配） */
+    background-color:transparent;   /* 瘝?豢?????*/
+    border: 1px solid white;     /* ??獢?摰皜? */
+    border-radius: 4px;          /* ??嚗?? */
 }
 
-/* ✅ CheckBox 勾選時顏色 */
+/* ??CheckBox ?暸????*/
 QCheckBox::indicator:checked {
     background-color:white; 
     image: url(:/icons/icons/check.svg);
@@ -970,7 +970,7 @@ QCheckBox::indicator:checked {
 </string>
      </property>
      <property name="text">
-      <string>啟用地圖點擊</string>
+      <string>??啣?暺?</string>
      </property>
      <property name="iconSize">
       <size>
@@ -1003,14 +1003,14 @@ QCheckBox::indicator:checked {
      <property name="styleSheet">
       <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 24px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 24px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
      </property>
      <property name="text">
@@ -1061,7 +1061,7 @@ QPushButton:hover {
          <enum>Qt::RightToLeft</enum>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: black;                  /* 白字 */
+         <string notr="true">color: black;                  /* ?賢? */
 font-size: 12px; 
 background-color:#42BE57</string>
         </property>
@@ -1106,11 +1106,11 @@ background-color:#42BE57</string>
          </font>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: black;                  /* 白字 */
+         <string notr="true">color: black;                  /* ?賢? */
 font-size: 16px; </string>
         </property>
         <property name="text">
-         <string>現在任務</string>
+         <string>?曉隞餃?</string>
         </property>
         <property name="frame">
          <bool>false</bool>
@@ -1162,7 +1162,7 @@ font-size: 16px; </string>
          <enum>Qt::RightToLeft</enum>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: black;                  /* 白字 */
+         <string notr="true">color: black;                  /* ?賢? */
 font-size: 12px; 
 background-color:#FF832B
 </string>
@@ -1208,11 +1208,11 @@ background-color:#FF832B
          </font>
         </property>
         <property name="styleSheet">
-         <string notr="true">color: black;                  /* 白字 */
+         <string notr="true">color: black;                  /* ?賢? */
 font-size: 16px; </string>
         </property>
         <property name="text">
-         <string>待辦任務</string>
+         <string>敺齒隞餃?</string>
         </property>
         <property name="frame">
          <bool>false</bool>
@@ -1250,7 +1250,7 @@ font-size: 16px; </string>
         </property>
         <property name="styleSheet">
          <string notr="true">QListWidget#listWidget_msg {
-        /* 設定外圍邊框線 */
+        /* 閮剖?憭???蝺?*/
         border: 1px solid blue; 
     }</string>
         </property>
@@ -1292,11 +1292,11 @@ font-size: 16px; </string>
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: black;                  /* 白字 */
+      <string notr="true">color: black;                  /* ?賢? */
 font-size: 18px; </string>
      </property>
      <property name="text">
-      <string>通知紀錄</string>
+      <string>?蝝??/string>
      </property>
      <property name="frame">
       <bool>false</bool>
@@ -1306,522 +1306,6 @@ font-size: 18px; </string>
      </property>
      <property name="readOnly">
       <bool>true</bool>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_rp_1">
-     <property name="geometry">
-      <rect>
-       <x>290</x>
-       <y>230</y>
-       <width>18</width>
-       <height>26</height>
-      </rect>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>18</width>
-       <height>26</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>18</width>
-       <height>26</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <weight>50</weight>
-       <bold>false</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;流水號:&lt;br/&gt;任務排序:&lt;br/&gt;任務內容:從手術室07-A前 往滅菌室-5, 完成後續執行任務&lt;br/&gt;新增人:蔡明勳(1002)&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QLabel#label_rp_1 {
-    /* 1. 大小和邊距 (將 QLabel 視為 'Frame 15') 這些的樣式似乎被程式限制了*/
-    /* 注意：Qt Widgets 的大小通常由內容或 Layout 決定，這裡設定一個基線 */
-    min-width: 12px;
-    max-width: 12px;
-    min-height: 20px;
-    max-height: 20px;
-
-    /* 2. 邊框 (Borders) */
-    /* 圓角 (Radius: 2px) */
-    border-radius: 2px;
-    /* 邊框線 (Border: 1px) + 顏色 (#525252) */
-    border: 1px solid #525252;
-    
-    /* 3. 顏色 (Colors) - 作為背景色 */
-    /* 這裡將 #33B1FF 設定為預設背景色 */
-    background-color: #33B1FF;
-
-    /* 4. 內邊距 (Padding: 2px) */
-    /* 這會影響 Label 內容（文字或圖片）與邊框的距離 */
-    padding: 2px; 
-    
-    /* 5. 文字對齊 (Inner alignment) */
-    /* 假設 'Inner alignment' 是指內容置中 */
-    text-align: center; 
-    
-    /* Flow 和 Gap 屬性（如 Vertical, 10px）屬於 Layout 管理器的職責，QSS 無法直接控制 */
-}
-
-/* 設定所有 QToolTip 的樣式 */
-QToolTip {
-    background-color: black;  /* 背景顏色設為黑色 */
-    color: white;             /* 文字顏色設為白色 */
-    border: 1px solid darkgray; /* 邊框 */
-    border-radius: 4px;       /* 圓角 */
-    padding: 4px;             /* 內邊距 */
-}</string>
-     </property>
-     <property name="text">
-      <string>0</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_rp_2">
-     <property name="geometry">
-      <rect>
-       <x>290</x>
-       <y>310</y>
-       <width>18</width>
-       <height>26</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <weight>50</weight>
-       <bold>false</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;流水號:&lt;br/&gt;任務排序:&lt;br/&gt;任務內容:從手術室07-A前 往滅菌室-5, 完成後續執行任務&lt;br/&gt;新增人:蔡明勳(1002)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QLabel#label_rp_2 {
-    /* 1. 大小和邊距 (將 QLabel 視為 'Frame 15') */
-    /* 注意：Qt Widgets 的大小通常由內容或 Layout 決定，這裡設定一個基線 */
-    min-width: 12px;
-    max-width: 12px;
-    min-height: 20px;
-    max-height: 20px;
-
-    /* 2. 邊框 (Borders) */
-    /* 圓角 (Radius: 2px) */
-    border-radius: 2px;
-    /* 邊框線 (Border: 1px) + 顏色 (#525252) */
-    border: 1px solid #525252;
-    
-    /* 3. 顏色 (Colors) - 作為背景色 */
-    /* 這裡將 #33B1FF 設定為預設背景色 */
-    background-color: #33B1FF;
-
-    /* 4. 內邊距 (Padding: 2px) */
-    /* 這會影響 Label 內容（文字或圖片）與邊框的距離 */
-    padding: 2px; 
-    
-    /* 5. 文字對齊 (Inner alignment) */
-    /* 假設 'Inner alignment' 是指內容置中 */
-    text-align: center; 
-    
-    /* Flow 和 Gap 屬性（如 Vertical, 10px）屬於 Layout 管理器的職責，QSS 無法直接控制 */
-}
-
-/* 設定所有 QToolTip 的樣式 */
-QToolTip {
-    background-color: black;  /* 背景顏色設為黑色 */
-    color: white;             /* 文字顏色設為白色 */
-    border: 1px solid darkgray; /* 邊框 */
-    border-radius: 4px;       /* 圓角 */
-    padding: 4px;             /* 內邊距 */
-}</string>
-     </property>
-     <property name="text">
-      <string>0</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_rp_3">
-     <property name="geometry">
-      <rect>
-       <x>290</x>
-       <y>410</y>
-       <width>18</width>
-       <height>26</height>
-      </rect>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>18</width>
-       <height>26</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>18</width>
-       <height>26</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <weight>50</weight>
-       <bold>false</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>流水號:
-任務排序:
-任務內容:從手術室07-A前 往滅菌室-5, 完成後續執行任務
-新增人:蔡明勳(1002)</string>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QLabel#label_rp_3 {
-    /* 1. 大小和邊距 (將 QLabel 視為 'Frame 15') */
-    /* 注意：Qt Widgets 的大小通常由內容或 Layout 決定，這裡設定一個基線 */
-    min-width: 12px;
-    max-width: 12px;
-    min-height: 20px;
-    max-height: 20px;
-
-    /* 2. 邊框 (Borders) */
-    /* 圓角 (Radius: 2px) */
-    border-radius: 2px;
-    /* 邊框線 (Border: 1px) + 顏色 (#525252) */
-    border: 1px solid #525252;
-    
-    /* 3. 顏色 (Colors) - 作為背景色 */
-    /* 這裡將 #33B1FF 設定為預設背景色 */
-    background-color: #33B1FF;
-
-    /* 4. 內邊距 (Padding: 2px) */
-    /* 這會影響 Label 內容（文字或圖片）與邊框的距離 */
-    padding: 2px; 
-    
-    /* 5. 文字對齊 (Inner alignment) */
-    /* 假設 'Inner alignment' 是指內容置中 */
-    text-align: center; 
-    
-    /* Flow 和 Gap 屬性（如 Vertical, 10px）屬於 Layout 管理器的職責，QSS 無法直接控制 */
-}
-
-/* 設定所有 QToolTip 的樣式 */
-QToolTip {
-    background-color: black;  /* 背景顏色設為黑色 */
-    color: white;             /* 文字顏色設為白色 */
-    border: 1px solid darkgray; /* 邊框 */
-    border-radius: 4px;       /* 圓角 */
-    padding: 4px;             /* 內邊距 */
-}</string>
-     </property>
-     <property name="text">
-      <string>0</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_rp_4">
-     <property name="geometry">
-      <rect>
-       <x>410</x>
-       <y>470</y>
-       <width>26</width>
-       <height>18</height>
-      </rect>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="font">
-      <font>
-       <weight>50</weight>
-       <bold>false</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>流水號:
-任務排序:
-任務內容:從手術室07-A前 往滅菌室-5, 完成後續執行任務
-新增人:蔡明勳(1002)</string>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QLabel#label_rp_4 {
-    /* 1. 大小和邊距 (將 QLabel 視為 'Frame 15') */
-    /* 注意：Qt Widgets 的大小通常由內容或 Layout 決定，這裡設定一個基線 */
-    min-width: 20px;
-    max-width: 20px;
-    min-height: 12px;
-    max-height: 12px;
-
-    /* 2. 邊框 (Borders) */
-    /* 圓角 (Radius: 2px) */
-    border-radius: 2px;
-    /* 邊框線 (Border: 1px) + 顏色 (#525252) */
-    border: 1px solid #525252;
-    
-    /* 3. 顏色 (Colors) - 作為背景色 */
-    /* 這裡將 #33B1FF 設定為預設背景色 */
-    background-color: #33B1FF;
-
-    /* 4. 內邊距 (Padding: 2px) */
-    /* 這會影響 Label 內容（文字或圖片）與邊框的距離 */
-    padding: 2px; 
-    
-    /* 5. 文字對齊 (Inner alignment) */
-    /* 假設 'Inner alignment' 是指內容置中 */
-    text-align: center; 
-    
-    /* Flow 和 Gap 屬性（如 Vertical, 10px）屬於 Layout 管理器的職責，QSS 無法直接控制 */
-}
-/* 設定所有 QToolTip 的樣式 */
-QToolTip {
-    background-color: black;  /* 背景顏色設為黑色 */
-    color: white;             /* 文字顏色設為白色 */
-    border: 1px solid darkgray; /* 邊框 */
-    border-radius: 4px;       /* 圓角 */
-    padding: 4px;             /* 內邊距 */
-}</string>
-     </property>
-     <property name="text">
-      <string>0</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_rp_5">
-     <property name="geometry">
-      <rect>
-       <x>510</x>
-       <y>470</y>
-       <width>26</width>
-       <height>18</height>
-      </rect>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="font">
-      <font>
-       <weight>50</weight>
-       <bold>false</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>流水號:
-任務排序:
-任務內容:從手術室07-A前 往滅菌室-5, 完成後續執行任務
-新增人:蔡明勳(1002)</string>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QLabel#label_rp_5 {
-    /* 1. 大小和邊距 (將 QLabel 視為 'Frame 15') */
-    /* 注意：Qt Widgets 的大小通常由內容或 Layout 決定，這裡設定一個基線 */
-    min-width: 20px;
-    max-width: 20px;
-    min-height: 12px;
-    max-height: 12px;
-
-    /* 2. 邊框 (Borders) */
-    /* 圓角 (Radius: 2px) */
-    border-radius: 2px;
-    /* 邊框線 (Border: 1px) + 顏色 (#525252) */
-    border: 1px solid #525252;
-    
-    /* 3. 顏色 (Colors) - 作為背景色 */
-    /* 這裡將 #33B1FF 設定為預設背景色 */
-    background-color: #33B1FF;
-
-    /* 4. 內邊距 (Padding: 2px) */
-    /* 這會影響 Label 內容（文字或圖片）與邊框的距離 */
-    padding: 2px; 
-    
-    /* 5. 文字對齊 (Inner alignment) */
-    /* 假設 'Inner alignment' 是指內容置中 */
-    text-align: center; 
-    
-    /* Flow 和 Gap 屬性（如 Vertical, 10px）屬於 Layout 管理器的職責，QSS 無法直接控制 */
-}
-
-/* 設定所有 QToolTip 的樣式 */
-QToolTip {
-    background-color: black;  /* 背景顏色設為黑色 */
-    color: white;             /* 文字顏色設為白色 */
-    border: 1px solid darkgray; /* 邊框 */
-    border-radius: 4px;       /* 圓角 */
-    padding: 4px;             /* 內邊距 */
-}</string>
-     </property>
-     <property name="text">
-      <string>0</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_rp_6">
-     <property name="geometry">
-      <rect>
-       <x>590</x>
-       <y>470</y>
-       <width>26</width>
-       <height>18</height>
-      </rect>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="font">
-      <font>
-       <weight>50</weight>
-       <bold>false</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>流水號:
-任務排序:
-任務內容:從手術室07-A前 往滅菌室-5, 完成後續執行任務
-新增人:蔡明勳(1002)</string>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QLabel#label_rp_6 {
-    /* 1. 大小和邊距 (將 QLabel 視為 'Frame 15') */
-    /* 注意：Qt Widgets 的大小通常由內容或 Layout 決定，這裡設定一個基線 */
-    min-width: 20px;
-    max-width: 20px;
-    min-height: 12px;
-    max-height: 12px;
-
-    /* 2. 邊框 (Borders) */
-    /* 圓角 (Radius: 2px) */
-    border-radius: 2px;
-    /* 邊框線 (Border: 1px) + 顏色 (#525252) */
-    border: 1px solid #525252;
-    
-    /* 3. 顏色 (Colors) - 作為背景色 */
-    /* 這裡將 #33B1FF 設定為預設背景色 */
-    background-color: #33B1FF;
-
-    /* 4. 內邊距 (Padding: 2px) */
-    /* 這會影響 Label 內容（文字或圖片）與邊框的距離 */
-    padding: 2px; 
-    
-    /* 5. 文字對齊 (Inner alignment) */
-    /* 假設 'Inner alignment' 是指內容置中 */
-    text-align: center; 
-    
-    /* Flow 和 Gap 屬性（如 Vertical, 10px）屬於 Layout 管理器的職責，QSS 無法直接控制 */
-}
-
-/* 設定所有 QToolTip 的樣式 */
-QToolTip {
-    background-color: black;  /* 背景顏色設為黑色 */
-    color: white;             /* 文字顏色設為白色 */
-    border: 1px solid darkgray; /* 邊框 */
-    border-radius: 4px;       /* 圓角 */
-    padding: 4px;             /* 內邊距 */
-}</string>
-     </property>
-     <property name="text">
-      <string>0</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_rp_7">
-     <property name="geometry">
-      <rect>
-       <x>870</x>
-       <y>320</y>
-       <width>26</width>
-       <height>18</height>
-      </rect>
-     </property>
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="font">
-      <font>
-       <weight>50</weight>
-       <bold>false</bold>
-      </font>
-     </property>
-     <property name="toolTip">
-      <string>流水號:
-任務排序:
-任務內容:從手術室07-A前 往滅菌室-5, 完成後續執行任務
-新增人:蔡明勳(1002)</string>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">QLabel#label_rp_7 {
-    /* 1. 大小和邊距 (將 QLabel 視為 'Frame 15') */
-    /* 注意：Qt Widgets 的大小通常由內容或 Layout 決定，這裡設定一個基線 */
-    min-width: 20px;
-    max-width: 20px;
-    min-height: 12px;
-    max-height: 12px;
-
-    /* 2. 邊框 (Borders) */
-    /* 圓角 (Radius: 2px) */
-    border-radius: 2px;
-    /* 邊框線 (Border: 1px) + 顏色 (#525252) */
-    border: 1px solid #525252;
-    
-    /* 3. 顏色 (Colors) - 作為背景色 */
-    /* 這裡將 #33B1FF 設定為預設背景色 */
-    background-color: #33B1FF;
-
-    /* 4. 內邊距 (Padding: 2px) */
-    /* 這會影響 Label 內容（文字或圖片）與邊框的距離 */
-    padding: 2px; 
-    
-    /* 5. 文字對齊 (Inner alignment) */
-    /* 假設 'Inner alignment' 是指內容置中 */
-    text-align: center; 
-    
-    /* Flow 和 Gap 屬性（如 Vertical, 10px）屬於 Layout 管理器的職責，QSS 無法直接控制 */
-}
-
-/* 設定所有 QToolTip 的樣式 */
-QToolTip {
-    background-color: black;  /* 背景顏色設為黑色 */
-    color: white;             /* 文字顏色設為白色 */
-    border: 1px solid darkgray; /* 邊框 */
-    border-radius: 4px;       /* 圓角 */
-    padding: 4px;             /* 內邊距 */
-}</string>
-     </property>
-     <property name="text">
-      <string>0</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
      </property>
     </widget>
     <widget class="QLabel" name="lbl_OR_Heartbeat_1">
@@ -1834,7 +1318,7 @@ QToolTip {
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -1854,7 +1338,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -1874,7 +1358,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -1894,7 +1378,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -1914,7 +1398,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -1934,7 +1418,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -1954,7 +1438,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -1974,7 +1458,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -1994,7 +1478,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -2014,7 +1498,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -2034,7 +1518,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -2054,7 +1538,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -2074,7 +1558,7 @@ font-size: 16px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 16px; </string>
      </property>
      <property name="text">
@@ -2095,7 +1579,7 @@ font-size: 16px; </string>
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">  border: 2px solid   #2C3E50; /* 外邊框線條 */</string>
+     <string notr="true">  border: 2px solid   #2C3E50; /* 憭?獢?璇?*/</string>
     </property>
     <property name="frameShape">
      <enum>QFrame::StyledPanel</enum>
@@ -2139,17 +1623,17 @@ font-size: 16px; </string>
      <property name="styleSheet">
       <string notr="true">QTableWidget::item {
     padding: 5px;
-    /*background-color: #1a1a1a;   深灰色背景 */
-   /*color: white;                文字顏色 */
-    gridline-color: #333333;    /* 格線顏色 */
+    /*background-color: #1a1a1a;   瘛梁?脰???*/
+   /*color: white;                ??憿 */
+    gridline-color: #333333;    /* ?潛?憿 */
     white-space: pre-wrap;
     border-bottom:1.5px solid   #2b2b2b;
 }
 QHeaderView::section {
-    background-color: #2b2b2b;  /* 表頭背景色 */
-    color: white;               /* 表頭文字顏色，這行 CSS 告訴 Qt：表格中的所有文字，除非被更具體的規則覆蓋，否則都必須是白色。 */
-    padding: 5px;               /* 內邊距 */
-    border-bottom: 2px solid #2b2b2b; /* 表頭底線 */
+    background-color: #2b2b2b;  /* 銵券???*/
+    color: white;               /* 銵券??憿嚗? CSS ?迄 Qt嚗”?潔葉????摮??日?鋡急?琿????????血??賢???質??*/
+    padding: 5px;               /* ?折?頝?*/
+    border-bottom: 2px solid #2b2b2b; /* 銵券摨? */
     font: 14pt;
 }
 
@@ -2279,7 +1763,7 @@ QHeaderView::section {
       </sizepolicy>
      </property>
      <property name="styleSheet">
-      <string notr="true">/* ✅ QDoubleSpinBox 整體樣式 */
+      <string notr="true">/* ??QDoubleSpinBox ?湧?璅?? */
 QDoubleSpinBox {
     color: white;
     background-color: transparent;
@@ -2288,7 +1772,7 @@ QDoubleSpinBox {
     border-radius: 4px;
     padding: 2px 6px;
 }
-/* ✅ 讓內部文字區域透明（關鍵） */
+/* ??霈?冽?摮???嚗??蛛? */
 QAbstractSpinBox::viewport {
     background: transparent;
 }
@@ -2316,7 +1800,7 @@ QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 24px; 
 background-color: rgba(103, 103, 103, 0);</string>
      </property>
@@ -2340,7 +1824,7 @@ background-color: rgba(103, 103, 103, 0);</string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 24px; </string>
      </property>
      <property name="locale">
@@ -2401,7 +1885,7 @@ font-size: 24px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 24px; 
 background-color: rgba(103, 103, 103, 0);</string>
      </property>
@@ -2425,14 +1909,14 @@ background-color: rgba(103, 103, 103, 0);</string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 24px; </string>
      </property>
      <property name="locale">
       <locale language="English" country="UnitedStates"/>
      </property>
      <property name="text">
-      <string>相對移動</string>
+      <string>?詨?蝘餃?</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -2467,7 +1951,7 @@ font-size: 24px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 24px; </string>
      </property>
      <property name="locale">
@@ -2490,7 +1974,7 @@ font-size: 24px; </string>
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 24px; </string>
      </property>
      <property name="locale">
@@ -2519,7 +2003,7 @@ font-size: 24px; </string>
       </sizepolicy>
      </property>
      <property name="styleSheet">
-      <string notr="true">/* ✅ QDoubleSpinBox 整體樣式 */
+      <string notr="true">/* ??QDoubleSpinBox ?湧?璅?? */
 QDoubleSpinBox {
     color: white;
     background-color: transparent;
@@ -2528,7 +2012,7 @@ QDoubleSpinBox {
     border-radius: 4px;
     padding: 2px 6px;
 }
-/* ✅ 讓內部文字區域透明（關鍵） */
+/* ??霈?冽?摮???嚗??蛛? */
 QAbstractSpinBox::viewport {
     background: transparent;
 }
@@ -2558,14 +2042,14 @@ QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
      <property name="styleSheet">
       <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 24px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 24px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
      </property>
      <property name="text">
@@ -2592,7 +2076,7 @@ QPushButton:hover {
       </sizepolicy>
      </property>
      <property name="styleSheet">
-      <string notr="true">/* ✅ QDoubleSpinBox 整體樣式 */
+      <string notr="true">/* ??QDoubleSpinBox ?湧?璅?? */
 QDoubleSpinBox {
     color: white;
     background-color: transparent;
@@ -2601,7 +2085,7 @@ QDoubleSpinBox {
     border-radius: 4px;
     padding: 2px 6px;
 }
-/* ✅ 讓內部文字區域透明（關鍵） */
+/* ??霈?冽?摮???嚗??蛛? */
 QAbstractSpinBox::viewport {
     background: transparent;
 }
@@ -2629,7 +2113,7 @@ QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 24px; 
 background-color: rgba(103, 103, 103, 0);</string>
      </property>
@@ -2661,14 +2145,14 @@ background-color: rgba(103, 103, 103, 0);</string>
      <property name="styleSheet">
       <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 24px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 24px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
      </property>
      <property name="text">
@@ -2691,14 +2175,14 @@ QPushButton:hover {
      <property name="styleSheet">
       <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 24px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 24px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
      </property>
      <property name="text">
@@ -2719,14 +2203,14 @@ QPushButton:hover {
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 24px; </string>
      </property>
      <property name="locale">
       <locale language="English" country="UnitedStates"/>
      </property>
      <property name="text">
-      <string>執行指定任務</string>
+      <string>?瑁???隞餃?</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -2748,14 +2232,14 @@ font-size: 24px; </string>
       </font>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: black;                  /* 白字 */
+      <string notr="true">color: black;                  /* ?賢? */
 font-size: 18px; </string>
      </property>
      <property name="locale">
       <locale language="English" country="UnitedStates"/>
      </property>
      <property name="text">
-      <string>拉車頂升</string>
+      <string>????</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -2779,18 +2263,18 @@ font-size: 18px; </string>
      <property name="styleSheet">
       <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 16px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 16px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
      </property>
      <property name="text">
-      <string>上</string>
+      <string>銝?/string>
      </property>
     </widget>
     <widget class="QPushButton" name="btn_IO_down">
@@ -2811,18 +2295,18 @@ QPushButton:hover {
      <property name="styleSheet">
       <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 16px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 16px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
      </property>
      <property name="text">
-      <string>下</string>
+      <string>銝?/string>
      </property>
     </widget>
     <widget class="QTextEdit" name="txtEdit_GetPM">
@@ -2854,7 +2338,7 @@ QPushButton:hover {
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: rgb(103, 103, 103);
- font-size: 16px;               /* 字體大小 */</string>
+ font-size: 16px;               /* 摮?憭批? */</string>
      </property>
      <property name="html">
       <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -2874,14 +2358,14 @@ p, li { white-space: pre-wrap; }
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 24px; </string>
      </property>
      <property name="locale">
       <locale language="English" country="UnitedStates"/>
      </property>
      <property name="text">
-      <string>等待中任務</string>
+      <string>蝑?銝凋遙??/string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -2911,18 +2395,18 @@ font-size: 24px; </string>
      <property name="styleSheet">
       <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size:16px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size:16px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
      </property>
      <property name="text">
-      <string>更新任務清單</string>
+      <string>?湔隞餃?皜</string>
      </property>
     </widget>
     <widget class="QPlainTextEdit" name="plntxtEdit_Info">
@@ -2936,7 +2420,7 @@ QPushButton:hover {
      </property>
      <property name="styleSheet">
       <string notr="true">background-color: rgb(103,103,103);
- font-size: 16px;               /* 字體大小 */</string>
+ font-size: 16px;               /* 摮?憭批? */</string>
      </property>
     </widget>
     <widget class="QPushButton" name="btn_UpdateInfo">
@@ -2963,14 +2447,14 @@ QPushButton:hover {
      <property name="styleSheet">
       <string notr="true">QPushButton {
 	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size:16px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    border-radius: 10px;           /* ?? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size:16px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
      </property>
      <property name="text">
@@ -2987,7 +2471,7 @@ QPushButton:hover {
       </rect>
      </property>
      <property name="styleSheet">
-      <string notr="true">color: white;                  /* 白字 */
+      <string notr="true">color: white;                  /* ?賢? */
 font-size: 12px; </string>
      </property>
      <property name="locale">
@@ -3019,13 +2503,13 @@ font-size: 12px; </string>
     <property name="styleSheet">
      <string notr="true">QPushButton {
 	background-color:#0678DD;
-    color: white;                  /* 白字 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 16px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 16px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
     </property>
     <property name="text">
@@ -3050,13 +2534,13 @@ QPushButton:hover {
     <property name="styleSheet">
      <string notr="true">QPushButton {
 	background-color:#0678DD;
-    color: white;                  /* 白字 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 16px;               /* 字體大小 */
+    color: white;                  /* ?賢? */
+    padding: 6px 12px;             /* ?扯? */
+    font-size: 16px;               /* 摮?憭批? */
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
 }</string>
     </property>
     <property name="text">
