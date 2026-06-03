@@ -13,6 +13,100 @@
     "image_pts": [[892, 411], [325, 361], [325, 113]],
     "world_pts": [[-7.209, 18.944], [27.55, 15.386], [27.683, -1.588]]
   },
+  "_comment_markers": "markers 定義主地圖 marker 的幾何資訊。這一版先依醫院平面圖標出可用初始位置，後續可在 P2/P3 再微調。",
+  "markers": [
+    {
+      "marker_id": "label_rp_1",
+      "x_px": 130,
+      "y_px": 286,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_2",
+      "x_px": 130,
+      "y_px": 412,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_3",
+      "x_px": 434,
+      "y_px": 462,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_4",
+      "x_px": 483,
+      "y_px": 277,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_5",
+      "x_px": 901,
+      "y_px": 277,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_6",
+      "x_px": 579,
+      "y_px": 277,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_7",
+      "x_px": 579,
+      "y_px": 462,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_8",
+      "x_px": 829,
+      "y_px": 462,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_9",
+      "x_px": 704,
+      "y_px": 462,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_10",
+      "x_px": 408,
+      "y_px": 140,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_11",
+      "x_px": 676,
+      "y_px": 277,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_12",
+      "x_px": 775,
+      "y_px": 277,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_rp_13",
+      "x_px": 787,
+      "y_px": 111,
+      "width_px": 26,
+      "height_px": 18
+    }
+  ],
   "_comment_locations": "locations 會轉成 user_location_map / room_id_map / location_to_marker。is_charging_station = true 的那筆會被當作回充站。",
   "locations": [
     {

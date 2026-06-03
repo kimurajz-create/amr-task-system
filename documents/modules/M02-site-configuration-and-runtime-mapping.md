@@ -18,6 +18,7 @@ This module lets the same application run against different physical sites or de
 - location display names
 - MiR location identifiers
 - mission display names
+- marker geometry specifications
 - marker bindings
 - room identifiers
 - charging-station designation
@@ -59,6 +60,7 @@ The active site profile is resolved in this order:
 - `USER_LOCATION_MAP` / `MIR_LOCATION_MAP` style mappings
 - mission display-to-MiR mappings
 - marker and room lookup tables
+- marker geometry maps keyed by `marker_id`
 - required mission-code set for scheduler-related logic
 
 ## Boundaries
@@ -79,6 +81,7 @@ A future schema document should define the expected shape for:
 
 - `assets`
 - `calibration`
+- `markers`
 - `locations`
 - `missions`
 

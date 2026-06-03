@@ -187,6 +187,7 @@ def load_site_config(site_profile=None):
     # 就算 hospital 還沒補資料，也先保證程式拿得到空陣列，不會直接噴錯。
     site_config.setdefault("locations", [])
     site_config.setdefault("missions", [])
+    site_config.setdefault("markers", [])
     site_config.setdefault("site_id", site_profile)
     return site_config
 
@@ -299,6 +300,29 @@ MIR_MISSION_GROUP_MAP = {v: k for k, v in USER_MISSION_GROUP_MAP.items()}
 CHARGING_STATION_NAME = "充電樁"
 
 
+def build_marker_specs_by_id(site_config):
+    marker_records = site_config.get("markers") or []
+    marker_specs_by_id = {}
+    marker_config_warnings = []
+
+    for index, marker in enumerate(marker_records, start=1):
+        marker_id = marker.get("marker_id")
+        if not marker_id:
+            marker_config_warnings.append(
+                f"markers[{index}] 缺少 marker_id，已略過這筆設定。"
+            )
+            continue
+        if marker_id in marker_specs_by_id:
+            marker_config_warnings.append(
+                f"marker_id '{marker_id}' 重複定義，後續重複項目已略過。"
+            )
+            continue
+
+        marker_specs_by_id[marker_id] = marker.copy()
+
+    return marker_specs_by_id, marker_config_warnings
+
+
 def build_site_runtime_maps(site_config):
     """
     將 site/<profile>.json 的新結構，轉回目前程式既有邏輯可直接使用的 map。
@@ -318,15 +342,24 @@ def build_site_runtime_maps(site_config):
         "location_to_marker": LOCATION_TO_MARKER.copy(),
         "required_mission_codes": set(REQUIRED_MISSION_CODES),
         "charging_station_name": CHARGING_STATION_NAME,
+        "marker_specs_by_id": {},
+        "marker_location_names_by_id": {},
+        "locations_without_markers": [],
+        "marker_config_warnings": [],
     }
 
     location_records = site_config.get("locations") or []
     mission_records = site_config.get("missions") or []
+    marker_specs_by_id, marker_config_warnings = build_marker_specs_by_id(site_config)
 
     user_location_map = {}
     location_to_marker = {}
     room_id_map = {}
     charging_station_name = None
+    marker_location_names_by_id = {
+        marker_id: [] for marker_id in marker_specs_by_id
+    }
+    locations_without_markers = []
 
     for location in location_records:
         # 每一筆 location 同時承載：
@@ -341,6 +374,13 @@ def build_site_runtime_maps(site_config):
         marker_id = location.get("marker_id")
         if marker_id:
             location_to_marker[display_name] = marker_id
+            marker_location_names_by_id.setdefault(marker_id, []).append(display_name)
+            if marker_id not in marker_specs_by_id:
+                marker_config_warnings.append(
+                    f"location '{display_name}' 參照未定義的 marker_id '{marker_id}'。"
+                )
+        else:
+            locations_without_markers.append(display_name)
 
         room_id = location.get("room_id")
         if room_id:
@@ -363,6 +403,10 @@ def build_site_runtime_maps(site_config):
         runtime_maps["room_id_map"] = room_id_map
     if charging_station_name:
         runtime_maps["charging_station_name"] = charging_station_name
+    runtime_maps["marker_specs_by_id"] = marker_specs_by_id
+    runtime_maps["marker_location_names_by_id"] = marker_location_names_by_id
+    runtime_maps["locations_without_markers"] = locations_without_markers
+    runtime_maps["marker_config_warnings"] = marker_config_warnings
 
     user_mission_group_map = {}
     required_mission_codes = set()
@@ -816,6 +860,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # site_runtime_maps = 新舊架構之間的過渡層。
         # UI / TaskThread 仍吃熟悉的 map，但來源已經優先改成 site config。
         self.site_runtime_maps = build_site_runtime_maps(self.site_config)
+        for marker_warning in self.site_runtime_maps["marker_config_warnings"]:
+            print(f"[site marker warning] {marker_warning}")
         #########################################客製化title：穩健 ToolBar 方案########################################
         # 1. 創建客製化標題列的 QFrame
         #    這個 QFrame 包含了您設計的標題文字和最小化/最大化/關閉按鈕。
@@ -927,6 +973,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ROOM_ID_MAP = self.site_runtime_maps["room_id_map"]
         self.LOCATION_TO_MARKER = self.site_runtime_maps["location_to_marker"]
         self.REQUIRED_MISSION_CODES = self.site_runtime_maps["required_mission_codes"]
+        self.MARKER_SPECS_BY_ID = self.site_runtime_maps["marker_specs_by_id"]
+        self.MARKER_LOCATION_NAMES_BY_ID = self.site_runtime_maps["marker_location_names_by_id"]
+        self.LOCATIONS_WITHOUT_MARKERS = self.site_runtime_maps["locations_without_markers"]
+        self.MARKER_CONFIG_WARNINGS = self.site_runtime_maps["marker_config_warnings"]
 
         # 初始化 MiR 函數
         # 將您已經導入的 functions 模組，作為一個屬性(attribute)賦值給 MainWindow 實例 (self)
