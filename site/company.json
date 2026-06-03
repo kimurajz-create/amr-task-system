@@ -28,6 +28,8 @@
       "marker_id": "label_rp_2",
       "x_px": 870,
       "y_px": 930,
+      "world_x": -0.057,
+      "world_y": 18.825,
       "width_px": 54,
       "height_px": 78
     },
@@ -35,6 +37,8 @@
       "marker_id": "label_rp_3",
       "x_px": 870,
       "y_px": 1230,
+      "world_x": -0.165,
+      "world_y": 12.29,
       "width_px": 54,
       "height_px": 78
     },
@@ -42,6 +46,8 @@
       "marker_id": "label_rp_4",
       "x_px": 1230,
       "y_px": 1410,
+      "world_x": 7.408,
+      "world_y": 9.093,
       "width_px": 78,
       "height_px": 54
     },
@@ -49,6 +55,8 @@
       "marker_id": "label_rp_5",
       "x_px": 1530,
       "y_px": 1410,
+      "world_x": 13.188,
+      "world_y": 9.187,
       "width_px": 78,
       "height_px": 54
     },
@@ -56,6 +64,8 @@
       "marker_id": "label_rp_6",
       "x_px": 1770,
       "y_px": 1410,
+      "world_x": 18.456,
+      "world_y": 9.106,
       "width_px": 78,
       "height_px": 54
     },
@@ -63,6 +73,8 @@
       "marker_id": "label_rp_7",
       "x_px": 2610,
       "y_px": 960,
+      "world_x": 32.743,
+      "world_y": 16.955,
       "width_px": 78,
       "height_px": 54
     }
