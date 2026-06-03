@@ -432,6 +432,105 @@ def build_site_runtime_maps(site_config):
 
     return runtime_maps
 
+
+def scale_point_to_display(
+    source_x,
+    source_y,
+    source_width,
+    source_height,
+    display_width,
+    display_height,
+):
+    if (
+        source_width <= 0
+        or source_height <= 0
+        or display_width <= 0
+        or display_height <= 0
+    ):
+        return 0, 0
+
+    return (
+        int(round(source_x * display_width / source_width)),
+        int(round(source_y * display_height / source_height)),
+    )
+
+
+def scale_point_to_source(
+    display_x,
+    display_y,
+    source_width,
+    source_height,
+    display_width,
+    display_height,
+):
+    if (
+        source_width <= 0
+        or source_height <= 0
+        or display_width <= 0
+        or display_height <= 0
+    ):
+        return 0.0, 0.0
+
+    return (
+        display_x * source_width / display_width,
+        display_y * source_height / display_height,
+    )
+
+
+def resolve_marker_source_point(marker_spec, world_to_image_fn=None):
+    # Allow marker configs to anchor by world coordinates when available.
+    world_x = marker_spec.get("world_x")
+    world_y = marker_spec.get("world_y")
+    if (
+        world_x is not None
+        and world_y is not None
+        and callable(world_to_image_fn)
+    ):
+        return world_to_image_fn(world_x, world_y)
+
+    return marker_spec.get("x_px", 0), marker_spec.get("y_px", 0)
+
+
+def scale_marker_spec_to_display(
+    marker_spec,
+    source_width,
+    source_height,
+    display_width,
+    display_height,
+    world_to_image_fn=None,
+):
+    source_x, source_y = resolve_marker_source_point(
+        marker_spec,
+        world_to_image_fn=world_to_image_fn,
+    )
+    x_px, y_px = scale_point_to_display(
+        source_x,
+        source_y,
+        source_width,
+        source_height,
+        display_width,
+        display_height,
+    )
+    width_px = max(
+        1,
+        int(round(marker_spec.get("width_px", 0) * display_width / source_width))
+        if source_width > 0 and display_width > 0
+        else 1,
+    )
+    height_px = max(
+        1,
+        int(round(marker_spec.get("height_px", 0) * display_height / source_height))
+        if source_height > 0 and display_height > 0
+        else 1,
+    )
+
+    return {
+        "x_px": x_px,
+        "y_px": y_px,
+        "width_px": width_px,
+        "height_px": height_px,
+    }
+
 # ------------將「耗時操作」丟到背景 thread 執行----------
 class DBWorker(QThread):
     """
@@ -977,6 +1076,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.MARKER_LOCATION_NAMES_BY_ID = self.site_runtime_maps["marker_location_names_by_id"]
         self.LOCATIONS_WITHOUT_MARKERS = self.site_runtime_maps["locations_without_markers"]
         self.MARKER_CONFIG_WARNINGS = self.site_runtime_maps["marker_config_warnings"]
+        self.map_marker_widgets = {}
+        self._legacy_map_marker_widgets = {}
+        self._map_marker_font = None
 
         # 初始化 MiR 函數
         # 將您已經導入的 functions 模組，作為一個屬性(attribute)賦值給 MainWindow 實例 (self)
@@ -1085,7 +1187,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             print(f"主地圖載入失敗: {main_map_path}")
         else:
             self.label_map_1.setPixmap(self.original_pixmap)
-            self.label_map_1.resize(self.original_pixmap.size())
             print(self.label_map_1.width())
             print(self.label_map_1.height())
             # 印出原始圖片尺寸（寬 x 高）
@@ -1114,7 +1215,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Flag
         self.clicked_enabled = False
         self.sent_robot_to_in_progress = False
-        self.last_click_overlay_pos = None
+        self.last_click_image_pos = None
         self.last_robot_world_pos = None
         self.current_mir_state_id = None
         self.robot_glow_phase = 0
@@ -1132,6 +1233,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # 建立仿射轉換矩陣
         self.affine_matrix = self.compute_affine_transform()
+        self._build_map_marker_widgets()
+        self._sync_main_map_overlay_geometry(redraw_overlay=True)
         # self.draw_car_position(-5.397, 7.455) 
         # self.poll_mir_position()
 
@@ -1573,6 +1676,144 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lineEdit_PendingMission.setGeometry(QRect(1220, 475, 224, 40))
         self.frame_pending_mission_list.setGeometry(QRect(1200, 535, 656, 476))
 
+    def _collect_legacy_map_marker_widgets(self):
+        marker_ids = set(self.MARKER_SPECS_BY_ID)
+        marker_ids.update(self.LOCATION_TO_MARKER.values())
+        legacy_widgets = {}
+
+        for marker_id in marker_ids:
+            widget = getattr(self, marker_id, None)
+            if isinstance(widget, QLabel):
+                legacy_widgets[marker_id] = widget
+
+        return legacy_widgets
+
+    def _clear_map_marker_widgets(self):
+        for marker_id, marker_widget in self.map_marker_widgets.items():
+            if getattr(self, marker_id, None) is marker_widget:
+                setattr(self, marker_id, None)
+            marker_widget.deleteLater()
+
+        self.map_marker_widgets = {}
+
+    def _build_map_marker_widgets(self):
+        self._clear_map_marker_widgets()
+
+        if not self._legacy_map_marker_widgets:
+            self._legacy_map_marker_widgets = self._collect_legacy_map_marker_widgets()
+            if self._legacy_map_marker_widgets and self._map_marker_font is None:
+                self._map_marker_font = next(
+                    iter(self._legacy_map_marker_widgets.values())
+                ).font()
+
+        for legacy_widget in self._legacy_map_marker_widgets.values():
+            legacy_widget.hide()
+
+        for marker_id in self.MARKER_SPECS_BY_ID:
+            marker_label = QLabel(self.label_car_overlay)
+            marker_label.setObjectName(marker_id)
+            marker_label.setAlignment(Qt.AlignCenter)
+            marker_label.setText("")
+            marker_label.setToolTip("")
+            marker_label.setStyleSheet(STYLE_DEFAULT)
+            marker_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            if self._map_marker_font is not None:
+                marker_label.setFont(self._map_marker_font)
+
+            self.map_marker_widgets[marker_id] = marker_label
+            setattr(self, marker_id, marker_label)
+
+        self._position_map_marker_widgets()
+
+    def _position_map_marker_widgets(self):
+        if self.original_pixmap.isNull():
+            return
+
+        source_width = self.original_pixmap.width()
+        source_height = self.original_pixmap.height()
+        display_width = self.label_car_overlay.width()
+        display_height = self.label_car_overlay.height()
+        if display_width <= 0 or display_height <= 0:
+            return
+
+        for marker_id, marker_spec in self.MARKER_SPECS_BY_ID.items():
+            marker_widget = self.map_marker_widgets.get(marker_id)
+            if marker_widget is None:
+                continue
+
+            world_to_image_fn = (
+                self.world_to_image if hasattr(self, "affine_matrix") else None
+            )
+            scaled_spec = scale_marker_spec_to_display(
+                marker_spec,
+                source_width,
+                source_height,
+                display_width,
+                display_height,
+                world_to_image_fn=world_to_image_fn,
+            )
+            marker_widget.setGeometry(
+                scaled_spec["x_px"],
+                scaled_spec["y_px"],
+                scaled_spec["width_px"],
+                scaled_spec["height_px"],
+            )
+            marker_widget.raise_()
+            marker_widget.show()
+
+    def _redraw_main_map_overlay(self):
+        overlay_width = self.label_car_overlay.width()
+        overlay_height = self.label_car_overlay.height()
+        if overlay_width <= 0 or overlay_height <= 0:
+            return
+
+        overlay_pixmap = QPixmap(self.label_car_overlay.size())
+        overlay_pixmap.fill(Qt.transparent)
+        painter = QPainter(overlay_pixmap)
+
+        if not self.original_pixmap.isNull():
+            source_width = self.original_pixmap.width()
+            source_height = self.original_pixmap.height()
+
+            if self.last_robot_world_pos is not None:
+                world_x, world_y = self.last_robot_world_pos
+                image_x, image_y = self.world_to_image(world_x, world_y)
+                robot_x, robot_y = scale_point_to_display(
+                    image_x,
+                    image_y,
+                    source_width,
+                    source_height,
+                    overlay_width,
+                    overlay_height,
+                )
+                self.draw_robot_marker(painter, robot_x, robot_y)
+
+            if self.last_click_image_pos is not None:
+                click_x, click_y = scale_point_to_display(
+                    self.last_click_image_pos[0],
+                    self.last_click_image_pos[1],
+                    source_width,
+                    source_height,
+                    overlay_width,
+                    overlay_height,
+                )
+                self.draw_click_marker(painter, click_x, click_y)
+
+        painter.end()
+        self.label_car_overlay.setPixmap(overlay_pixmap)
+
+    def _sync_main_map_overlay_geometry(self, redraw_overlay=False):
+        self.label_car_overlay.setGeometry(self.label_map_1.geometry())
+        self.label_car_overlay.raise_()
+        self._position_map_marker_widgets()
+        if redraw_overlay:
+            self._redraw_main_map_overlay()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, "label_car_overlay"):
+            self._sync_main_map_overlay_geometry(redraw_overlay=True)
+
     def api_error_handler(self):
         print("❌ API 異常")
 
@@ -1980,7 +2221,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 步驟 1: 清空所有可能的標記狀態 (重置)
         # ----------------------------------------------------
         # 遍歷所有已知地點標記的名稱
-        for marker_name in self.LOCATION_TO_MARKER.values():
+        for marker_name in set(self.LOCATION_TO_MARKER.values()):
             # 這一行程式碼讓您能夠用一個簡單的迴圈，遍歷地圖上所有名稱有規律的標記
             marker_label = getattr(self, marker_name, None)
             if marker_label:
@@ -2879,8 +3120,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # orig_width = 706  
         # orig_height = 469 
 
-        orig_width = 3216 
-        orig_height = 1824
+        self.last_robot_world_pos = (world_x, world_y)
+        self._sync_main_map_overlay_geometry()
+        self._redraw_main_map_overlay()
+        return
 
         # 3. 繪圖畫布的當前尺寸 (self.label_car_overlay 的尺寸)
         current_width = self.label_car_overlay.width() # 應該是 1072
@@ -2913,11 +3156,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_car_overlay.setPixmap(pixmap)
 
     def clear_click_marker(self):
-        self.last_click_overlay_pos = None
+        self.last_click_image_pos = None
         if self.last_robot_world_pos is not None:
             self.draw_car_position(*self.last_robot_world_pos)
         else:
-            self.label_car_overlay.clear()
+            self._redraw_main_map_overlay()
 
     # 更新MiR位置
     def update_robot_position(self,world_x,world_y):
@@ -2985,7 +3228,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         # 2. 處理原有的 地圖圖片點擊 邏輯 (只在點擊 self.label_map_1 時觸發)
         # 假設 self.clicked_enabled, self.label_map_1, self.image_to_world, self.dsb_x_m, self.dsb_y_m 都已存在
-        if widget is self.label_map_1:
+        relative_pos = self.label_map_1.mapFrom(self, event.pos())
+        if self.label_map_1.rect().contains(relative_pos):
             
             # 檢查點擊模式是否啟用
             if not self.clicked_enabled:
@@ -2996,23 +3240,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # 進行座標轉換和設定值
             relative_pos = self.label_map_1.mapFrom(self, event.pos())
             # 請保留您原有的縮放係數 (1.48 和 1.26)
-            x = relative_pos.x()/0.333
-            y = relative_pos.y()/0.333
+            x, y = scale_point_to_source(
+                relative_pos.x(),
+                relative_pos.y(),
+                self.original_pixmap.width(),
+                self.original_pixmap.height(),
+                self.label_car_overlay.width(),
+                self.label_car_overlay.height(),
+            )
             world_x, world_y = self.image_to_world(x, y)
             
             self.dsb_x_m.setValue(world_x)
             self.dsb_y_m.setValue(world_y)
 
-            self.last_click_overlay_pos = (relative_pos.x(), relative_pos.y())
-            if self.last_robot_world_pos is not None:
-                self.draw_car_position(*self.last_robot_world_pos)
-            else:
-                marker_pixmap = QPixmap(self.label_car_overlay.size())
-                marker_pixmap.fill(Qt.transparent)
-                marker_painter = QPainter(marker_pixmap)
-                self.draw_click_marker(marker_painter, relative_pos.x(), relative_pos.y())
-                marker_painter.end()
-                self.label_car_overlay.setPixmap(marker_pixmap)
+            self.last_click_image_pos = (x, y)
+            self._sync_main_map_overlay_geometry()
+            self._redraw_main_map_overlay()
             
             print(f"{world_x}, {world_y}")
             print(f"你點了圖片座標 ({x:.1f}, {y:.1f})，對應世界座標為 ({world_x:.2f}, {world_y:.2f})")

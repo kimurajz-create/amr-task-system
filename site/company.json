@@ -17,52 +17,54 @@
   "markers": [
     {
       "marker_id": "label_rp_1",
-      "x_px": 290,
-      "y_px": 230,
-      "width_px": 18,
-      "height_px": 26
+      "x_px": 851,
+      "y_px": 733,
+      "world_x": -0.004,
+      "world_y": 24.154,
+      "width_px": 54,
+      "height_px": 78
     },
     {
       "marker_id": "label_rp_2",
-      "x_px": 290,
-      "y_px": 310,
-      "width_px": 18,
-      "height_px": 26
+      "x_px": 870,
+      "y_px": 930,
+      "width_px": 54,
+      "height_px": 78
     },
     {
       "marker_id": "label_rp_3",
-      "x_px": 290,
-      "y_px": 410,
-      "width_px": 18,
-      "height_px": 26
+      "x_px": 870,
+      "y_px": 1230,
+      "width_px": 54,
+      "height_px": 78
     },
     {
       "marker_id": "label_rp_4",
-      "x_px": 410,
-      "y_px": 470,
-      "width_px": 26,
-      "height_px": 18
+      "x_px": 1230,
+      "y_px": 1410,
+      "width_px": 78,
+      "height_px": 54
     },
     {
       "marker_id": "label_rp_5",
-      "x_px": 510,
-      "y_px": 470,
-      "width_px": 26,
-      "height_px": 18
+      "x_px": 1530,
+      "y_px": 1410,
+      "width_px": 78,
+      "height_px": 54
     },
     {
       "marker_id": "label_rp_6",
-      "x_px": 590,
-      "y_px": 470,
-      "width_px": 26,
-      "height_px": 18
+      "x_px": 1770,
+      "y_px": 1410,
+      "width_px": 78,
+      "height_px": 54
     },
     {
       "marker_id": "label_rp_7",
-      "x_px": 870,
-      "y_px": 320,
-      "width_px": 26,
-      "height_px": 18
+      "x_px": 2610,
+      "y_px": 960,
+      "width_px": 78,
+      "height_px": 54
     }
   ],
   "_comment_locations": "locations 是場域的核心資料表。每筆 location 同時描述 MiR 名稱、UI 顯示名稱、marker、room_id，以及是否為充電站。",

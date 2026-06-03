@@ -115,7 +115,7 @@ version: v1
 | 階段 | 狀態 | 名稱 | 產出 | 後續文件類型 | 預期文件 |
 |---|---|---|---|---|---|
 | P1 | [x] 已完成 | 場域 marker 結構與執行期對映 | 由 site config 接管 marker 幾何資訊與 location-to-marker 綁定。 | R03 | `documents/implements/R03-site-marker-schema-and-runtime-maps.md` |
-| P2 | [ ] 未完成 | MainWindow marker 外部化落地 | Marker widget 改成由 site data 動態建立與重新定位，不再依賴 Designer 幾何座標。 | R04 | `documents/implements/R04-dynamic-map-marker-layer.md` |
+| P2 | [x] 已完成 | MainWindow marker 外部化落地 | Marker widget 改成由 site data 動態建立與重新定位，不再依賴 Designer 幾何座標。 | R04 | `documents/implements/R04-dynamic-map-marker-layer.md` |
 | P3 | [ ] 未完成 | 維護流程清理與保護機制 | 專案可透過編輯 config 來增減 marker，並加入缺漏參照的保護機制。 | RXX | `documents/implements/R05-map-marker-maintenance-cleanup.md` |
 | P4 | [ ] 可選 | Marker 座標擷取輔助 | 為新場域提供更快速的座標擷取工作流。 | FXX 或 RXX | P1-P3 落地後再定 |
 

@@ -2,7 +2,12 @@ import json
 import unittest
 from pathlib import Path
 
-from main import build_site_runtime_maps
+from main import (
+    build_site_runtime_maps,
+    scale_marker_spec_to_display,
+    scale_point_to_display,
+    scale_point_to_source,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -101,6 +106,87 @@ class SiteRuntimeMarkerMapTests(unittest.TestCase):
         self.assertEqual(["A 點"], runtime_maps["marker_location_names_by_id"]["label_rp_1"])
         self.assertEqual(["B 點"], runtime_maps["marker_location_names_by_id"]["label_missing"])
         self.assertEqual(["C 點"], runtime_maps["locations_without_markers"])
+
+class MapMarkerGeometryScalingTests(unittest.TestCase):
+    def test_marker_geometry_scales_into_display_space(self):
+        scaled = scale_marker_spec_to_display(
+            {
+                "marker_id": "label_rp_1",
+                "x_px": 321,
+                "y_px": 456,
+                "width_px": 18,
+                "height_px": 27,
+            },
+            source_width=3216,
+            source_height=1824,
+            display_width=1072,
+            display_height=608,
+        )
+
+        self.assertEqual(107, scaled["x_px"])
+        self.assertEqual(152, scaled["y_px"])
+        self.assertEqual(6, scaled["width_px"])
+        self.assertEqual(9, scaled["height_px"])
+
+    def test_display_to_source_point_conversion_round_trips(self):
+        display_x, display_y = scale_point_to_display(
+            804,
+            912,
+            source_width=3216,
+            source_height=1824,
+            display_width=1072,
+            display_height=608,
+        )
+        source_x, source_y = scale_point_to_source(
+            display_x,
+            display_y,
+            source_width=3216,
+            source_height=1824,
+            display_width=1072,
+            display_height=608,
+        )
+
+        self.assertAlmostEqual(804, source_x)
+        self.assertAlmostEqual(912, source_y)
+
+    def test_marker_scaling_keeps_tiny_markers_visible(self):
+        scaled = scale_marker_spec_to_display(
+            {
+                "marker_id": "tiny",
+                "x_px": 10,
+                "y_px": 20,
+                "width_px": 1,
+                "height_px": 1,
+            },
+            source_width=3216,
+            source_height=1824,
+            display_width=1072,
+            display_height=608,
+        )
+
+        self.assertEqual(1, scaled["width_px"])
+        self.assertEqual(1, scaled["height_px"])
+
+    def test_marker_geometry_can_anchor_from_world_coordinates(self):
+        scaled = scale_marker_spec_to_display(
+            {
+                "marker_id": "world-marker",
+                "world_x": -0.004,
+                "world_y": 24.154,
+                "width_px": 54,
+                "height_px": 78,
+            },
+            source_width=3216,
+            source_height=1824,
+            display_width=1072,
+            display_height=608,
+            world_to_image_fn=lambda world_x, world_y: (851, 733),
+        )
+
+        self.assertEqual(284, scaled["x_px"])
+        self.assertEqual(244, scaled["y_px"])
+        self.assertEqual(18, scaled["width_px"])
+        self.assertEqual(26, scaled["height_px"])
 
 
 if __name__ == "__main__":
