@@ -1,62 +1,62 @@
 ---
 author: Codex
 date: 2026-06-03
-title: Site Marker Schema And Runtime Maps
+title: 站點標記結構與執行期對應表
 uuid: 1e32fbc57d1e4ba6ab6571f1bb1ba833
 version: v1
 planning: documents/planning/P02-map-marker-externalization-and-scaled-positioning.md
 status: completed
 ---
 
-# R03 Site Marker Schema And Runtime Maps
+# R03 站點標記結構與執行期對應表
 
 ## 1. Scope
 
-P02 P1 focuses on moving main-map marker geometry into `site/*.json` and making `build_site_runtime_maps()` expose marker-oriented runtime structures for later UI work.
+P02 P1 聚焦於將主地圖標記幾何資料移入 `site/*.json`，並讓 `build_site_runtime_maps()` 提供以 marker 為中心的執行期資料結構，供後續 UI 工作使用。
 
 ## 2. Goals
 
-- Externalize marker geometry into site config instead of relying on Qt Designer geometry as the source of truth.
-- Keep `locations[*].marker_id` as the business-to-marker binding.
-- Let runtime maps distinguish between:
-  - locations that intentionally have no marker
-  - locations that reference a missing marker definition
+- 將 marker 幾何資料外部化到 site 設定，不再依賴 Qt Designer 幾何作為唯一真實來源。
+- 保留 `locations[*].marker_id` 作為業務位置與 marker 的綁定關係。
+- 讓執行期對應表能區分：
+  - 本來就不需要 marker 的 location
+  - 參考了不存在 marker 定義的 location
 
 ## 3. Changes
 
-### R1. Site schema adds `markers`
+### R1. Site schema 新增 `markers`
 
-- `site/company.json` now contains a `markers` array seeded from the current `label_rp_1` to `label_rp_7` geometry in `ui_main.py`.
-- `site/hospital.json` now contains a `markers` array for `label_rp_1` to `label_rp_13`.
-- Each marker spec currently includes:
+- `site/company.json` 現在包含一個 `markers` 陣列，初始資料來自 `ui_main.py` 目前的 `label_rp_1` 到 `label_rp_7` 幾何設定。
+- `site/hospital.json` 現在包含 `label_rp_1` 到 `label_rp_13` 的 `markers` 陣列。
+- 每個 marker 規格目前包含：
   - `marker_id`
   - `x_px`
   - `y_px`
   - `width_px`
   - `height_px`
 
-### R2. Runtime maps expose marker structures
+### R2. 執行期對應表提供 marker 結構
 
-- `build_marker_specs_by_id()` normalizes marker records into a dictionary keyed by `marker_id`.
-- `build_site_runtime_maps()` now returns:
+- `build_marker_specs_by_id()` 會將 marker 紀錄正規化為以 `marker_id` 為 key 的 dictionary。
+- `build_site_runtime_maps()` 現在回傳：
   - `marker_specs_by_id`
   - `marker_location_names_by_id`
   - `locations_without_markers`
   - `marker_config_warnings`
 
-### R3. Validation stays non-destructive for P1
+### R3. P1 階段的驗證維持非破壞式
 
-- Duplicate marker definitions are collected as warnings.
-- A location that points to an undefined `marker_id` is preserved in the runtime maps and also reported as a warning.
-- Locations without `marker_id` are tracked separately so later phases can tell “no marker by design” from “broken marker reference”.
+- 重複的 marker 定義會被收集為 warning。
+- 指向未定義 `marker_id` 的 location 仍會保留在執行期對應表中，並同時回報 warning。
+- 沒有 `marker_id` 的 location 會被獨立追蹤，讓後續階段能區分「設計上沒有 marker」與「marker 參照損壞」。
 
 ## 4. Test Coverage
 
 | Test ID | Type | Coverage |
 |---|---|---|
-| R03-T1 | unit | `company` and `hospital` site profiles expose complete `marker_specs_by_id` maps and all runtime marker references resolve to defined marker ids |
-| R03-T2 | unit | shared markers and marker-less locations are tracked separately in runtime maps |
-| R03-T3 | unit | duplicate marker ids and missing marker references produce warnings without dropping runtime location bindings |
+| R03-T1 | unit | `company` 與 `hospital` 的 site profile 都能提供完整的 `marker_specs_by_id` 對應表，且所有執行期 marker 參照都能解析到已定義的 marker id |
+| R03-T2 | unit | 共用 marker 與無 marker 的 location 會在執行期對應表中分開追蹤 |
+| R03-T3 | unit | 重複 marker id 與遺失 marker 參照會產生 warning，但不會丟失執行期 location 綁定 |
 
 ## 5. Verification
 
@@ -66,5 +66,5 @@ python -m unittest tests.test_site_runtime_marker_maps
 
 ## 6. Notes
 
-- The hospital marker coordinates are an initial config-driven baseline taken from the current floor-plan asset and can be fine-tuned in P2/P3 without changing code.
-- P2 can now consume `MARKER_SPECS_BY_ID` directly when replacing the legacy Designer marker widgets with runtime-built widgets.
+- hospital 的 marker 座標是從目前樓層平面資產取得的初始 config 基線，之後可在 P2/P3 微調，而不需要修改程式碼。
+- P2 現在可以直接使用 `MARKER_SPECS_BY_ID`，將舊有的 Designer marker widget 替換為執行期建立的 widget。
