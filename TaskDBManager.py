@@ -339,6 +339,173 @@ class TaskDBManager:
         """
         return self._execute_query(query, fetch=True)
 
+    def _normalize_statistics_limit(self, limit, default=None):
+        """Validate Top N style limits so dashboard queries stay predictable."""
+        if limit is None:
+            return default
+        if isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0:
+            raise ValueError("limit must be a positive integer or None")
+        return limit
+
+    def _build_limit_clause(self, limit, default=None):
+        normalized_limit = self._normalize_statistics_limit(limit, default=default)
+        if normalized_limit is None:
+            return "", None
+        return "LIMIT %s", (normalized_limit,)
+
+    def _normalize_group_label(self, value):
+        if value is None:
+            return "(未填寫)"
+
+        text = str(value).strip()
+        return text if text else "(未填寫)"
+
+    def _normalize_task_count(self, value):
+        if value is None:
+            return 0
+        return int(value)
+
+    def get_task_status_summary(self):
+        """
+        回傳目前 tasks 保留資料的狀態摘要。
+
+        備註:
+        - Pending / Executing 較接近即時佇列狀態。
+        - Completed / Aborted / Total 反映目前資料表保留中的累積資料。
+        """
+        query = """
+        SELECT status, COUNT(*) AS task_count
+        FROM tasks
+        GROUP BY status;
+        """
+        rows = self._execute_query(query, fetch=True) or []
+
+        summary = {
+            "pending_count": 0,
+            "executing_count": 0,
+            "completed_count": 0,
+            "aborted_count": 0,
+            "active_count": 0,
+            "finished_count": 0,
+            "other_status_count": 0,
+            "total_count": 0,
+            "status_breakdown": {},
+        }
+        canonical_status_map = {
+            "Pending": "pending_count",
+            "Executing": "executing_count",
+            "Completed": "completed_count",
+            "Aborted": "aborted_count",
+        }
+
+        for row in rows:
+            status = self._normalize_group_label(row.get("status"))
+            task_count = self._normalize_task_count(row.get("task_count"))
+
+            summary["status_breakdown"][status] = task_count
+            summary["total_count"] += task_count
+
+            summary_key = canonical_status_map.get(status)
+            if summary_key:
+                summary[summary_key] += task_count
+            else:
+                summary["other_status_count"] += task_count
+
+        summary["active_count"] = (
+            summary["pending_count"] + summary["executing_count"]
+        )
+        summary["finished_count"] = (
+            summary["completed_count"] + summary["aborted_count"]
+        )
+        return summary
+
+    def get_task_volume_by_mission(self, limit=None):
+        limit_clause, params = self._build_limit_clause(limit)
+        mission_expr = "COALESCE(NULLIF(BTRIM(mission_content), ''), '(未填寫)')"
+        query = f"""
+        SELECT {mission_expr} AS mission_content, COUNT(*) AS task_count
+        FROM tasks
+        GROUP BY {mission_expr}
+        ORDER BY COUNT(*) DESC, mission_content ASC
+        {limit_clause};
+        """
+        rows = self._execute_query(query, params=params, fetch=True) or []
+        return [
+            {
+                "mission_content": self._normalize_group_label(
+                    row.get("mission_content")
+                ),
+                "task_count": self._normalize_task_count(row.get("task_count")),
+            }
+            for row in rows
+        ]
+
+    def get_task_start_hotspots(self, limit=10):
+        limit_clause, params = self._build_limit_clause(limit, default=10)
+        start_expr = "COALESCE(NULLIF(BTRIM(start_point), ''), '(未填寫)')"
+        query = f"""
+        SELECT {start_expr} AS start_point, COUNT(*) AS task_count
+        FROM tasks
+        GROUP BY {start_expr}
+        ORDER BY COUNT(*) DESC, start_point ASC
+        {limit_clause};
+        """
+        rows = self._execute_query(query, params=params, fetch=True) or []
+        return [
+            {
+                "start_point": self._normalize_group_label(row.get("start_point")),
+                "task_count": self._normalize_task_count(row.get("task_count")),
+            }
+            for row in rows
+        ]
+
+    def get_task_target_hotspots(self, limit=10):
+        limit_clause, params = self._build_limit_clause(limit, default=10)
+        target_expr = "COALESCE(NULLIF(BTRIM(target_point), ''), '(未填寫)')"
+        query = f"""
+        SELECT {target_expr} AS target_point, COUNT(*) AS task_count
+        FROM tasks
+        GROUP BY {target_expr}
+        ORDER BY COUNT(*) DESC, target_point ASC
+        {limit_clause};
+        """
+        rows = self._execute_query(query, params=params, fetch=True) or []
+        return [
+            {
+                "target_point": self._normalize_group_label(row.get("target_point")),
+                "task_count": self._normalize_task_count(row.get("task_count")),
+            }
+            for row in rows
+        ]
+
+    def get_task_route_hotspots(self, limit=10):
+        limit_clause, params = self._build_limit_clause(limit, default=10)
+        start_expr = "COALESCE(NULLIF(BTRIM(start_point), ''), '(未填寫)')"
+        target_expr = "COALESCE(NULLIF(BTRIM(target_point), ''), '(未填寫)')"
+        query = f"""
+        SELECT
+            {start_expr} AS start_point,
+            {target_expr} AS target_point,
+            COUNT(*) AS task_count
+        FROM tasks
+        GROUP BY {start_expr}, {target_expr}
+        ORDER BY COUNT(*) DESC, start_point ASC, target_point ASC
+        {limit_clause};
+        """
+        rows = self._execute_query(query, params=params, fetch=True) or []
+        return [
+            {
+                "start_point": self._normalize_group_label(row.get("start_point")),
+                "target_point": self._normalize_group_label(row.get("target_point")),
+                "route_label": (
+                    f"{self._normalize_group_label(row.get('start_point'))} -> "
+                    f"{self._normalize_group_label(row.get('target_point'))}"
+                ),
+                "task_count": self._normalize_task_count(row.get("task_count")),
+            }
+            for row in rows
+        ]
+
 
 
     #-------------------------------------更新系列---------------------------------------------#
