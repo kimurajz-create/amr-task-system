@@ -35,6 +35,7 @@ from ui_main import Ui_MainWindow
 from performance_dashboard import (
     PerformanceDashboardController,
     build_performance_dashboard_snapshot,
+    build_performance_dashboard_snapshot_from_db,
 )
 
 # 從轉換後的檔案中引入 UI 類別
@@ -1534,19 +1535,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # ====== 每 n 秒查一次 API 狀態記錄下來給手術室桌機軟體確認用======
     def get_performance_dashboard_snapshot(self):
-        if not self.task_db_manager:
-            return build_performance_dashboard_snapshot(
-                warning_message="TaskDBManager is not available."
-            )
-
         try:
-            summary = self.task_db_manager.get_task_status_summary()
+            return build_performance_dashboard_snapshot_from_db(
+                self.task_db_manager
+            )
         except Exception as exc:
             return build_performance_dashboard_snapshot(
-                warning_message=f"Task statistics summary refresh failed: {exc}"
+                warning_message=f"任務統計刷新失敗：{exc}"
             )
-
-        return build_performance_dashboard_snapshot(task_status_summary=summary)
 
     def open_performance_dashboard(self):
         self.performance_dashboard_controller.open(

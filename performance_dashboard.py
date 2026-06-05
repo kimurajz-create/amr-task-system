@@ -17,38 +17,75 @@ from PySide6.QtWidgets import (
 DASHBOARD_AUTO_REFRESH_MS = 15_000
 
 SUMMARY_CARD_SPECS = [
-    ("pending_count", "待執行", "目前排隊等待派送"),
-    ("executing_count", "執行中", "MiR 正在執行中的任務"),
-    ("completed_count", "已完成", "累積完成的任務筆數"),
-    ("aborted_count", "已中止", "累積中止的任務筆數"),
-    ("total_count", "總任務", "目前資料表內的總任務數"),
+    ("pending_count", "待執行", "等待派送到 MiR 的任務數量。"),
+    ("executing_count", "執行中", "目前由 MiR 執行中的任務數量。"),
+    ("completed_count", "已完成", "已正常完成的任務數量。"),
+    ("aborted_count", "已中止", "提早結束或被停止的任務數量。"),
+    ("total_count", "總任務", "資料庫目前累積的任務總數。"),
 ]
 
 SECTION_SPECS = [
-    (
-        "task-volume",
-        "任務量概況",
-        "P3 會把 mission volume 與任務量統計接到這裡。",
-    ),
-    (
-        "start-hotspots",
-        "起點熱區",
-        "P3 會把 start_point Top N 統計接到這裡。",
-    ),
-    (
-        "target-hotspots",
-        "目的地熱區",
-        "P3 會把 target_point Top N 統計接到這裡。",
-    ),
-    (
-        "route-hotspots",
-        "熱門路線",
-        "P3 會把 route hotspots 與 Top N 接到這裡。",
-    ),
+    {
+        "key": "task-volume",
+        "title": "任務類型分組",
+        "row_label_key": "mission_content",
+        "empty_text": "目前還沒有任務類型統計資料。",
+    },
+    {
+        "key": "start-hotspots",
+        "title": "起點 Top N",
+        "row_label_key": "start_point",
+        "empty_text": "目前還沒有起點熱區資料。",
+    },
+    {
+        "key": "target-hotspots",
+        "title": "目的地 Top N",
+        "row_label_key": "target_point",
+        "empty_text": "目前還沒有目的地熱區資料。",
+    },
+    {
+        "key": "route-hotspots",
+        "title": "熱門路線 Top N",
+        "row_label_key": "route_label",
+        "empty_text": "目前還沒有熱門路線資料。",
+    },
 ]
 
 
-def build_performance_dashboard_snapshot(task_status_summary=None, warning_message=None):
+def _normalize_section_label(value):
+    if value is None:
+        return "(未填寫)"
+
+    text = str(value).strip()
+    return text if text else "(未填寫)"
+
+
+def _normalize_section_rows(items, label_key):
+    rows = []
+    for item in items or []:
+        rows.append(
+            {
+                "label": _normalize_section_label(item.get(label_key)),
+                "value": str(item.get("task_count", 0)),
+            }
+        )
+    return rows
+
+
+def _format_section_body(rows, empty_text):
+    if not rows:
+        return empty_text
+    return "\n".join(f"{row['label']}: {row['value']}" for row in rows)
+
+
+def build_performance_dashboard_snapshot(
+    task_status_summary=None,
+    task_volume_by_mission=None,
+    start_hotspots=None,
+    target_hotspots=None,
+    route_hotspots=None,
+    warning_message=None,
+):
     summary = task_status_summary or {}
 
     summary_cards = [
@@ -60,24 +97,37 @@ def build_performance_dashboard_snapshot(task_status_summary=None, warning_messa
         }
         for key, title, caption in SUMMARY_CARD_SPECS
     ]
-    sections = [
-        {
-            "key": key,
-            "title": title,
-            "body": body,
-        }
-        for key, title, body in SECTION_SPECS
-    ]
+
+    section_data = {
+        "task-volume": task_volume_by_mission,
+        "start-hotspots": start_hotspots,
+        "target-hotspots": target_hotspots,
+        "route-hotspots": route_hotspots,
+    }
+    sections = []
+    for spec in SECTION_SPECS:
+        rows = _normalize_section_rows(
+            section_data.get(spec["key"]),
+            spec["row_label_key"],
+        )
+        sections.append(
+            {
+                "key": spec["key"],
+                "title": spec["title"],
+                "rows": rows,
+                "body": _format_section_body(rows, spec["empty_text"]),
+            }
+        )
 
     if warning_message:
         status_level = "warning"
         status_text = warning_message
     elif task_status_summary is None:
         status_level = "info"
-        status_text = "P04 / P2 視窗骨架已就緒，等待主程式接入摘要資料來源。"
+        status_text = "績效 dashboard 已就緒，開啟或刷新後會載入任務統計與熱門路線資料。"
     else:
         status_level = "ready"
-        status_text = "目前已接入任務狀態摘要；任務量與熱區明細將在 P3 續接。"
+        status_text = "任務量與熱區統計已刷新完成。"
 
     return {
         "status_level": status_level,
@@ -85,6 +135,30 @@ def build_performance_dashboard_snapshot(task_status_summary=None, warning_messa
         "summary_cards": summary_cards,
         "sections": sections,
     }
+
+
+def build_performance_dashboard_snapshot_from_db(
+    task_db_manager,
+    hotspot_limit=10,
+):
+    if task_db_manager is None:
+        return build_performance_dashboard_snapshot(
+            warning_message="目前無法取得 TaskDBManager，尚未載入統計資料。"
+        )
+
+    summary = task_db_manager.get_task_status_summary()
+    task_volume_by_mission = task_db_manager.get_task_volume_by_mission()
+    start_hotspots = task_db_manager.get_task_start_hotspots(limit=hotspot_limit)
+    target_hotspots = task_db_manager.get_task_target_hotspots(limit=hotspot_limit)
+    route_hotspots = task_db_manager.get_task_route_hotspots(limit=hotspot_limit)
+
+    return build_performance_dashboard_snapshot(
+        task_status_summary=summary,
+        task_volume_by_mission=task_volume_by_mission,
+        start_hotspots=start_hotspots,
+        target_hotspots=target_hotspots,
+        route_hotspots=route_hotspots,
+    )
 
 
 class PerformanceDashboardWindow(QWidget):
@@ -104,7 +178,7 @@ class PerformanceDashboardWindow(QWidget):
         self.section_body_labels = {}
 
         self.setObjectName("PerformanceDashboardWindow")
-        self.setWindowTitle("MiR 績效看板")
+        self.setWindowTitle("MiR 績效儀表板")
         self.resize(980, 720)
         self.setMinimumSize(860, 620)
 
@@ -122,11 +196,11 @@ class PerformanceDashboardWindow(QWidget):
         root_layout.setContentsMargins(24, 24, 24, 24)
         root_layout.setSpacing(18)
 
-        title_label = QLabel("MiR 績效看板")
+        title_label = QLabel("MiR 績效儀表板")
         title_label.setObjectName("dashboardTitleLabel")
 
         subtitle_label = QLabel(
-            "P04 / P2 先完成入口、單例視窗與刷新骨架，詳細統計在後續 phase 續接。"
+            "P04 / P3 任務統計視圖，集中顯示摘要數量、任務類型分組與熱門路線。"
         )
         subtitle_label.setObjectName("dashboardSubtitleLabel")
         subtitle_label.setWordWrap(True)
@@ -134,7 +208,7 @@ class PerformanceDashboardWindow(QWidget):
         header_actions_layout = QHBoxLayout()
         header_actions_layout.setSpacing(12)
 
-        self.last_refresh_label = QLabel("最後刷新：尚未更新")
+        self.last_refresh_label = QLabel("最後刷新：尚未載入")
         self.last_refresh_label.setObjectName("dashboardMetaLabel")
 
         self.refresh_button = QPushButton("立即刷新")
@@ -155,7 +229,7 @@ class PerformanceDashboardWindow(QWidget):
         summary_layout.setContentsMargins(18, 18, 18, 18)
         summary_layout.setSpacing(14)
 
-        summary_title = QLabel("任務狀態摘要")
+        summary_title = QLabel("任務摘要")
         summary_title.setObjectName("dashboardSectionTitle")
         summary_layout.addWidget(summary_title)
 
@@ -170,25 +244,37 @@ class PerformanceDashboardWindow(QWidget):
             )
         summary_layout.addLayout(summary_cards_layout)
 
-        placeholder_frame = QFrame()
-        placeholder_frame.setObjectName("dashboardPanel")
-        placeholder_layout = QVBoxLayout(placeholder_frame)
-        placeholder_layout.setContentsMargins(18, 18, 18, 18)
-        placeholder_layout.setSpacing(14)
+        sections_frame = QFrame()
+        sections_frame.setObjectName("dashboardPanel")
+        sections_layout = QVBoxLayout(sections_frame)
+        sections_layout.setContentsMargins(18, 18, 18, 18)
+        sections_layout.setSpacing(14)
 
-        placeholder_title = QLabel("後續統計區塊")
-        placeholder_title.setObjectName("dashboardSectionTitle")
-        placeholder_layout.addWidget(placeholder_title)
+        sections_title = QLabel("任務量與熱區統計")
+        sections_title.setObjectName("dashboardSectionTitle")
+        sections_layout.addWidget(sections_title)
 
-        for key, title, body in SECTION_SPECS:
-            placeholder_layout.addWidget(self._build_section_card(key, title, body))
+        section_cards_layout = QGridLayout()
+        section_cards_layout.setHorizontalSpacing(12)
+        section_cards_layout.setVerticalSpacing(12)
+        for index, spec in enumerate(SECTION_SPECS):
+            section_cards_layout.addWidget(
+                self._build_section_card(
+                    spec["key"],
+                    spec["title"],
+                    spec["empty_text"],
+                ),
+                index // 2,
+                index % 2,
+            )
+        sections_layout.addLayout(section_cards_layout)
 
         root_layout.addWidget(title_label)
         root_layout.addWidget(subtitle_label)
         root_layout.addLayout(header_actions_layout)
         root_layout.addWidget(self.status_banner)
         root_layout.addWidget(summary_frame)
-        root_layout.addWidget(placeholder_frame)
+        root_layout.addWidget(sections_frame)
         root_layout.addStretch()
 
     def _build_summary_card(self, key, title, caption):
@@ -219,21 +305,24 @@ class PerformanceDashboardWindow(QWidget):
 
     def _build_section_card(self, key, title, body):
         frame = QFrame()
-        frame.setObjectName("dashboardPlaceholderCard")
+        frame.setObjectName("dashboardSectionCard")
+        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(14, 14, 14, 14)
-        layout.setSpacing(6)
+        layout.setSpacing(8)
 
         title_label = QLabel(title)
-        title_label.setObjectName("dashboardPlaceholderTitle")
+        title_label.setObjectName("dashboardSectionCardTitle")
 
         body_label = QLabel(body)
-        body_label.setObjectName("dashboardPlaceholderBody")
+        body_label.setObjectName("dashboardSectionBody")
         body_label.setWordWrap(True)
+        body_label.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
         layout.addWidget(title_label)
         layout.addWidget(body_label)
+        layout.addStretch()
 
         self.section_body_labels[key] = body_label
         return frame
@@ -271,12 +360,12 @@ class PerformanceDashboardWindow(QWidget):
                 font-weight: 700;
                 color: #f4f7fb;
             }
-            QFrame#dashboardSummaryCard, QFrame#dashboardPlaceholderCard {
+            QFrame#dashboardSummaryCard, QFrame#dashboardSectionCard {
                 background-color: #10171f;
                 border: 1px solid #233243;
                 border-radius: 12px;
             }
-            QLabel#dashboardCardTitle, QLabel#dashboardPlaceholderTitle {
+            QLabel#dashboardCardTitle, QLabel#dashboardSectionCardTitle {
                 font-size: 14px;
                 font-weight: 600;
                 color: #d7e2ef;
@@ -286,7 +375,7 @@ class PerformanceDashboardWindow(QWidget):
                 font-weight: 700;
                 color: #f8fbff;
             }
-            QLabel#dashboardCardCaption, QLabel#dashboardPlaceholderBody {
+            QLabel#dashboardCardCaption, QLabel#dashboardSectionBody {
                 font-size: 12px;
                 color: #92a6bc;
             }
@@ -313,13 +402,14 @@ class PerformanceDashboardWindow(QWidget):
             snapshot = self.snapshot_provider() or build_performance_dashboard_snapshot()
         except Exception as exc:
             snapshot = build_performance_dashboard_snapshot(
-                warning_message=f"統計資料暫時無法更新：{exc}"
+                warning_message=f"統計資料刷新失敗：{exc}"
             )
 
         self.apply_snapshot(snapshot)
         refreshed_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.last_refresh_label.setText(
-            f"最後刷新：{refreshed_at}  |  自動刷新：{self.refresh_interval_ms // 1000} 秒"
+            f"最後刷新：{refreshed_at}  |  自動刷新："
+            f"{self.refresh_interval_ms // 1000} 秒"
         )
 
     def apply_snapshot(self, snapshot):
@@ -344,10 +434,20 @@ class PerformanceDashboardWindow(QWidget):
             if value_label is not None:
                 value_label.setText(str(card.get("value", "0")))
 
+        section_specs_by_key = {spec["key"]: spec for spec in SECTION_SPECS}
         for section in snapshot.get("sections", []):
             body_label = self.section_body_labels.get(section.get("key"))
-            if body_label is not None:
-                body_label.setText(section.get("body", ""))
+            if body_label is None:
+                continue
+
+            body_text = section.get("body")
+            if body_text is None:
+                spec = section_specs_by_key.get(section.get("key"), {})
+                body_text = _format_section_body(
+                    section.get("rows", []),
+                    spec.get("empty_text", "目前沒有資料。"),
+                )
+            body_label.setText(body_text)
 
     def closeEvent(self, event: QCloseEvent):
         self.hide()
