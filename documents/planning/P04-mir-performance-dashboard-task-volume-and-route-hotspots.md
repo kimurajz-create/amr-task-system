@@ -366,7 +366,7 @@ uuid: c3b7302c6b7d4e3cb9a298ed58b3c4f1
 | P1 | [x] 已完成 | 統計查詢與資料模型整理 | 定義任務量、熱區、路線 Top N 的聚合查詢與回傳格式。 | R06 | `documents/implements/R06-task-statistics-queries-for-performance-dashboard.md` |
 | P2 | [x] 已完成 | GUI 入口按鈕與績效頁骨架 | 主畫面新增入口按鈕；建立獨立績效視窗骨架；規劃 refresh 流程 | 主畫面版面不重排；可開啟/關閉績效視窗；刷新不干擾主畫面 | `documents/implements/F01-performance-dashboard-entry-and-window.md` |
 | P3 | [x] 已完成 | 任務量卡片與熱區表格 | 接入查詢結果，完成數字卡片、起點/目的地 Top N、可選路線 Top N | 畫面可讀、數字可驗算、空資料狀態明確 | `documents/implements/F02-performance-dashboard-v1-task-volume-and-hotspots.md` + `documents/implements/R06-task-statistics-queries-for-performance-dashboard.md` |
-| P4 | [ ] | 驗收與擴充預留 | 確認命名、欄位定義、刷新策略、未來 KPI 擴充點 | 第一版範圍收斂，小而穩；後續 KPI 不需回頭重做入口設計 | `FXX` 或後續 `PXX` |
+| P4 | [x] | 驗收與擴充預留 | 已完成 v1 驗證收口，並把 phase 2 KPI 擴充整理到 `P05` | 第一版範圍收斂，小而穩；後續 KPI 不需回頭重做入口設計 | `documents/planning/P05-mir-performance-dashboard-phase-2-kpis.md` |
 
 ### P1. 統計查詢與資料模型整理
 
