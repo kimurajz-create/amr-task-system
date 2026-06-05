@@ -364,8 +364,8 @@ uuid: c3b7302c6b7d4e3cb9a298ed58b3c4f1
 | Phase | 狀態 | 目標 | 主要變更 | 驗收重點 | 建議文件類型 |
 |---|---|---|---|---|---|
 | P1 | [x] 已完成 | 統計查詢與資料模型整理 | 定義任務量、熱區、路線 Top N 的聚合查詢與回傳格式。 | R06 | `documents/implements/R06-task-statistics-queries-for-performance-dashboard.md` |
-| P2 | [ ] | GUI 入口按鈕與績效頁骨架 | 主畫面新增入口按鈕；建立獨立績效視窗骨架；規劃 refresh 流程 | 主畫面版面不重排；可開啟/關閉績效視窗；刷新不干擾主畫面 | `FXX` |
-| P3 | [ ] | 任務量卡片與熱區表格 | 接入查詢結果，完成數字卡片、起點/目的地 Top N、可選路線 Top N | 畫面可讀、數字可驗算、空資料狀態明確 | `FXX` + `RXX` |
+| P2 | [x] 已完成 | GUI 入口按鈕與績效頁骨架 | 主畫面新增入口按鈕；建立獨立績效視窗骨架；規劃 refresh 流程 | 主畫面版面不重排；可開啟/關閉績效視窗；刷新不干擾主畫面 | `documents/implements/F01-performance-dashboard-entry-and-window.md` |
+| P3 | [x] 已完成 | 任務量卡片與熱區表格 | 接入查詢結果，完成數字卡片、起點/目的地 Top N、可選路線 Top N | 畫面可讀、數字可驗算、空資料狀態明確 | `documents/implements/F02-performance-dashboard-v1-task-volume-and-hotspots.md` + `documents/implements/R06-task-statistics-queries-for-performance-dashboard.md` |
 | P4 | [ ] | 驗收與擴充預留 | 確認命名、欄位定義、刷新策略、未來 KPI 擴充點 | 第一版範圍收斂，小而穩；後續 KPI 不需回頭重做入口設計 | `FXX` 或後續 `PXX` |
 
 ### P1. 統計查詢與資料模型整理
@@ -389,7 +389,7 @@ uuid: c3b7302c6b7d4e3cb9a298ed58b3c4f1
 
 建議文件類型：
 
-- `RXX`: 績效統計查詢與讀模型。
+- `R06`: 績效統計查詢與讀模型。
 
 ### P2. GUI 入口按鈕與績效頁骨架
 
@@ -412,7 +412,7 @@ uuid: c3b7302c6b7d4e3cb9a298ed58b3c4f1
 
 建議文件類型：
 
-- `FXX`: 績效頁 GUI 入口與視窗骨架。
+- `F01`: 績效頁 GUI 入口與視窗骨架。
 
 ### P3. 任務量卡片與熱區表格
 
@@ -436,8 +436,8 @@ uuid: c3b7302c6b7d4e3cb9a298ed58b3c4f1
 
 建議文件類型：
 
-- `FXX`: 績效頁第一版 UI 呈現。
-- `RXX`: 任務量與熱區聚合查詢擴充。
+- `F02`: 績效頁第一版 UI 呈現。
+- `R06`: 任務量與熱區聚合查詢擴充。
 
 ### P4. 驗收與擴充預留
 
@@ -527,9 +527,9 @@ uuid: c3b7302c6b7d4e3cb9a298ed58b3c4f1
 
 本份 P04 之後，最可能接續的文件如下：
 
-- `FXX`: 績效頁 GUI 與入口按鈕。
-- `RXX`: 統計查詢與 `TaskDBManager` 擴充。
-- `FXX`: 任務量卡片與熱區表格整合。
+- `F01`: 績效頁 GUI 與入口按鈕。
+- `R06`: 統計查詢與 `TaskDBManager` 擴充。
+- `F02`: 任務量卡片與熱區表格整合。
 - `PXX`: 績效頁第二版 KPI 規劃。
 
 可考慮的文件主題範例：
