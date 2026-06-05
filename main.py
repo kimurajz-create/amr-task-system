@@ -32,6 +32,10 @@ from PySide6.QtCore import (
 from TaskDBManager import TaskDBManager
 from UserDBManager import UserDBManager
 from ui_main import Ui_MainWindow
+from performance_dashboard import (
+    PerformanceDashboardController,
+    build_performance_dashboard_snapshot,
+)
 
 # 從轉換後的檔案中引入 UI 類別
 # 注意：這裡假設您的轉換檔案名是 ui_login_window.py 和 ui_admin_panel.py
@@ -1010,6 +1014,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_Status_1.setWordWrap(True)
         self.label_Status_1.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self._adjust_status_area_layout()
+        self.performance_dashboard_controller = PerformanceDashboardController()
 
         ########################################儲存 Manager 實例，以便後續的方法可以使用################################
         self.user_db_manager = user_db_manager
@@ -1498,6 +1503,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         # 將使用者資訊加入菜單
         self.userMenu.addAction(info_action)
+        self.actionPerformanceDashboard = self.userMenu.addAction("Dashboard")
+        self.actionPerformanceDashboard.setShortcut("Ctrl+Shift+D")
+        self.actionPerformanceDashboard.triggered.connect(
+            self.open_performance_dashboard
+        )
+        self.userMenu.addSeparator()
         self.userMenu.addSeparator() # 分隔線
 
         # --- 2. 登出 ---
@@ -1522,6 +1533,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     # ====== 每 n 秒查一次 API 狀態記錄下來給手術室桌機軟體確認用======
+    def get_performance_dashboard_snapshot(self):
+        if not self.task_db_manager:
+            return build_performance_dashboard_snapshot(
+                warning_message="TaskDBManager is not available."
+            )
+
+        try:
+            summary = self.task_db_manager.get_task_status_summary()
+        except Exception as exc:
+            return build_performance_dashboard_snapshot(
+                warning_message=f"Task statistics summary refresh failed: {exc}"
+            )
+
+        return build_performance_dashboard_snapshot(task_status_summary=summary)
+
+    def open_performance_dashboard(self):
+        self.performance_dashboard_controller.open(
+            snapshot_provider=self.get_performance_dashboard_snapshot,
+            parent=self,
+        )
+
     def poll_room_status(self):
         # ⭐ 如果上一輪還沒跑完 → 直接跳過（避免 thread 疊加）
         if self.polling_busy:
