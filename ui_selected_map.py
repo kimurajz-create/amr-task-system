@@ -99,84 +99,6 @@ class Ui_Form_SelectedMap(object):
         self.lineEdit_sm_selectedpoint.setFont(font3)
         self.lineEdit_sm_selectedpoint.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
 "")
-        self.btn_sm_rp1 = QPushButton(Form_SelectedMap)
-        self.btn_sm_rp1.setObjectName(u"btn_sm_rp1")
-        self.btn_sm_rp1.setGeometry(QRect(230, 370, 100, 25))
-        self.btn_sm_rp1.setStyleSheet(u"QPushButton {\n"
-"    /* 1. \u79fb\u9664 3D \u6548\u679c\u548c\u908a\u6846 (\u8b93\u5b83\u770b\u8d77\u4f86\u50cf Label) */\n"
-"   border: none;\n"
-"	background-color: #33B1FF;\n"
-"   color: black;                  /* \u767d\u5b57 */\n"
-"	font-size: 12px; \n"
-"}\n"
-"")
-        self.btn_sm_rp2 = QPushButton(Form_SelectedMap)
-        self.btn_sm_rp2.setObjectName(u"btn_sm_rp2")
-        self.btn_sm_rp2.setGeometry(QRect(230, 440, 100, 25))
-        self.btn_sm_rp2.setStyleSheet(u"QPushButton {\n"
-"    /* 1. \u79fb\u9664 3D \u6548\u679c\u548c\u908a\u6846 (\u8b93\u5b83\u770b\u8d77\u4f86\u50cf Label) */\n"
-"   border: none;\n"
-"	background-color: #33B1FF;\n"
-"   color: black;                  /* \u767d\u5b57 */\n"
-"	font-size: 12px; \n"
-"}\n"
-"")
-        self.btn_sm_rp3 = QPushButton(Form_SelectedMap)
-        self.btn_sm_rp3.setObjectName(u"btn_sm_rp3")
-        self.btn_sm_rp3.setGeometry(QRect(230, 510, 100, 25))
-        self.btn_sm_rp3.setStyleSheet(u"QPushButton {\n"
-"    /* 1. \u79fb\u9664 3D \u6548\u679c\u548c\u908a\u6846 (\u8b93\u5b83\u770b\u8d77\u4f86\u50cf Label) */\n"
-"   border: none;\n"
-"	background-color: #33B1FF;\n"
-"   color: black;                  /* \u767d\u5b57 */\n"
-"	font-size: 12px; \n"
-"}\n"
-"")
-        self.btn_sm_rp4 = QPushButton(Form_SelectedMap)
-        self.btn_sm_rp4.setObjectName(u"btn_sm_rp4")
-        self.btn_sm_rp4.setGeometry(QRect(390, 600, 75, 25))
-        self.btn_sm_rp4.setStyleSheet(u"QPushButton {\n"
-"    /* 1. \u79fb\u9664 3D \u6548\u679c\u548c\u908a\u6846 (\u8b93\u5b83\u770b\u8d77\u4f86\u50cf Label) */\n"
-"   border: none;\n"
-"	background-color: #33B1FF;\n"
-"   color: black;                  /* \u767d\u5b57 */\n"
-"	font-size: 12px; \n"
-"}\n"
-"")
-        self.btn_sm_rp5 = QPushButton(Form_SelectedMap)
-        self.btn_sm_rp5.setObjectName(u"btn_sm_rp5")
-        self.btn_sm_rp5.setGeometry(QRect(510, 600, 75, 25))
-        self.btn_sm_rp5.setStyleSheet(u"QPushButton {\n"
-"    /* 1. \u79fb\u9664 3D \u6548\u679c\u548c\u908a\u6846 (\u8b93\u5b83\u770b\u8d77\u4f86\u50cf Label) */\n"
-"   border: none;\n"
-"	background-color: #33B1FF;\n"
-"   color: black;                  /* \u767d\u5b57 */\n"
-"	font-size: 12px; \n"
-"}\n"
-"")
-        self.btn_sm_rp6 = QPushButton(Form_SelectedMap)
-        self.btn_sm_rp6.setObjectName(u"btn_sm_rp6")
-        self.btn_sm_rp6.setGeometry(QRect(630, 600, 75, 25))
-        self.btn_sm_rp6.setStyleSheet(u"QPushButton {\n"
-"    /* 1. \u79fb\u9664 3D \u6548\u679c\u548c\u908a\u6846 (\u8b93\u5b83\u770b\u8d77\u4f86\u50cf Label) */\n"
-"   border: none;\n"
-"	background-color: #33B1FF;\n"
-"   color: black;                  /* \u767d\u5b57 */\n"
-"	font-size: 12px; \n"
-"}\n"
-"")
-        self.btn_sm_rp7 = QPushButton(Form_SelectedMap)
-        self.btn_sm_rp7.setObjectName(u"btn_sm_rp7")
-        self.btn_sm_rp7.setGeometry(QRect(900, 420, 75, 25))
-        self.btn_sm_rp7.setStyleSheet(u"QPushButton {\n"
-"    /* 1. \u79fb\u9664 3D \u6548\u679c\u548c\u908a\u6846 (\u8b93\u5b83\u770b\u8d77\u4f86\u50cf Label) */\n"
-"   border: none;\n"
-"	background-color: #33B1FF;\n"
-"   color: black;                  /* \u767d\u5b57 */\n"
-"	font-size: 12px; \n"
-"}\n"
-"")
-
         self.retranslateUi(Form_SelectedMap)
 
         QMetaObject.connectSlotsByName(Form_SelectedMap)
@@ -189,13 +111,6 @@ class Ui_Form_SelectedMap(object):
         self.btn_sm_enter.setText(QCoreApplication.translate("Form_SelectedMap", u"\u78ba\u5b9a", None))
         self.label_sm_text1.setText(QCoreApplication.translate("Form_SelectedMap", u"\u5df2\u9078\u64c7:", None))
         self.label_sm_text2.setText(QCoreApplication.translate("Form_SelectedMap", u"\u8acb\u9ede\u9078\u5730\u5716\u8a2d\u5b9a\u76ee\u7684\u5730", None))
-        self.lineEdit_sm_selectedpoint.setText(QCoreApplication.translate("Form_SelectedMap", u"\u6ac3\u53f0", None))
-        self.btn_sm_rp1.setText(QCoreApplication.translate("Form_SelectedMap", u"\u83ef\u9640\u6703\u8b70\u5ba4", None))
-        self.btn_sm_rp2.setText(QCoreApplication.translate("Form_SelectedMap", u"\u6f14\u8b1b\u5ef3_02", None))
-        self.btn_sm_rp3.setText(QCoreApplication.translate("Form_SelectedMap", u"\u6f14\u8b1b\u5ef3_01", None))
-        self.btn_sm_rp4.setText(QCoreApplication.translate("Form_SelectedMap", u"\u6c99\u767c1", None))
-        self.btn_sm_rp5.setText(QCoreApplication.translate("Form_SelectedMap", u"\u6c99\u767c2", None))
-        self.btn_sm_rp6.setText(QCoreApplication.translate("Form_SelectedMap", u"\u6c99\u767c3", None))
-        self.btn_sm_rp7.setText(QCoreApplication.translate("Form_SelectedMap", u"\u6ac3\u53f0", None))
+        self.lineEdit_sm_selectedpoint.setText("")
     # retranslateUi
 

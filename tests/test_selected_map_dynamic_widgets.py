@@ -1,12 +1,15 @@
 import os
 import unittest
+from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QSize
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QComboBox
 
-from main import SelectedMap
+from main import MainWindow, SelectedMap
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class SelectedMapDynamicWidgetTests(unittest.TestCase):
@@ -55,11 +58,11 @@ class SelectedMapDynamicWidgetTests(unittest.TestCase):
         self.app.processEvents()
         return dialog
 
-    def test_dialog_hides_legacy_buttons_and_builds_runtime_widgets(self):
+    def test_dialog_builds_runtime_widgets_without_legacy_button_attrs(self):
         dialog = self._build_dialog()
 
-        self.assertFalse(dialog.btn_sm_rp1.isVisible())
-        self.assertFalse(dialog.btn_sm_rp7.isVisible())
+        self.assertFalse(hasattr(dialog, "btn_sm_rp1"))
+        self.assertFalse(hasattr(dialog, "btn_sm_rp7"))
         self.assertEqual(2, len(dialog.dynamic_location_buttons))
         self.assertEqual(
             ["dynamic_alpha", "dynamic_beta"],
@@ -96,6 +99,32 @@ class SelectedMapDynamicWidgetTests(unittest.TestCase):
         self.assertEqual([], dialog.dynamic_location_buttons)
         self.assertTrue(dialog.empty_state_label.isVisible())
         self.assertFalse(dialog.btn_sm_enter.isEnabled())
+
+    def test_selected_map_emit_can_drive_target_dropdown_selection(self):
+        dialog = self._build_dialog()
+        target_dropdown = QComboBox()
+        target_dropdown.addItem("Placeholder")
+        target_dropdown.addItem("Alpha")
+        target_dropdown.addItem("Beta")
+
+        dialog.location_selected.connect(
+            lambda location_name: MainWindow._set_current_dropdown_value(
+                None,
+                location_name,
+                target_dropdown,
+            )
+        )
+
+        dialog.dynamic_location_buttons[1].click()
+        dialog._confirm_selection()
+
+        self.assertEqual("Beta", target_dropdown.currentText())
+
+    def test_selected_map_ui_source_no_longer_declares_legacy_buttons(self):
+        selected_map_ui_text = (REPO_ROOT / "selected_map.ui").read_text(encoding="utf-8")
+
+        self.assertNotIn('name="btn_sm_rp1"', selected_map_ui_text)
+        self.assertNotIn('name="btn_sm_rp7"', selected_map_ui_text)
 
 
 if __name__ == "__main__":

@@ -95,6 +95,15 @@ DEFAULT_SELECTED_MAP_CONFIG = {
     "selectable_points": [],
 }
 
+SELECTED_MAP_POINT_BUTTON_STYLE = (
+    "QPushButton {\n"
+    "   border: none;\n"
+    "   background-color: #33B1FF;\n"
+    "   color: black;\n"
+    "   font-size: 12px;\n"
+    "}\n"
+)
+
 
 def resolve_runtime_path(relative_path):
     # 把像 picture/xxx.png 這種相對路徑轉成實際可讀取的路徑，
@@ -951,12 +960,7 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
         self.selected_map_design_size = (0, 0)
         self.selected_map_empty_state_text = DEFAULT_SELECTED_MAP_CONFIG["empty_state_text"]
         self.dynamic_location_buttons = []
-        self.legacy_location_buttons = [
-            self.btn_sm_rp1, self.btn_sm_rp2, self.btn_sm_rp3,
-            self.btn_sm_rp4, self.btn_sm_rp5, self.btn_sm_rp6,
-            self.btn_sm_rp7,
-        ]
-        self.dynamic_button_style = self.btn_sm_rp1.styleSheet()
+        self.dynamic_button_style = SELECTED_MAP_POINT_BUTTON_STYLE
         self.empty_state_label = QLabel(self.label_sm_map_1)
         self.empty_state_label.setAlignment(Qt.AlignCenter)
         self.empty_state_label.setWordWrap(True)
@@ -969,8 +973,6 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
         # 小地圖不再固定寫死公司版圖片，而是改由目前場域設定決定。
         self.set_map_image(map_image_path)
 
-        # 連接地圖上的地點按鈕
-        self._hide_legacy_buttons()
         # 連接「確定」按鈕到發送信號的方法
         self.btn_sm_enter.clicked.connect(self._confirm_selection)
         self.btn_sm_cancel.clicked.connect(self.close)
@@ -1005,11 +1007,6 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
         self.selected_location = location_name
         self.selected_location_label = display_text
         self.btn_sm_enter.setEnabled(True)
-
-    def _hide_legacy_buttons(self):
-        for button in self.legacy_location_buttons:
-            button.hide()
-            button.setEnabled(False)
 
     def _clear_selectable_widgets(self):
         for button in self.dynamic_location_buttons:
@@ -2968,14 +2965,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             mir_code_d = priority_tasks[0]['target_point']      
             mir_code = priority_tasks[0]['mission_content']
 
-            mir_code_s = MIR_LOCATION_MAP.get(mir_code_s)
-            mir_code_d = MIR_LOCATION_MAP.get(mir_code_d)
-            mir_code = MIR_MISSION_GROUP_MAP.get(mir_code)
+            mir_code_s = self.MIR_LOCATION_MAP.get(mir_code_s)
+            mir_code_d = self.MIR_LOCATION_MAP.get(mir_code_d)
+            mir_code = self.MIR_MISSION_GROUP_MAP.get(mir_code)
 
             # mir_code_s = self.cmb_location2.currentData()
             # mir_code_d = self.cmb_location.currentData()
             # mir_code = self.cmb_mission.currentData()
-            charge_code = MIR_LOCATION_MAP.get(CHARGING_STATION_NAME)
+            charge_code = self.MIR_LOCATION_MAP.get(self.CHARGING_STATION_NAME)
 
             if "Charge" in mir_code_d:
                 if mir_code and mir_code_s and mir_code_d:

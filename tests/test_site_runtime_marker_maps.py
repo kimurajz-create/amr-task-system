@@ -167,6 +167,14 @@ class SiteRuntimeMarkerMapTests(unittest.TestCase):
                     self.assertTrue(point["width_px"] > 0)
                     self.assertTrue(point["height_px"] > 0)
 
+    def test_site_profiles_no_longer_include_legacy_map_button_ids(self):
+        for profile_name in ("company", "hospital"):
+            with self.subTest(profile=profile_name):
+                site_config = load_site_profile(profile_name)
+
+                for location in site_config["locations"]:
+                    self.assertNotIn("map_button_id", location)
+
     def test_selected_map_runtime_falls_back_label_marker_and_order(self):
         site_config = {
             "assets": {"selected_map": "picture/example.png"},

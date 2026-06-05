@@ -298,7 +298,6 @@
       "display_name": "手術室1",
       "marker_id": "label_rp_1",
       "room_id": "OR01",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -306,7 +305,6 @@
       "display_name": "手術室2",
       "marker_id": "label_rp_2",
       "room_id": "OR02",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -314,7 +312,6 @@
       "display_name": "手術室3",
       "marker_id": "label_rp_3",
       "room_id": "OR03",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -322,7 +319,6 @@
       "display_name": "手術室5",
       "marker_id": "label_rp_5",
       "room_id": "OR05",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -330,7 +326,6 @@
       "display_name": "手術室6",
       "marker_id": "label_rp_6",
       "room_id": "OR06",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -338,7 +333,6 @@
       "display_name": "手術室7",
       "marker_id": "label_rp_7",
       "room_id": "OR07",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -346,7 +340,6 @@
       "display_name": "手術室8",
       "marker_id": "label_rp_8",
       "room_id": "OR08",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -354,7 +347,6 @@
       "display_name": "手術室9",
       "marker_id": "label_rp_9",
       "room_id": "OR09",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -362,7 +354,6 @@
       "display_name": "手術室10",
       "marker_id": "label_rp_10",
       "room_id": "OR10",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -370,7 +361,6 @@
       "display_name": "手術室11",
       "marker_id": "label_rp_11",
       "room_id": "OR11",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -378,7 +368,6 @@
       "display_name": "手術室12",
       "marker_id": "label_rp_12",
       "room_id": "OR12",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -386,7 +375,6 @@
       "display_name": "手術室13",
       "marker_id": "label_rp_13",
       "room_id": "OR13",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -394,7 +382,6 @@
       "display_name": "充電樁",
       "marker_id": "label_charge_station",
       "room_id": null,
-      "map_button_id": null,
       "is_charging_station": true
     },
     {
@@ -402,7 +389,6 @@
       "display_name": "滅菌室",
       "marker_id": "label_sr_1",
       "room_id": "SR01",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -410,7 +396,6 @@
       "display_name": "滅菌室2",
       "marker_id": "label_sr_2",
       "room_id": "SR02",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -418,7 +403,6 @@
       "display_name": "車架位置(手術室1)",
       "marker_id": "label_rp_1",
       "room_id": "OR01",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -426,7 +410,6 @@
       "display_name": "車架位置(手術室2)",
       "marker_id": "label_rp_2",
       "room_id": "OR02",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -434,7 +417,6 @@
       "display_name": "車架位置(手術室3)",
       "marker_id": "label_rp_3",
       "room_id": "OR03",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -442,7 +424,6 @@
       "display_name": "車架位置(手術室5)",
       "marker_id": "label_rp_5",
       "room_id": "OR05",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -450,7 +431,6 @@
       "display_name": "車架位置(手術室6)",
       "marker_id": "label_rp_6",
       "room_id": "OR06",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -458,7 +438,6 @@
       "display_name": "車架位置(手術室7)",
       "marker_id": "label_rp_7",
       "room_id": "OR07",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -466,7 +445,6 @@
       "display_name": "車架位置(手術室8)",
       "marker_id": "label_rp_8",
       "room_id": "OR08",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -474,7 +452,6 @@
       "display_name": "車架位置(手術室9)",
       "marker_id": "label_rp_9",
       "room_id": "OR09",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -482,7 +459,6 @@
       "display_name": "車架位置(手術室10)",
       "marker_id": "label_rp_10",
       "room_id": "OR10",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -490,7 +466,6 @@
       "display_name": "車架位置(手術室11)",
       "marker_id": "label_rp_11",
       "room_id": "OR11",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -498,7 +473,6 @@
       "display_name": "車架位置(手術室12)",
       "marker_id": "label_rp_12",
       "room_id": "OR12",
-      "map_button_id": null,
       "is_charging_station": false
     },
     {
@@ -506,7 +480,6 @@
       "display_name": "車架位置(手術室13)",
       "marker_id": "label_rp_13",
       "room_id": "OR13",
-      "map_button_id": null,
       "is_charging_station": false
     }
   ],

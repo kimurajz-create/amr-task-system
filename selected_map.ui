@@ -39,9 +39,6 @@
      <height>672</height>
     </rect>
    </property>
-   <property name="styleSheet">
-    <string notr="true"/>
-   </property>
    <property name="text">
     <string/>
    </property>
@@ -64,22 +61,21 @@
    <property name="font">
     <font>
      <family>Noto Sans TC</family>
-     <pointsize>-1</pointsize>
      <weight>75</weight>
      <bold>true</bold>
     </font>
    </property>
    <property name="styleSheet">
     <string notr="true">QPushButton {
-	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 24px;               /* 字體大小 */
+    background-color: rgb(72, 72, 72);
+    color: white;
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 24px;
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;
 }</string>
    </property>
    <property name="text">
@@ -98,22 +94,21 @@ QPushButton:hover {
    <property name="font">
     <font>
      <family>Noto Sans TC</family>
-     <pointsize>-1</pointsize>
      <weight>75</weight>
      <bold>true</bold>
     </font>
    </property>
    <property name="styleSheet">
     <string notr="true">QPushButton {
-	background-color: rgb(72, 72, 72);
-    color: white;                  /* 白字 */
-    border-radius: 10px;           /* 圓角 */
-    padding: 6px 12px;             /* 內距 */
-    font-size: 24px;               /* 字體大小 */
+    background-color: rgb(72, 72, 72);
+    color: white;
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 24px;
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 滑鼠移上去變色 */
+    background-color: #1E70BF;
 }</string>
    </property>
    <property name="text">
@@ -132,13 +127,12 @@ QPushButton:hover {
    <property name="font">
     <font>
      <family>Noto Sans TC</family>
-     <pointsize>-1</pointsize>
      <weight>50</weight>
      <bold>false</bold>
     </font>
    </property>
    <property name="styleSheet">
-    <string notr="true">color: white;                  /* 白字 */
+    <string notr="true">color: white;
 font-size: 16px</string>
    </property>
    <property name="text">
@@ -163,8 +157,7 @@ font-size: 16px</string>
     </font>
    </property>
    <property name="styleSheet">
-    <string notr="true">color: white;                  /* 白字 */
-</string>
+    <string notr="true">color: white;</string>
    </property>
    <property name="text">
     <string>請點選地圖設定目的地</string>
@@ -188,172 +181,10 @@ font-size: 16px</string>
     </font>
    </property>
    <property name="styleSheet">
-    <string notr="true">color: white;                  /* 白字 */
-</string>
+    <string notr="true">color: white;</string>
    </property>
    <property name="text">
-    <string>櫃台</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btn_sm_rp1">
-   <property name="geometry">
-    <rect>
-     <x>230</x>
-     <y>370</y>
-     <width>100</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QPushButton {
-    /* 1. 移除 3D 效果和邊框 (讓它看起來像 Label) */
-   border: none;
-	background-color: #33B1FF;
-   color: black;                  /* 白字 */
-	font-size: 12px; 
-}
-</string>
-   </property>
-   <property name="text">
-    <string>華陀會議室</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btn_sm_rp2">
-   <property name="geometry">
-    <rect>
-     <x>230</x>
-     <y>440</y>
-     <width>100</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QPushButton {
-    /* 1. 移除 3D 效果和邊框 (讓它看起來像 Label) */
-   border: none;
-	background-color: #33B1FF;
-   color: black;                  /* 白字 */
-	font-size: 12px; 
-}
-</string>
-   </property>
-   <property name="text">
-    <string>演講廳_02</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btn_sm_rp3">
-   <property name="geometry">
-    <rect>
-     <x>230</x>
-     <y>510</y>
-     <width>100</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QPushButton {
-    /* 1. 移除 3D 效果和邊框 (讓它看起來像 Label) */
-   border: none;
-	background-color: #33B1FF;
-   color: black;                  /* 白字 */
-	font-size: 12px; 
-}
-</string>
-   </property>
-   <property name="text">
-    <string>演講廳_01</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btn_sm_rp4">
-   <property name="geometry">
-    <rect>
-     <x>390</x>
-     <y>600</y>
-     <width>75</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QPushButton {
-    /* 1. 移除 3D 效果和邊框 (讓它看起來像 Label) */
-   border: none;
-	background-color: #33B1FF;
-   color: black;                  /* 白字 */
-	font-size: 12px; 
-}
-</string>
-   </property>
-   <property name="text">
-    <string>沙發1</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btn_sm_rp5">
-   <property name="geometry">
-    <rect>
-     <x>510</x>
-     <y>600</y>
-     <width>75</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QPushButton {
-    /* 1. 移除 3D 效果和邊框 (讓它看起來像 Label) */
-   border: none;
-	background-color: #33B1FF;
-   color: black;                  /* 白字 */
-	font-size: 12px; 
-}
-</string>
-   </property>
-   <property name="text">
-    <string>沙發2</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btn_sm_rp6">
-   <property name="geometry">
-    <rect>
-     <x>630</x>
-     <y>600</y>
-     <width>75</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QPushButton {
-    /* 1. 移除 3D 效果和邊框 (讓它看起來像 Label) */
-   border: none;
-	background-color: #33B1FF;
-   color: black;                  /* 白字 */
-	font-size: 12px; 
-}
-</string>
-   </property>
-   <property name="text">
-    <string>沙發3</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="btn_sm_rp7">
-   <property name="geometry">
-    <rect>
-     <x>900</x>
-     <y>420</y>
-     <width>75</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">QPushButton {
-    /* 1. 移除 3D 效果和邊框 (讓它看起來像 Label) */
-   border: none;
-	background-color: #33B1FF;
-   color: black;                  /* 白字 */
-	font-size: 12px; 
-}
-</string>
-   </property>
-   <property name="text">
-    <string>櫃台</string>
+    <string/>
    </property>
   </widget>
  </widget>
