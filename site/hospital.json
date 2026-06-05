@@ -13,6 +13,146 @@
     "image_pts": [[892, 411], [325, 361], [325, 113]],
     "world_pts": [[-7.209, 18.944], [27.55, 15.386], [27.683, -1.588]]
   },
+  "selected_map": {
+    "_comment": "P03 P1 selected-map schema. Hospital currently exposes robot-position points only.",
+    "design_width_px": 1024,
+    "design_height_px": 576,
+    "empty_state_text": "No selectable points are configured for this site.",
+    "selectable_points": [
+      {
+        "point_id": "or01_robot",
+        "location_mir_name": "MH_Robot position OR 1",
+        "marker_id": "label_rp_1",
+        "x_px": 98,
+        "y_px": 270,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 10,
+        "visible": true
+      },
+      {
+        "point_id": "or02_robot",
+        "location_mir_name": "MH_Robot position OR 2",
+        "marker_id": "label_rp_2",
+        "x_px": 98,
+        "y_px": 396,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 20,
+        "visible": true
+      },
+      {
+        "point_id": "or03_robot",
+        "location_mir_name": "MH_Robot position OR 3",
+        "marker_id": "label_rp_3",
+        "x_px": 402,
+        "y_px": 446,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 30,
+        "visible": true
+      },
+      {
+        "point_id": "or05_robot",
+        "location_mir_name": "MH_Robot position OR 5",
+        "marker_id": "label_rp_5",
+        "x_px": 869,
+        "y_px": 261,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 50,
+        "visible": true
+      },
+      {
+        "point_id": "or06_robot",
+        "location_mir_name": "MH_Robot position OR 6",
+        "marker_id": "label_rp_6",
+        "x_px": 547,
+        "y_px": 261,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 60,
+        "visible": true
+      },
+      {
+        "point_id": "or07_robot",
+        "location_mir_name": "MH_Robot position OR 7",
+        "marker_id": "label_rp_7",
+        "x_px": 547,
+        "y_px": 446,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 70,
+        "visible": true
+      },
+      {
+        "point_id": "or08_robot",
+        "location_mir_name": "MH_Robot position OR 8",
+        "marker_id": "label_rp_8",
+        "x_px": 797,
+        "y_px": 446,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 80,
+        "visible": true
+      },
+      {
+        "point_id": "or09_robot",
+        "location_mir_name": "MH_Robot position OR 9",
+        "marker_id": "label_rp_9",
+        "x_px": 672,
+        "y_px": 446,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 90,
+        "visible": true
+      },
+      {
+        "point_id": "or10_robot",
+        "location_mir_name": "MH_Robot position OR 10",
+        "marker_id": "label_rp_10",
+        "x_px": 376,
+        "y_px": 124,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 100,
+        "visible": true
+      },
+      {
+        "point_id": "or11_robot",
+        "location_mir_name": "MH_Robot position OR 11",
+        "marker_id": "label_rp_11",
+        "x_px": 644,
+        "y_px": 261,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 110,
+        "visible": true
+      },
+      {
+        "point_id": "or12_robot",
+        "location_mir_name": "MH_Robot position OR 12",
+        "marker_id": "label_rp_12",
+        "x_px": 743,
+        "y_px": 261,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 120,
+        "visible": true
+      },
+      {
+        "point_id": "or13_robot",
+        "location_mir_name": "MH_Robot position OR 13",
+        "marker_id": "label_rp_13",
+        "x_px": 755,
+        "y_px": 95,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 130,
+        "visible": true
+      }
+    ]
+  },
   "_comment_markers": "markers 定義主地圖 marker 的幾何資訊。這一版先依醫院平面圖標出可用初始位置，後續可在 P2/P3 再微調。",
   "markers": [
     {

@@ -20,6 +20,8 @@ This module lets the same application run against different physical sites or de
 - mission display names
 - marker geometry specifications
 - marker bindings
+- selected-map design geometry
+- selected-map selectable-point bindings
 - room identifiers
 - charging-station designation
 
@@ -44,6 +46,7 @@ The active site profile is resolved in this order:
 - UI combo boxes and labels
 - task scheduler mission/location translation
 - map marker highlighting
+- selected-map point selection
 - room heartbeat mapping
 - charging-station behavior
 
@@ -61,6 +64,9 @@ The active site profile is resolved in this order:
 - mission display-to-MiR mappings
 - marker and room lookup tables
 - marker geometry maps keyed by `marker_id`
+- selected-map asset path and design size
+- selected-map points keyed by `point_id`
+- selected-map config warnings
 - required mission-code set for scheduler-related logic
 
 ## Boundaries
@@ -82,7 +88,44 @@ A future schema document should define the expected shape for:
 - `assets`
 - `calibration`
 - `markers`
+- `selected_map`
 - `locations`
 - `missions`
+
+## SelectedMap Contract
+
+`site/<profile>.json` may define a top-level `selected_map` block:
+
+- `design_width_px`
+- `design_height_px`
+- `empty_state_text`
+- `selectable_points`
+
+Each `selectable_points[*]` record defines:
+
+- `point_id`: unique runtime identifier
+- `location_mir_name`: reference to `locations[*].mir_name`
+- `marker_id`: optional explicit marker reference
+- `label`: optional UI override
+- `x_px`, `y_px`, `width_px`, `height_px`: clickable geometry in selected-map design space
+- `order`: optional explicit ordering key
+- `visible`: optional flag, defaults to visible
+
+`build_site_runtime_maps()` now exposes these selected-map outputs:
+
+- `selected_map_asset_path`
+- `selected_map_design_size`
+- `selected_map_empty_state_text`
+- `selected_map_points`
+- `selected_map_points_by_id`
+- `selected_map_location_names`
+- `selected_map_config_warnings`
+
+Runtime builder rules:
+
+- invalid or unresolved selected-map points are skipped with warnings instead of crashing
+- `selected_label` falls back to the referenced location display name
+- `marker_id` falls back to the referenced location's `marker_id`
+- hidden points (`visible: false`) are omitted from runtime point lists
 
 That schema would make adding new sites safer and easier.

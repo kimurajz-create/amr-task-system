@@ -13,6 +13,91 @@
     "image_pts": [[933, 552], [567, 1381], [2635, 950]],
     "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]]
   },
+  "selected_map": {
+    "_comment": "P03 P1 selected-map schema. P2/P3 will consume this runtime contract instead of fixed btn_sm_rp* wiring.",
+    "design_width_px": 3216,
+    "design_height_px": 1824,
+    "empty_state_text": "No selectable points are configured for this site.",
+    "selectable_points": [
+      {
+        "point_id": "or01_robot",
+        "location_mir_name": "LbV2_Robot position Hua",
+        "marker_id": "label_rp_1",
+        "x_px": 741,
+        "y_px": 690,
+        "width_px": 216,
+        "height_px": 86,
+        "order": 10,
+        "visible": true
+      },
+      {
+        "point_id": "or02_robot",
+        "location_mir_name": "LbV2_Robot position lecture hall 02",
+        "marker_id": "label_rp_2",
+        "x_px": 760,
+        "y_px": 888,
+        "width_px": 216,
+        "height_px": 86,
+        "order": 20,
+        "visible": true
+      },
+      {
+        "point_id": "or03_robot",
+        "location_mir_name": "LbV2_Robot position lecture hall 01",
+        "marker_id": "label_rp_3",
+        "x_px": 760,
+        "y_px": 1188,
+        "width_px": 216,
+        "height_px": 86,
+        "order": 30,
+        "visible": true
+      },
+      {
+        "point_id": "or07_robot",
+        "location_mir_name": "LbV2_Robot position Sofa1",
+        "marker_id": "label_rp_4",
+        "x_px": 1120,
+        "y_px": 1368,
+        "width_px": 216,
+        "height_px": 86,
+        "order": 40,
+        "visible": true
+      },
+      {
+        "point_id": "or06_robot",
+        "location_mir_name": "LbV2_Robot position Sofa2",
+        "marker_id": "label_rp_5",
+        "x_px": 1420,
+        "y_px": 1368,
+        "width_px": 216,
+        "height_px": 86,
+        "order": 50,
+        "visible": true
+      },
+      {
+        "point_id": "or05_robot",
+        "location_mir_name": "LbV2_Robot position Sofa3",
+        "marker_id": "label_rp_6",
+        "x_px": 1660,
+        "y_px": 1368,
+        "width_px": 216,
+        "height_px": 86,
+        "order": 60,
+        "visible": true
+      },
+      {
+        "point_id": "or08_robot",
+        "location_mir_name": "LbV2_Robot position Reception V2",
+        "marker_id": "label_rp_7",
+        "x_px": 2500,
+        "y_px": 918,
+        "width_px": 216,
+        "height_px": 86,
+        "order": 70,
+        "visible": true
+      }
+    ]
+  },
   "_comment_markers": "markers 定義主地圖 marker 的幾何資訊，locations[*].marker_id 只負責引用這些 marker_id。",
   "markers": [
     {

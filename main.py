@@ -88,6 +88,13 @@ DEFAULT_SITE_CALIBRATION = {
     "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]],
 }
 
+DEFAULT_SELECTED_MAP_CONFIG = {
+    "design_width_px": 0,
+    "design_height_px": 0,
+    "empty_state_text": "No selectable points are configured for this site.",
+    "selectable_points": [],
+}
+
 
 def resolve_runtime_path(relative_path):
     # 把像 picture/xxx.png 這種相對路徑轉成實際可讀取的路徑，
@@ -161,6 +168,7 @@ def load_site_config(site_profile=None):
             "site_id": "company",
             "assets": DEFAULT_SITE_ASSETS.copy(),
             "calibration": DEFAULT_SITE_CALIBRATION.copy(),
+            "selected_map": DEFAULT_SELECTED_MAP_CONFIG.copy(),
             "locations": [],
             "missions": [],
         }
@@ -177,6 +185,7 @@ def load_site_config(site_profile=None):
             "site_id": "company",
             "assets": DEFAULT_SITE_ASSETS.copy(),
             "calibration": DEFAULT_SITE_CALIBRATION.copy(),
+            "selected_map": DEFAULT_SELECTED_MAP_CONFIG.copy(),
             "locations": [],
             "missions": [],
         }
@@ -188,6 +197,13 @@ def load_site_config(site_profile=None):
     calibration = DEFAULT_SITE_CALIBRATION.copy()
     calibration.update(site_config.get("calibration", {}))
     site_config["calibration"] = calibration
+
+    selected_map_config = DEFAULT_SELECTED_MAP_CONFIG.copy()
+    selected_map_config.update(site_config.get("selected_map", {}))
+    selected_map_config["selectable_points"] = list(
+        selected_map_config.get("selectable_points") or []
+    )
+    site_config["selected_map"] = selected_map_config
 
     # 這三個欄位是新 schema。
     # 就算 hospital 還沒補資料，也先保證程式拿得到空陣列，不會直接噴錯。
@@ -329,6 +345,123 @@ def build_marker_specs_by_id(site_config):
     return marker_specs_by_id, marker_config_warnings
 
 
+def _coerce_int(value):
+    if isinstance(value, bool):
+        return None
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _build_selected_map_runtime(
+    site_config,
+    user_location_map,
+    location_to_marker,
+):
+    selected_map_config = site_config.get("selected_map") or {}
+    design_width_px = _coerce_int(selected_map_config.get("design_width_px")) or 0
+    design_height_px = _coerce_int(selected_map_config.get("design_height_px")) or 0
+    empty_state_text = (
+        selected_map_config.get("empty_state_text")
+        or DEFAULT_SELECTED_MAP_CONFIG["empty_state_text"]
+    )
+    selectable_points = selected_map_config.get("selectable_points") or []
+
+    selected_map_points = []
+    selected_map_points_by_id = {}
+    selected_map_config_warnings = []
+
+    for index, point in enumerate(selectable_points, start=1):
+        point_id = point.get("point_id")
+        if not point_id:
+            selected_map_config_warnings.append(
+                f"selected_map.selectable_points[{index}] is missing point_id."
+            )
+            continue
+        if point_id in selected_map_points_by_id:
+            selected_map_config_warnings.append(
+                f"selected_map point_id '{point_id}' is duplicated."
+            )
+            continue
+
+        location_mir_name = point.get("location_mir_name")
+        if not location_mir_name:
+            selected_map_config_warnings.append(
+                f"selected_map point '{point_id}' is missing location_mir_name."
+            )
+            continue
+
+        location_display_name = user_location_map.get(location_mir_name)
+        if not location_display_name:
+            selected_map_config_warnings.append(
+                f"selected_map point '{point_id}' references unknown "
+                f"location_mir_name '{location_mir_name}'."
+            )
+            continue
+
+        x_px = _coerce_int(point.get("x_px"))
+        y_px = _coerce_int(point.get("y_px"))
+        width_px = _coerce_int(point.get("width_px"))
+        height_px = _coerce_int(point.get("height_px"))
+        if None in (x_px, y_px, width_px, height_px):
+            selected_map_config_warnings.append(
+                f"selected_map point '{point_id}' has non-integer geometry."
+            )
+            continue
+        if width_px <= 0 or height_px <= 0:
+            selected_map_config_warnings.append(
+                f"selected_map point '{point_id}' has non-positive geometry."
+            )
+            continue
+
+        visible = point.get("visible", True) is not False
+        if not visible:
+            continue
+
+        runtime_point = {
+            "point_id": point_id,
+            "location_mir_name": location_mir_name,
+            "location_display_name": location_display_name,
+            "selected_label": point.get("label") or location_display_name,
+            "marker_id": (
+                point.get("marker_id")
+                or location_to_marker.get(location_display_name)
+            ),
+            "x_px": x_px,
+            "y_px": y_px,
+            "width_px": width_px,
+            "height_px": height_px,
+            "order": _coerce_int(point.get("order")),
+            "visible": True,
+        }
+        selected_map_points.append(runtime_point)
+        selected_map_points_by_id[point_id] = runtime_point
+
+    selected_map_points.sort(
+        key=lambda point: (
+            point["order"] is None,
+            point["order"] if point["order"] is not None else point["selected_label"],
+            point["location_mir_name"],
+        )
+    )
+
+    return {
+        "selected_map_asset_path": resolve_runtime_path(
+            site_config.get("assets", {}).get("selected_map")
+        ),
+        "selected_map_design_size": (design_width_px, design_height_px),
+        "selected_map_empty_state_text": empty_state_text,
+        "selected_map_points": selected_map_points,
+        "selected_map_points_by_id": selected_map_points_by_id,
+        "selected_map_location_names": [
+            point["location_display_name"] for point in selected_map_points
+        ],
+        "selected_map_config_warnings": selected_map_config_warnings,
+    }
+
+
 def build_site_runtime_maps(site_config):
     """
     將 site/<profile>.json 的新結構，轉回目前程式既有邏輯可直接使用的 map。
@@ -352,6 +485,13 @@ def build_site_runtime_maps(site_config):
         "marker_location_names_by_id": {},
         "locations_without_markers": [],
         "marker_config_warnings": [],
+        "selected_map_asset_path": None,
+        "selected_map_design_size": (0, 0),
+        "selected_map_empty_state_text": DEFAULT_SELECTED_MAP_CONFIG["empty_state_text"],
+        "selected_map_points": [],
+        "selected_map_points_by_id": {},
+        "selected_map_location_names": [],
+        "selected_map_config_warnings": [],
     }
 
     location_records = site_config.get("locations") or []
@@ -435,6 +575,14 @@ def build_site_runtime_maps(site_config):
         runtime_maps["mir_mission_group_map"] = {v: k for k, v in user_mission_group_map.items()}
     if required_mission_codes:
         runtime_maps["required_mission_codes"] = required_mission_codes
+
+    runtime_maps.update(
+        _build_selected_map_runtime(
+            site_config,
+            runtime_maps["user_location_map"],
+            runtime_maps["location_to_marker"],
+        )
+    )
 
     return runtime_maps
 
