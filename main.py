@@ -945,15 +945,37 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
     def __init__(self, map_image_path=None):
         super().__init__()
         self.setupUi(self)
+        self.selected_location = ""
+        self.selected_location_label = ""
+        self.selected_map_runtime_points = []
+        self.selected_map_design_size = (0, 0)
+        self.selected_map_empty_state_text = DEFAULT_SELECTED_MAP_CONFIG["empty_state_text"]
+        self.dynamic_location_buttons = []
+        self.legacy_location_buttons = [
+            self.btn_sm_rp1, self.btn_sm_rp2, self.btn_sm_rp3,
+            self.btn_sm_rp4, self.btn_sm_rp5, self.btn_sm_rp6,
+            self.btn_sm_rp7,
+        ]
+        self.dynamic_button_style = self.btn_sm_rp1.styleSheet()
+        self.empty_state_label = QLabel(self.label_sm_map_1)
+        self.empty_state_label.setAlignment(Qt.AlignCenter)
+        self.empty_state_label.setWordWrap(True)
+        self.empty_state_label.setStyleSheet(
+            "color: white; background-color: rgba(0, 0, 0, 110);"
+            " border: 1px dashed rgba(255, 255, 255, 120); padding: 16px;"
+        )
+        self.empty_state_label.hide()
 
         # 小地圖不再固定寫死公司版圖片，而是改由目前場域設定決定。
         self.set_map_image(map_image_path)
 
         # 連接地圖上的地點按鈕
-        self._connect_location_buttons()
+        self._hide_legacy_buttons()
         # 連接「確定」按鈕到發送信號的方法
         self.btn_sm_enter.clicked.connect(self._confirm_selection)
         self.btn_sm_cancel.clicked.connect(self.close)
+        self.lineEdit_sm_selectedpoint.setText("")
+        self.btn_sm_enter.setEnabled(False)
 
     def set_map_image(self, map_image_path):
         if not map_image_path:
@@ -968,16 +990,119 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
 
         self.label_sm_map_1.setPixmap(map_pixmap)
         self.label_sm_map_1.setScaledContents(True)
+        self._position_selectable_widgets()
+        self._show_empty_state_if_needed()
 
-    def _update_selected_point(self, location_name):
+    def _update_selected_point(self, location_name, selected_label=None):
         """
         槽函數：接收地點名稱，並更新結果顯示框
         """
         # 將按鈕文字設定到 QLineEdit 中
-        self.lineEdit_sm_selectedpoint.setText(location_name)
+        display_text = selected_label or location_name
+        self.lineEdit_sm_selectedpoint.setText(display_text)
         
         # 同時儲存選擇結果，供「確定」按鈕使用
         self.selected_location = location_name
+        self.selected_location_label = display_text
+        self.btn_sm_enter.setEnabled(True)
+
+    def _hide_legacy_buttons(self):
+        for button in self.legacy_location_buttons:
+            button.hide()
+            button.setEnabled(False)
+
+    def _clear_selectable_widgets(self):
+        for button in self.dynamic_location_buttons:
+            button.deleteLater()
+        self.dynamic_location_buttons = []
+
+    def _get_selected_map_source_size(self):
+        design_width, design_height = self.selected_map_design_size
+        if design_width > 0 and design_height > 0:
+            return design_width, design_height
+
+        pixmap = self.label_sm_map_1.pixmap()
+        if pixmap and not pixmap.isNull():
+            return pixmap.width(), pixmap.height()
+
+        return 0, 0
+
+    def _build_selectable_widgets(self):
+        self._clear_selectable_widgets()
+
+        for point in self.selected_map_runtime_points:
+            button = QPushButton(point["selected_label"], self.label_sm_map_1)
+            button.setObjectName(f"dynamic_{point['point_id']}")
+            button.setStyleSheet(self.dynamic_button_style)
+            button.clicked.connect(
+                lambda checked=False, location_name=point["location_display_name"], selected_label=point["selected_label"]:
+                self._update_selected_point(location_name, selected_label)
+            )
+            button.show()
+            self.dynamic_location_buttons.append(button)
+
+        self._position_selectable_widgets()
+        self._show_empty_state_if_needed()
+
+    def _position_selectable_widgets(self):
+        source_width, source_height = self._get_selected_map_source_size()
+        display_width = self.label_sm_map_1.width()
+        display_height = self.label_sm_map_1.height()
+
+        for button, point in zip(self.dynamic_location_buttons, self.selected_map_runtime_points):
+            x_px, y_px = scale_point_to_display(
+                point["x_px"],
+                point["y_px"],
+                source_width,
+                source_height,
+                display_width,
+                display_height,
+            )
+            width_px = max(
+                1,
+                int(round(point["width_px"] * display_width / source_width))
+                if source_width > 0 and display_width > 0
+                else 1,
+            )
+            height_px = max(
+                1,
+                int(round(point["height_px"] * display_height / source_height))
+                if source_height > 0 and display_height > 0
+                else 1,
+            )
+            button.setGeometry(x_px, y_px, width_px, height_px)
+
+    def _show_empty_state_if_needed(self):
+        self.empty_state_label.setGeometry(self.label_sm_map_1.rect())
+        has_points = bool(self.dynamic_location_buttons)
+        self.empty_state_label.setText(self.selected_map_empty_state_text)
+        self.empty_state_label.setVisible(not has_points)
+
+        if has_points:
+            for button in self.dynamic_location_buttons:
+                button.raise_()
+        else:
+            self.empty_state_label.raise_()
+
+        if not self.selected_location:
+            self.btn_sm_enter.setEnabled(False)
+
+    def set_selected_map_runtime(self, runtime_points=None, design_size=None, empty_state_text=None):
+        self.selected_map_runtime_points = list(runtime_points or [])
+        self.selected_map_design_size = tuple(design_size or (0, 0))
+        self.selected_map_empty_state_text = (
+            empty_state_text or DEFAULT_SELECTED_MAP_CONFIG["empty_state_text"]
+        )
+        self.selected_location = ""
+        self.selected_location_label = ""
+        self.lineEdit_sm_selectedpoint.clear()
+        self.btn_sm_enter.setEnabled(False)
+        self._build_selectable_widgets()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._position_selectable_widgets()
+        self._show_empty_state_if_needed()
 
     def _connect_location_buttons(self):
         """
@@ -1002,9 +1127,8 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
 
     def _confirm_selection(self):
         #「確定」按鈕的槽函數，發射信號並關閉視窗 selected_map.ui
-        selected_text = self.lineEdit_sm_selectedpoint.text()
-        if selected_text:
-            self.location_selected.emit(selected_text)
+        if self.selected_location:
+            self.location_selected.emit(self.selected_location)
         self.close()
 
 
@@ -1252,6 +1376,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 之後只要切 site_profile 就能換圖，不必再改程式。
         selected_map_path = resolve_runtime_path(self.site_assets.get("selected_map"))
         self.map_dialog = SelectedMap(selected_map_path) 
+        self.map_dialog.set_selected_map_runtime(
+            runtime_points=self.site_runtime_maps["selected_map_points"],
+            design_size=self.site_runtime_maps["selected_map_design_size"],
+            empty_state_text=self.site_runtime_maps["selected_map_empty_state_text"],
+        )
         # 隱藏地圖選擇對話框
         self.map_dialog.hide()
 
