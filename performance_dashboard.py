@@ -168,8 +168,15 @@ class PerformanceDashboardWindow(QWidget):
         refresh_interval_ms=DASHBOARD_AUTO_REFRESH_MS,
         parent=None,
     ):
-        super().__init__(parent)
-        self.setWindowFlag(Qt.Window, True)
+        # Keep the dashboard as a true top-level window. Parenting it to the
+        # frameless main window can make the native title bar hit area drift
+        # outside the visible region on Windows after maximize/restore.
+        super().__init__(None)
+        self.setWindowFlags(
+            Qt.Window
+            | Qt.WindowMinMaxButtonsHint
+            | Qt.WindowCloseButtonHint
+        )
         self.setAttribute(Qt.WA_DeleteOnClose, False)
 
         self.snapshot_provider = snapshot_provider or build_performance_dashboard_snapshot

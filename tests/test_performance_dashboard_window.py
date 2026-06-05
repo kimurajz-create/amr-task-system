@@ -161,6 +161,21 @@ class PerformanceDashboardWindowTests(unittest.TestCase):
 
         self.assertFalse(window.isVisible())
 
+    def test_window_stays_top_level_even_with_parent_argument(self):
+        parent = PerformanceDashboardWindow(refresh_interval_ms=60_000)
+        self.addCleanup(parent.deleteLater)
+        parent.refresh_timer.stop()
+
+        window = PerformanceDashboardWindow(
+            refresh_interval_ms=60_000,
+            parent=parent,
+        )
+        self.addCleanup(window.deleteLater)
+        window.refresh_timer.stop()
+
+        self.assertIsNone(window.parentWidget())
+        self.assertTrue(window.isWindow())
+
     def test_snapshot_builder_from_db_collects_all_statistics(self):
         manager = FakeTaskStatisticsManager()
 
