@@ -1889,7 +1889,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.last_mission_text = mission_text
         self.current_mission_text = mission_text
         # mission_text 改變時，重新組合狀態列文字。
-        self._update_status_label(self.current_mir_state_id)
+        self._refresh_robot_status_presentation()
         print(f"mission_text: {mission_text}")
 
     def _has_mir_state_connection_issue(self):
@@ -1899,6 +1899,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self._has_mir_state_connection_issue():
             return UNKNOWN_MIR_STATE_UI
         return MIR_STATE_UI.get(state_id, UNKNOWN_MIR_STATE_UI)
+
+    def _refresh_robot_status_presentation(self, state_id=None, advance_glow=False):
+        if state_id is not None:
+            self.current_mir_state_id = state_id
+
+        if advance_glow:
+            self.robot_glow_phase = (self.robot_glow_phase + 1) % 3
+
+        if self.last_robot_world_pos is not None:
+            self.draw_car_position(*self.last_robot_world_pos)
+
+        self._update_status_label(self.current_mir_state_id)
 
     def _update_status_label_legacy(self, state_id):
         # 將 MiR state_id 轉成人看得懂的狀態文字與顏色。
@@ -2145,7 +2157,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.api_error:
             self.task_db_manager.mark_room_error("MASTER", "API_ERROR")
             self.api_error = True
-            self._update_status_label(self.current_mir_state_id)
+            self._refresh_robot_status_presentation()
 
     def _setup_worker(self, worker, success_cb, error_cb):
         self.active_workers += 1 # ⭐ 記錄目前有幾個 worker 在跑
@@ -2620,6 +2632,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             status_info = functions.check_MiR_status()
             #轉換成「格式化的 JSON 字串」，用來方便顯示（indent=4 表示用四個空格縮排）
             status_info_str = json.dumps(status_info, indent = 4) 
+            self.api_error = False
             self.current_mission_text = status_info.get("mission_text", self.current_mission_text)
             timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
             full_message = f"[{timestamp}] 狀態：\n{status_info_str}\n{'-'*40}"
@@ -2634,14 +2647,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.txtEdit_GetPM.setPlainText("No pending missions")
                 
             state_ID = functions.check_MiR_status_state_ID()
-            self.current_mir_state_id = state_ID
-            self.robot_glow_phase = (self.robot_glow_phase + 1) % 3
-            if self.last_robot_world_pos is not None:
-                self.draw_car_position(*self.last_robot_world_pos)
-            self._update_status_label(state_ID)
+            self._refresh_robot_status_presentation(
+                state_id=state_ID,
+                advance_glow=True,
+            )
         except Exception as e:
             self.api_error = True
-            self._update_status_label(self.current_mir_state_id)
+            self._refresh_robot_status_presentation()
 
     # 詢問車子資料庫是否有執行的任務，並用MiR API確認底層車子任務是否完成
     def query_mir_status_db(self):
@@ -2652,7 +2664,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             was_disconnected = self.mir_status_poll_disconnected
             self.mir_status_poll_disconnected = False
             if was_disconnected:
-                self._update_status_label(self.current_mir_state_id)
+                self._refresh_robot_status_presentation()
             # 沒有任務在執行，直接退出
             return
         
@@ -2681,13 +2693,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if not self.mir_status_poll_disconnected:
                 print(f"[MIR RECONCILE] mission queue state unavailable for mq_id={mq_id}")
             self.mir_status_poll_disconnected = True
-            self._update_status_label(self.current_mir_state_id)
+            self._refresh_robot_status_presentation()
             return
 
         if self.mir_status_poll_disconnected:
             print(f"[MIR RECONCILE] mission queue connection restored for mq_id={mq_id}")
             self.mir_status_poll_disconnected = False
-            self._update_status_label(self.current_mir_state_id)
+            self._refresh_robot_status_presentation()
 
         if  state == "Done":
             self._finalize_task_result(task_id, "Completed", start_point, target_point)
@@ -2906,9 +2918,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         status_info_str = json.dumps(status_info, indent = 4) 
         self.plntxtEdit_Info.setPlainText(status_info_str)
         state_ID = status_info.get("state_id")
-        self.current_mir_state_id = state_ID
+        self.api_error = False
         self.current_mission_text = status_info.get("mission_text", self.current_mission_text)
-        self._update_status_label(state_ID)
+        self._refresh_robot_status_presentation(state_ID)
         
         
     # 按鈕(回去充電站)

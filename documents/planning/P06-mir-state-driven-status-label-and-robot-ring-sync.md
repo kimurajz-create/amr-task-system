@@ -108,7 +108,7 @@ version: v1
 |---|---|---|---|---|
 | P1 | [ ] 待開始 | 收斂 MiR state UI mapping | 將主幹的狀態名稱/顏色/外圈顏色 mapping 併入分支，補齊 fallback helper | F03 |
 | P2 | [x] 已完成 | 同步 status label 與 robot ring | 讓 `_update_status_label()` 與 `draw_robot_marker()` 都使用同一份 state UI 資料 | F03 |
-| P3 | [ ] 待開始 | 收斂 presentation refresh 流程 | 將 `query_mir_info()` / `query_mir_status_db()` 改為透過統一 refresh 入口更新 UI | F03 |
+| P3 | [x] 已完成 | 收斂 presentation refresh 流程 | 將 `query_mir_info()` / `query_mir_status_db()` 改為透過統一 refresh 入口更新 UI | F03 |
 | P4 | [ ] 待開始 | 驗證 site_profile 相容性與 fallback | 驗證 company / hospital / 其他 site profile 不需特判，且 offline/unavailable 有一致呈現 | F03 |
 
 ## 7. 各階段詳述
