@@ -3411,13 +3411,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def draw_robot_marker(self, painter, x, y):
         painter.setRenderHint(QPainter.Antialiasing, True)
 
+        state_ui = self._get_mir_state_ui(self.current_mir_state_id)
+        ring_color = QColor(state_ui["map_ring_color"])
+
         if self.is_robot_in_motion_state():
             glow_alpha = 120 + (self.robot_glow_phase % 3) * 35
-            glow_pen = QPen(QColor(57, 255, 20, glow_alpha))
+            glow_pen = QPen(QColor(ring_color.red(), ring_color.green(), ring_color.blue(), glow_alpha))
             glow_pen.setWidth(6)
             painter.setPen(glow_pen)
             painter.setBrush(Qt.NoBrush)
             painter.drawEllipse(x - 18, y - 18, 36, 36)
+
+        ring_pen = QPen(ring_color)
+        ring_pen.setWidth(4)
+        painter.setPen(ring_pen)
+        painter.setBrush(Qt.NoBrush)
+        painter.drawEllipse(x - 15, y - 15, 30, 30)
 
         body_rect = QRect(x - 11, y - 9, 22, 18)
         painter.setPen(QPen(QColor("#0B1F33"), 2))
