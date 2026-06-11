@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from main import MainWindow
+from main import MIR_STATE_UI, MainWindow, UNKNOWN_MIR_STATE_UI
 
 
 class _PlainTextRecorder:
@@ -42,6 +42,7 @@ class MirStatusPresentationRefreshTests(unittest.TestCase):
         fake.current_mir_state_id = 3
         fake.current_mission_text = "Initial"
         fake.last_mission_text = None
+        fake.site_profile = "company"
         fake.mir_status_poll_disconnected = False
         fake.robot_glow_phase = 0
         fake.last_robot_world_pos = (1.25, 2.5)
@@ -59,6 +60,12 @@ class MirStatusPresentationRefreshTests(unittest.TestCase):
             fake,
             "refresh_task_list_calls",
             fake.refresh_task_list_calls + 1,
+        )
+        fake._has_mir_state_connection_issue = lambda: MainWindow._has_mir_state_connection_issue(
+            fake
+        )
+        fake._get_mir_state_ui = lambda state_id: MainWindow._get_mir_state_ui(
+            fake, state_id
         )
         fake._refresh_robot_status_presentation = (
             lambda state_id=None, advance_glow=False: MainWindow._refresh_robot_status_presentation(
@@ -140,6 +147,42 @@ class MirStatusPresentationRefreshTests(unittest.TestCase):
         self.assertEqual([3, 3], fake.label_updates)
         self.assertEqual([(1.25, 2.5), (1.25, 2.5)], fake.draw_calls)
         self.assertEqual(1, fake.refresh_task_list_calls)
+
+    def test_get_mir_state_ui_is_independent_from_site_profile(self):
+        state_id = 12
+
+        for profile_name in ("company", "hospital"):
+            fake = self._build_fake_window()
+            fake.site_profile = profile_name
+
+            state_ui = MainWindow._get_mir_state_ui(fake, state_id)
+
+            self.assertEqual(
+                MIR_STATE_UI[state_id],
+                state_ui,
+                msg=f"state UI should not vary by site_profile={profile_name}",
+            )
+
+    def test_get_mir_state_ui_uses_same_unknown_offline_fallback_for_all_site_profiles(self):
+        for profile_name in ("company", "hospital"):
+            fake = self._build_fake_window()
+            fake.site_profile = profile_name
+            fake.api_error = True
+
+            self.assertEqual(
+                UNKNOWN_MIR_STATE_UI,
+                MainWindow._get_mir_state_ui(fake, 3),
+                msg=f"api error fallback should be shared by site_profile={profile_name}",
+            )
+
+            fake.api_error = False
+            fake.mir_status_poll_disconnected = True
+
+            self.assertEqual(
+                UNKNOWN_MIR_STATE_UI,
+                MainWindow._get_mir_state_ui(fake, 3),
+                msg=f"disconnect fallback should be shared by site_profile={profile_name}",
+            )
 
 
 if __name__ == "__main__":

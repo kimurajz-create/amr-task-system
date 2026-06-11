@@ -1,15 +1,15 @@
 ---
 author: Codex
 date: 2026-06-11
-title: P06 P1-P3 - MiR state UI mapping, status label, robot ring, and presentation refresh sync
+title: P06 P1-P4 - MiR state UI mapping, status label, robot ring, presentation refresh, and cross-site fallback verification
 uuid: 3150f9650d764f10b76430d38dff92b4
 version: v1
 ---
 
-# F03 - P06 P1-P3 MiR State UI Mapping and Presentation Sync
+# F03 - P06 P1-P4 MiR State UI Mapping, Presentation Sync, and Cross-Site Fallback Verification
 
 ## 1. Feature Overview
-This implementation now delivers `P06 / P1-P3` by centralizing MiR `state_id` UI metadata in `main.py`, routing status label rendering through a shared helper, drawing the main-map robot ring from that same shared state presentation, and refreshing both through one presentation-sync path whenever MiR polling state changes. It also keeps a single fallback path for API or mission-queue disconnect conditions so the label and map ring can consistently show `Unknown/Offline`.
+This implementation now delivers `P06 / P1-P4` by centralizing MiR `state_id` UI metadata in `main.py`, routing status label rendering through a shared helper, drawing the main-map robot ring from that same shared state presentation, and refreshing both through one presentation-sync path whenever MiR polling state changes. It also verifies that API or mission-queue disconnect conditions use one shared `Unknown/Offline` fallback regardless of `site_profile`, so `company` and `hospital` stay behaviorally aligned.
 
 ## 2. Requirement / User Story
 - As an operator
@@ -41,6 +41,8 @@ This implementation now delivers `P06 / P1-P3` by centralizing MiR `state_id` UI
   - `_refresh_robot_status_presentation(state_id=None, advance_glow=False)`
 - Updated the final `_update_status_label()` implementation to consume the helper result instead of maintaining an inline `status_map`
 - Updated `draw_robot_marker()` so the robot ring and motion glow derive from `state_ui["map_ring_color"]`
+- Confirmed via focused tests that `_get_mir_state_ui()` remains independent from `site_profile`
+- Confirmed via focused tests that `company` and `hospital` share the same `Unknown/Offline` fallback for API-error and mission-queue disconnect states
 - Wired presentation refresh orchestration into:
   - `_print_mission_text()`
   - `api_error_handler()`
@@ -58,6 +60,8 @@ This implementation now delivers `P06 / P1-P3` by centralizing MiR `state_id` UI
 | TC5 | mission queue connection restores | Label returns to mapped state presentation |
 | TC6 | `state_id = 12` on map redraw | Robot ring uses mapped purple ring color |
 | TC7 | disconnect fallback on map redraw | Robot ring uses `Unknown/Offline` white ring color |
+| TC8 | `state_id = 12` across `company` and `hospital` | `_get_mir_state_ui()` returns the same mapped state presentation |
+| TC9 | API error or mission-queue disconnect across `company` and `hospital` | `_get_mir_state_ui()` returns the shared `UNKNOWN_MIR_STATE_UI` fallback |
 
 ## 6. Verification
 Verification performed via focused regression tests and syntax validation:
@@ -66,6 +70,3 @@ Verification performed via focused regression tests and syntax validation:
 python -m unittest tests.test_mir_status_presentation_refresh
 python -c "import ast, pathlib; ast.parse(pathlib.Path('main.py').read_text(encoding='utf-8'))"
 ```
-
-## 7. Notes
-- `P4` still owns broader cross-site-profile fallback verification.
