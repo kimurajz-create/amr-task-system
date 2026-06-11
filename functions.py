@@ -419,7 +419,28 @@ def move_to_position_multi_var(start_uuid,goal_uuid,mission_id):
 
 
 
-# 執行任務
+# 執行帶音效的移動任務
+def move_to_position_with_sound(start_uuid, goal_uuid, mission_id, duration_seconds):
+    url = f"{MIR_IP}/api/v2.0.0/mission_queue"
+    mission_data = {
+        "mission_id": mission_id,
+        "parameters": [
+            {"id": "target1", "value": start_uuid},
+            {"id": "target2", "value": goal_uuid},
+            {"id": "test_0610", "value": str(duration_seconds)}
+        ]
+    }
+    print(f"任務參數:{mission_data}")
+    headers = get_auth_headers()
+    response = requests.post(url, json=mission_data, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+    if response.status_code == 201:
+        print(f"成功發送移動至 {goal_uuid} 的指令")
+        mission_queue_max_id = get_mission_queue_max_id()
+        print(f"MiR Dashboard mission_queue_max_id 編號:{mission_queue_max_id}")
+    else:
+        print(f"移動失敗: {response.text}")
+
+
 def start_the_mission(ref_mission_id):
     url = f"{MIR_IP}/api/v2.0.0/mission_queue"
     mission_data = {
