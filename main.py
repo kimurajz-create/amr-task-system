@@ -313,6 +313,27 @@ STYLE_DEFAULT = "border: none; background-color: #33B1FF;" # 預設樣式
 STYLE_EXECUTING = "border: none; background-color: green;"
 STYLE_PENDING = "border: none; background-color: orange; color: white; "
 
+MIR_STATE_UI = {
+    1: {"name": "Starting", "label_color": "#F1C40F", "map_ring_color": "#F1C40F"},
+    2: {"name": "ShuttingDown", "label_color": "#E74C3C", "map_ring_color": "#E74C3C"},
+    3: {"name": "Ready", "label_color": "#2ECC71", "map_ring_color": "#2ECC71"},
+    4: {"name": "Pause", "label_color": "#F39C12", "map_ring_color": "#F39C12"},
+    5: {"name": "Executing", "label_color": "#2ECC71", "map_ring_color": "#2ECC71"},
+    6: {"name": "Aborted", "label_color": "#F39C12", "map_ring_color": "#F39C12"},
+    7: {"name": "GoalReached", "label_color": "#2ECC71", "map_ring_color": "#2ECC71"},
+    8: {"name": "Docked", "label_color": "#2ECC71", "map_ring_color": "#2ECC71"},
+    9: {"name": "Docking", "label_color": "#2ECC71", "map_ring_color": "#2ECC71"},
+    10: {"name": "EmergencyStop", "label_color": "#E74C3C", "map_ring_color": "#E74C3C"},
+    11: {"name": "ManualControl", "label_color": "#E74C3C", "map_ring_color": "#E74C3C"},
+    12: {"name": "Error", "label_color": "#9B59B6", "map_ring_color": "#9B59B6"},
+}
+
+UNKNOWN_MIR_STATE_UI = {
+    "name": "Unknown/Offline",
+    "label_color": "#FFFFFF",
+    "map_ring_color": "#FFFFFF",
+}
+
 # # 定義 ToolTip 的樣式 暫時沒用到
 # tooltip_reset_style = """
 #     QToolTip {
@@ -1871,7 +1892,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self._update_status_label(self.current_mir_state_id)
         print(f"mission_text: {mission_text}")
 
-    def _update_status_label(self, state_id):
+    def _has_mir_state_connection_issue(self):
+        return self.api_error or self.mir_status_poll_disconnected
+
+    def _get_mir_state_ui(self, state_id):
+        if self._has_mir_state_connection_issue():
+            return UNKNOWN_MIR_STATE_UI
+        return MIR_STATE_UI.get(state_id, UNKNOWN_MIR_STATE_UI)
+
+    def _update_status_label_legacy(self, state_id):
         # 將 MiR state_id 轉成人看得懂的狀態文字與顏色。
         status_map = {
             1: ("Starting", "yellow"),
@@ -1905,8 +1934,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.label_Status_1.setText(label_text)
         self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
 
-
-    def _update_status_label(self, state_id):
+    def _update_status_label_legacy_v2(self, state_id):
         # 將 MiR state_id 轉成人看得懂的狀態文字與顏色。
         status_map = {
             1: ("Starting", "yellow"),
@@ -1935,27 +1963,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _update_status_label(self, state_id):
         # Final status renderer used by the UI: line 1 = robot state, line 2 = mission text.
-        status_map = {
-            1: ("Starting", "yellow"),
-            2: ("ShuttingDown", "red"),
-            3: ("Ready", "green"),
-            4: ("Pause", "yellow"),
-            5: ("Executing", "green"),
-            6: ("Aborted", "yellow"),
-            7: ("GoalReached", "green"),
-            8: ("Docked", "green"),
-            9: ("Docking", "green"),
-            10: ("EmergencyStop", "red"),
-            11: ("ManualControl", "red"),
-            12: ("Error", "purple"),
-        }
-
-        status_name, color = status_map.get(state_id, ("Unknown", "white"))
+        state_ui = self._get_mir_state_ui(state_id)
         mission_line = self.current_mission_text or "-"
-        label_text = f"Status: {status_name}\nMission: {mission_line}"
+        label_text = f"Status: {state_ui['name']}\nMission: {mission_line}"
 
         self.label_Status_1.setText(label_text)
-        self.label_Status_1.setStyleSheet(f"color: {color}; font-size: 24px;")
+        self.label_Status_1.setStyleSheet(
+            f"color: {state_ui['label_color']}; font-size: 24px;"
+        )
         self.label_Status_1.setToolTip(f"Mission: {mission_line}")
 
     def _adjust_status_area_layout(self):
@@ -2130,6 +2145,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.api_error:
             self.task_db_manager.mark_room_error("MASTER", "API_ERROR")
             self.api_error = True
+            self._update_status_label(self.current_mir_state_id)
 
     def _setup_worker(self, worker, success_cb, error_cb):
         self.active_workers += 1 # ⭐ 記錄目前有幾個 worker 在跑
@@ -2624,8 +2640,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.draw_car_position(*self.last_robot_world_pos)
             self._update_status_label(state_ID)
         except Exception as e:
-            self.label_Status_1.setText("錯誤")
-            self.label_Status_1.setToolTip("")
+            self.api_error = True
+            self._update_status_label(self.current_mir_state_id)
 
     # 詢問車子資料庫是否有執行的任務，並用MiR API確認底層車子任務是否完成
     def query_mir_status_db(self):
@@ -2633,7 +2649,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         executing_task_data = self.task_db_manager.get_currently_executing_task()
         # 檢查是否有正在執行的任務
         if not executing_task_data:
+            was_disconnected = self.mir_status_poll_disconnected
             self.mir_status_poll_disconnected = False
+            if was_disconnected:
+                self._update_status_label(self.current_mir_state_id)
             # 沒有任務在執行，直接退出
             return
         
@@ -2662,11 +2681,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if not self.mir_status_poll_disconnected:
                 print(f"[MIR RECONCILE] mission queue state unavailable for mq_id={mq_id}")
             self.mir_status_poll_disconnected = True
+            self._update_status_label(self.current_mir_state_id)
             return
 
         if self.mir_status_poll_disconnected:
             print(f"[MIR RECONCILE] mission queue connection restored for mq_id={mq_id}")
             self.mir_status_poll_disconnected = False
+            self._update_status_label(self.current_mir_state_id)
 
         if  state == "Done":
             self._finalize_task_result(task_id, "Completed", start_point, target_point)
