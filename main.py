@@ -134,7 +134,7 @@ def load_app_settings():
             continue
 
         try:
-            with candidate.open("r", encoding="utf-8") as settings_file:
+            with candidate.open("r", encoding="utf-8-sig") as settings_file:
                 app_settings = json.load(settings_file)
         except (json.JSONDecodeError, OSError) as exc:
             print(f"app_settings.json 讀取失敗，改用預設值: {exc}")
@@ -183,7 +183,7 @@ def load_site_config(site_profile=None):
         }
 
     try:
-        with site_config_path.open("r", encoding="utf-8") as config_file:
+        with site_config_path.open("r", encoding="utf-8-sig") as config_file:
             site_config = json.load(config_file)
     except (json.JSONDecodeError, OSError) as exc:
         if site_profile != "company":

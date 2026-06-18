@@ -1,5 +1,5 @@
 {
-  "_comment": "hospital 場域設定，依醫院 POC 可跑版本整理 location / mission 對照。",
+  "_comment": "hospital 場域設定，依醫院 POC 可跑版本整理 locations / missions 對照。",
   "site_id": "hospital",
   "display_name": "國軍台中總醫院",
   "assets": {
@@ -233,20 +233,11 @@
       "height_px": 18
     },
     {
-      "marker_id": "label_sr_1",
+      "marker_id": "label_wr_1",
       "x_px": 353,
       "y_px": 208,
-      "world_x": 25.923,
-      "world_y": 4.898,
-      "width_px": 26,
-      "height_px": 18
-    },
-    {
-      "marker_id": "label_sr_2",
-      "x_px": 416,
-      "y_px": 162,
-      "world_x": 22.108,
-      "world_y": 1.818,
+      "world_x": 18.291,
+      "world_y": 15.432,
       "width_px": 26,
       "height_px": 18
     }
@@ -331,17 +322,10 @@
       "is_charging_station": true
     },
     {
-      "mir_name": "MH_Shelf position SR 1",
-      "display_name": "滅菌室",
-      "marker_id": "label_sr_1",
-      "room_id": "SR01",
-      "is_charging_station": false
-    },
-    {
-      "mir_name": "MH_Shelf position SR 2",
-      "display_name": "滅菌室2",
-      "marker_id": "label_sr_2",
-      "room_id": "SR02",
+      "mir_name": "MH_Robot position wash room",
+      "display_name": "洗滌室",
+      "marker_id": "label_wr_1",
+      "room_id": "WR01",
       "is_charging_station": false
     },
     {
