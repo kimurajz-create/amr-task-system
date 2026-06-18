@@ -10,8 +10,8 @@
   },
   "calibration": {
     "_comment": "沿用醫院 POC 版本實測可跑的地圖校正點。",
-    "image_pts": [[892, 411], [325, 361], [325, 113]],
-    "world_pts": [[-7.209, 18.944], [27.55, 15.386], [27.683, -1.588]]
+    "image_pts": [[174, 54], [112, 539], [950, 541]],
+    "world_pts": [[-3.839, 25.809], [-7.736, -7.885], [43.669, -7.801]]
   },
   "selected_map": {
     "_comment": "P03 P1 selected-map schema. Hospital currently exposes robot-position points only.",
@@ -21,7 +21,7 @@
     "selectable_points": [
       {
         "point_id": "or01_robot",
-        "location_mir_name": "MH_Robot position OR 1",
+        "location_mir_name": "MH_Robot position OA 1",
         "marker_id": "label_rp_1",
         "x_px": 98,
         "y_px": 270,
@@ -32,7 +32,7 @@
       },
       {
         "point_id": "or02_robot",
-        "location_mir_name": "MH_Robot position OR 2",
+        "location_mir_name": "MH_Robot position OA 2",
         "marker_id": "label_rp_2",
         "x_px": 98,
         "y_px": 396,
@@ -43,7 +43,7 @@
       },
       {
         "point_id": "or03_robot",
-        "location_mir_name": "MH_Robot position OR 3",
+        "location_mir_name": "MH_Robot position OA 3",
         "marker_id": "label_rp_3",
         "x_px": 402,
         "y_px": 446,
@@ -54,7 +54,7 @@
       },
       {
         "point_id": "or05_robot",
-        "location_mir_name": "MH_Robot position OR 5",
+        "location_mir_name": "MH_Robot position OA 5",
         "marker_id": "label_rp_5",
         "x_px": 869,
         "y_px": 261,
@@ -65,7 +65,7 @@
       },
       {
         "point_id": "or06_robot",
-        "location_mir_name": "MH_Robot position OR 6",
+        "location_mir_name": "MH_Robot position OA 6",
         "marker_id": "label_rp_6",
         "x_px": 547,
         "y_px": 261,
@@ -76,7 +76,7 @@
       },
       {
         "point_id": "or07_robot",
-        "location_mir_name": "MH_Robot position OR 7",
+        "location_mir_name": "MH_Robot position OA 7",
         "marker_id": "label_rp_7",
         "x_px": 547,
         "y_px": 446,
@@ -87,7 +87,7 @@
       },
       {
         "point_id": "or08_robot",
-        "location_mir_name": "MH_Robot position OR 8",
+        "location_mir_name": "MH_Robot position OA 8",
         "marker_id": "label_rp_8",
         "x_px": 797,
         "y_px": 446,
@@ -98,7 +98,7 @@
       },
       {
         "point_id": "or09_robot",
-        "location_mir_name": "MH_Robot position OR 9",
+        "location_mir_name": "MH_Robot position OA 9",
         "marker_id": "label_rp_9",
         "x_px": 672,
         "y_px": 446,
@@ -109,7 +109,7 @@
       },
       {
         "point_id": "or10_robot",
-        "location_mir_name": "MH_Robot position OR 10",
+        "location_mir_name": "MH_Robot position OA 10",
         "marker_id": "label_rp_10",
         "x_px": 376,
         "y_px": 124,
@@ -120,7 +120,7 @@
       },
       {
         "point_id": "or11_robot",
-        "location_mir_name": "MH_Robot position OR 11",
+        "location_mir_name": "MH_Robot position OA 11",
         "marker_id": "label_rp_11",
         "x_px": 644,
         "y_px": 261,
@@ -131,7 +131,7 @@
       },
       {
         "point_id": "or12_robot",
-        "location_mir_name": "MH_Robot position OR 12",
+        "location_mir_name": "MH_Robot position OA 12",
         "marker_id": "label_rp_12",
         "x_px": 743,
         "y_px": 261,
@@ -142,7 +142,7 @@
       },
       {
         "point_id": "or13_robot",
-        "location_mir_name": "MH_Robot position OR 13",
+        "location_mir_name": "MH_Robot position OA 13",
         "marker_id": "label_rp_13",
         "x_px": 755,
         "y_px": 95,
@@ -159,8 +159,8 @@
       "marker_id": "label_rp_1",
       "x_px": 130,
       "y_px": 286,
-      "world_x": 26.626,
-      "world_y": -1.611,
+      "world_x": 5.252,
+      "world_y": 27.15,
       "width_px": 26,
       "height_px": 18
     },
@@ -294,84 +294,84 @@
   "_comment_locations": "locations 會轉成 user_location_map / room_id_map / location_to_marker。is_charging_station = true 的那筆會被當作回充站。",
   "locations": [
     {
-      "mir_name": "MH_Robot position OR 1",
+      "mir_name": "MH_Robot position OA 1",
       "display_name": "手術室1",
       "marker_id": "label_rp_1",
       "room_id": "OR01",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 2",
+      "mir_name": "MH_Robot position OA 2",
       "display_name": "手術室2",
       "marker_id": "label_rp_2",
       "room_id": "OR02",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 3",
+      "mir_name": "MH_Robot position OA 3",
       "display_name": "手術室3",
       "marker_id": "label_rp_3",
       "room_id": "OR03",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 5",
+      "mir_name": "MH_Robot position OA 5",
       "display_name": "手術室5",
       "marker_id": "label_rp_5",
       "room_id": "OR05",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 6",
+      "mir_name": "MH_Robot position OA 6",
       "display_name": "手術室6",
       "marker_id": "label_rp_6",
       "room_id": "OR06",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 7",
+      "mir_name": "MH_Robot position OA 7",
       "display_name": "手術室7",
       "marker_id": "label_rp_7",
       "room_id": "OR07",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 8",
+      "mir_name": "MH_Robot position OA 8",
       "display_name": "手術室8",
       "marker_id": "label_rp_8",
       "room_id": "OR08",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 9",
+      "mir_name": "MH_Robot position OA 9",
       "display_name": "手術室9",
       "marker_id": "label_rp_9",
       "room_id": "OR09",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 10",
+      "mir_name": "MH_Robot position OA 10",
       "display_name": "手術室10",
       "marker_id": "label_rp_10",
       "room_id": "OR10",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 11",
+      "mir_name": "MH_Robot position OA 11",
       "display_name": "手術室11",
       "marker_id": "label_rp_11",
       "room_id": "OR11",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 12",
+      "mir_name": "MH_Robot position OA 12",
       "display_name": "手術室12",
       "marker_id": "label_rp_12",
       "room_id": "OR12",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OR 13",
+      "mir_name": "MH_Robot position OA 13",
       "display_name": "手術室13",
       "marker_id": "label_rp_13",
       "room_id": "OR13",
@@ -399,84 +399,84 @@
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 1",
+      "mir_name": "MH_Shelf position OA 1",
       "display_name": "車架位置(手術室1)",
       "marker_id": "label_rp_1",
       "room_id": "OR01",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 2",
+      "mir_name": "MH_Shelf position OA 2",
       "display_name": "車架位置(手術室2)",
       "marker_id": "label_rp_2",
       "room_id": "OR02",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 3",
+      "mir_name": "MH_Shelf position OA 3",
       "display_name": "車架位置(手術室3)",
       "marker_id": "label_rp_3",
       "room_id": "OR03",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 5",
+      "mir_name": "MH_Shelf position OA 5",
       "display_name": "車架位置(手術室5)",
       "marker_id": "label_rp_5",
       "room_id": "OR05",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 6",
+      "mir_name": "MH_Shelf position OA 6",
       "display_name": "車架位置(手術室6)",
       "marker_id": "label_rp_6",
       "room_id": "OR06",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 7",
+      "mir_name": "MH_Shelf position OA 7",
       "display_name": "車架位置(手術室7)",
       "marker_id": "label_rp_7",
       "room_id": "OR07",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 8",
+      "mir_name": "MH_Shelf position OA 8",
       "display_name": "車架位置(手術室8)",
       "marker_id": "label_rp_8",
       "room_id": "OR08",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 9",
+      "mir_name": "MH_Shelf position OA 9",
       "display_name": "車架位置(手術室9)",
       "marker_id": "label_rp_9",
       "room_id": "OR09",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 10",
+      "mir_name": "MH_Shelf position OA 10",
       "display_name": "車架位置(手術室10)",
       "marker_id": "label_rp_10",
       "room_id": "OR10",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 11",
+      "mir_name": "MH_Shelf position OA 11",
       "display_name": "車架位置(手術室11)",
       "marker_id": "label_rp_11",
       "room_id": "OR11",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 12",
+      "mir_name": "MH_Shelf position OA 12",
       "display_name": "車架位置(手術室12)",
       "marker_id": "label_rp_12",
       "room_id": "OR12",
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Shelf position OR 13",
+      "mir_name": "MH_Shelf position OA 13",
       "display_name": "車架位置(手術室13)",
       "marker_id": "label_rp_13",
       "room_id": "OR13",
