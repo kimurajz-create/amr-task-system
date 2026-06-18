@@ -708,9 +708,15 @@ def scale_marker_spec_to_display(
         else 1,
     )
 
+    # Marker coordinates are treated as center points so the parking slot
+    # expands evenly around the configured location instead of drifting
+    # down-right from a top-left anchor.
+    x_px -= width_px / 2
+    y_px -= height_px / 2
+
     return {
-        "x_px": x_px,
-        "y_px": y_px,
+        "x_px": int(round(x_px)),
+        "y_px": int(round(y_px)),
         "width_px": width_px,
         "height_px": height_px,
     }
