@@ -19,7 +19,7 @@
     "design_height_px": 576,
     "empty_state_text": "No selectable points are configured for this site.",
     "selectable_points": [
-      {
+{
         "point_id": "or01_robot",
         "location_mir_name": "MH_Robot position OA 1",
         "marker_id": "label_rp_1",
@@ -128,28 +128,6 @@
         "height_px": 40,
         "order": 110,
         "visible": true
-      },
-      {
-        "point_id": "or12_robot",
-        "location_mir_name": "MH_Robot position OA 12",
-        "marker_id": "label_rp_12",
-        "x_px": 743,
-        "y_px": 261,
-        "width_px": 76,
-        "height_px": 40,
-        "order": 120,
-        "visible": true
-      },
-      {
-        "point_id": "or13_robot",
-        "location_mir_name": "MH_Robot position OA 13",
-        "marker_id": "label_rp_13",
-        "x_px": 755,
-        "y_px": 95,
-        "width_px": 76,
-        "height_px": 40,
-        "order": 130,
-        "visible": true
       }
     ]
   },
@@ -168,8 +146,8 @@
       "marker_id": "label_rp_2",
       "x_px": 130,
       "y_px": 412,
-      "world_x": 27.76,
-      "world_y": 12.788,
+      "world_x": -8.32,
+      "world_y": 9.969,
       "width_px": 26,
       "height_px": 18
     },
@@ -177,8 +155,8 @@
       "marker_id": "label_rp_3",
       "x_px": 434,
       "y_px": 462,
-      "world_x": 27.498,
-      "world_y": 17.275,
+      "world_x": -8.375,
+      "world_y": 1.845,
       "width_px": 26,
       "height_px": 18
     },
@@ -186,8 +164,8 @@
       "marker_id": "label_rp_5",
       "x_px": 901,
       "y_px": 277,
-      "world_x": 22.639,
-      "world_y": 17.76,
+      "world_x": 10.652,
+      "world_y": -9.159,
       "width_px": 26,
       "height_px": 18
     },
@@ -195,8 +173,8 @@
       "marker_id": "label_rp_6",
       "x_px": 579,
       "y_px": 277,
-      "world_x": 12.394,
-      "world_y": 17.984,
+      "world_x": 17.084,
+      "world_y": -9.192,
       "width_px": 26,
       "height_px": 18
     },
@@ -204,8 +182,8 @@
       "marker_id": "label_rp_7",
       "x_px": 579,
       "y_px": 462,
-      "world_x": 8.783,
-      "world_y": 15.626,
+      "world_x": 22.863,
+      "world_y": -9.322,
       "width_px": 26,
       "height_px": 18
     },
@@ -213,8 +191,8 @@
       "marker_id": "label_rp_8",
       "x_px": 829,
       "y_px": 462,
-      "world_x": -4.893,
-      "world_y": 18.252,
+      "world_x": 31.802,
+      "world_y": -9.173,
       "width_px": 26,
       "height_px": 18
     },
@@ -222,8 +200,8 @@
       "marker_id": "label_rp_9",
       "x_px": 704,
       "y_px": 462,
-      "world_x": -6.22,
-      "world_y": 17.033,
+      "world_x": 34.158,
+      "world_y": 15.393,
       "width_px": 26,
       "height_px": 18
     },
@@ -231,8 +209,8 @@
       "marker_id": "label_rp_10",
       "x_px": 408,
       "y_px": 140,
-      "world_x": -0.209,
-      "world_y": 15.449,
+      "world_x": 29.41,
+      "world_y": 13.536,
       "width_px": 26,
       "height_px": 18
     },
@@ -240,26 +218,8 @@
       "marker_id": "label_rp_11",
       "x_px": 676,
       "y_px": 277,
-      "world_x": 8.752,
-      "world_y": 15.607,
-      "width_px": 26,
-      "height_px": 18
-    },
-    {
-      "marker_id": "label_rp_12",
-      "x_px": 775,
-      "y_px": 277,
-      "world_x": 12.775,
-      "world_y": 15.331,
-      "width_px": 26,
-      "height_px": 18
-    },
-    {
-      "marker_id": "label_rp_13",
-      "x_px": 787,
-      "y_px": 111,
-      "world_x": 25.742,
-      "world_y": 12.946,
+      "world_x": 22.492,
+      "world_y": 13.631,
       "width_px": 26,
       "height_px": 18
     },
@@ -267,8 +227,8 @@
       "marker_id": "label_charge_station",
       "x_px": 364,
       "y_px": 77,
-      "world_x": 25.307,
-      "world_y": -4.069,
+      "world_x": -10.713,
+      "world_y": -8,
       "width_px": 26,
       "height_px": 18
     },
@@ -364,21 +324,7 @@
       "is_charging_station": false
     },
     {
-      "mir_name": "MH_Robot position OA 12",
-      "display_name": "手術室12",
-      "marker_id": "label_rp_12",
-      "room_id": "OR12",
-      "is_charging_station": false
-    },
-    {
-      "mir_name": "MH_Robot position OA 13",
-      "display_name": "手術室13",
-      "marker_id": "label_rp_13",
-      "room_id": "OR13",
-      "is_charging_station": false
-    },
-    {
-      "mir_name": "MH_MiR Charge 48V V2",
+      "mir_name": "MH_MiR Charge 48V 35A OA",
       "display_name": "充電樁",
       "marker_id": "label_charge_station",
       "room_id": null,
@@ -466,20 +412,6 @@
       "display_name": "車架位置(手術室11)",
       "marker_id": "label_rp_11",
       "room_id": "OR11",
-      "is_charging_station": false
-    },
-    {
-      "mir_name": "MH_Shelf position OA 12",
-      "display_name": "車架位置(手術室12)",
-      "marker_id": "label_rp_12",
-      "room_id": "OR12",
-      "is_charging_station": false
-    },
-    {
-      "mir_name": "MH_Shelf position OA 13",
-      "display_name": "車架位置(手術室13)",
-      "marker_id": "label_rp_13",
-      "room_id": "OR13",
       "is_charging_station": false
     }
   ],
