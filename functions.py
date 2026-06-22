@@ -404,7 +404,7 @@ def move_to_position_multi_var(start_uuid,goal_uuid,mission_id):
     url = f"{MIR_IP}/api/v2.0.0/mission_queue"
     mission_data = {
         "mission_id": mission_id,
-        "parameters": [{"id": "target", "value": start_uuid},{"id": "target_2", "value": goal_uuid}]
+        "parameters": [{"id": "target_1", "value": start_uuid},{"id": "target_2", "value": goal_uuid}]
     }
     print(f"任務參數:{mission_data}") 
     headers = get_auth_headers()
