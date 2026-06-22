@@ -90,8 +90,8 @@ class SelectedMapDynamicWidgetTests(unittest.TestCase):
 
         resized_geometry = dialog.dynamic_location_buttons[0].geometry()
 
-        self.assertNotEqual(original_geometry.width(), resized_geometry.width())
-        self.assertNotEqual(original_geometry.height(), resized_geometry.height())
+        self.assertNotEqual(original_geometry.x(), resized_geometry.x())
+        self.assertNotEqual(original_geometry.y(), resized_geometry.y())
 
     def test_empty_state_is_shown_when_no_runtime_points_exist(self):
         dialog = self._build_dialog(runtime_points=[])

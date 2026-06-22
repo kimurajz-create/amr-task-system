@@ -101,8 +101,14 @@ SELECTED_MAP_POINT_BUTTON_STYLE = (
     "   background-color: #33B1FF;\n"
     "   color: black;\n"
     "   font-size: 12px;\n"
+    "   padding: 0 12px;\n"
     "}\n"
 )
+
+SELECTED_MAP_BUTTON_MIN_WIDTH_PX = 44
+SELECTED_MAP_BUTTON_MIN_HEIGHT_PX = 24
+SELECTED_MAP_BUTTON_HORIZONTAL_PADDING_PX = 24
+SELECTED_MAP_BUTTON_VERTICAL_PADDING_PX = 10
 
 
 def resolve_runtime_path(relative_path):
@@ -1117,6 +1123,19 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
         self._position_selectable_widgets()
         self._show_empty_state_if_needed()
 
+    def _measure_button_size(self, button):
+        text_width = button.fontMetrics().horizontalAdvance(button.text())
+        text_height = button.fontMetrics().height()
+        button_width = max(
+            SELECTED_MAP_BUTTON_MIN_WIDTH_PX,
+            text_width + SELECTED_MAP_BUTTON_HORIZONTAL_PADDING_PX,
+        )
+        button_height = max(
+            SELECTED_MAP_BUTTON_MIN_HEIGHT_PX,
+            text_height + SELECTED_MAP_BUTTON_VERTICAL_PADDING_PX,
+        )
+        return button_width, button_height
+
     def _position_selectable_widgets(self):
         source_width, source_height = self._get_selected_map_source_size()
         display_width = self.label_sm_map_1.width()
@@ -1143,7 +1162,12 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
                 if source_height > 0 and display_height > 0
                 else 1,
             )
-            button.setGeometry(x_px, y_px, width_px, height_px)
+            button_width, button_height = self._measure_button_size(button)
+            center_x = x_px + width_px / 2
+            center_y = y_px + height_px / 2
+            button_x = int(round(center_x - button_width / 2))
+            button_y = int(round(center_y - button_height / 2))
+            button.setGeometry(button_x, button_y, button_width, button_height)
 
     def _show_empty_state_if_needed(self):
         self.empty_state_label.setGeometry(self.label_sm_map_1.rect())
