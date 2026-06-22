@@ -93,6 +93,60 @@ class TaskThread(QThread):
         charge_code = self.MIR_LOCATION_MAP.get(self.CHARGING_STATION_NAME)
         self.functions.run_combo_location(charge_code)
 
+    def _describe_missing_mapping(
+        self,
+        start_point,
+        target_point,
+        mission_content,
+        mir_start,
+        mir_target,
+        mir_mission,
+    ):
+        missing_parts = []
+
+        if not mir_start:
+            missing_parts.append(f"start_point='{start_point}'")
+        if not mir_target:
+            missing_parts.append(f"target_point='{target_point}'")
+        if not mir_mission:
+            missing_parts.append(f"mission_content='{mission_content}'")
+
+        return ", ".join(missing_parts)
+
+    def _abort_invalid_pending_task(
+        self,
+        task_id,
+        start_point,
+        target_point,
+        mission_content,
+        mir_start,
+        mir_target,
+        mir_mission,
+    ):
+        missing_mapping = self._describe_missing_mapping(
+            start_point,
+            target_point,
+            mission_content,
+            mir_start,
+            mir_target,
+            mir_mission,
+        )
+        self.log_message.emit(
+            f"Task ID:{task_id} has incomplete mission mapping ({missing_mapping}); "
+            "marking task as Aborted so the queue can continue."
+        )
+
+        updated = self.db_manager.transition_task_status(
+            task_id,
+            from_status="Pending",
+            to_status="Aborted",
+            command_sent=False,
+        )
+        if not updated:
+            self.log_message.emit(
+                f"Task ID:{task_id} could not be marked Aborted because its status changed."
+            )
+
     def run(self):
         """
         Main scheduler loop:
@@ -143,8 +197,16 @@ class TaskThread(QThread):
             )
 
             if not (mir_mission and mir_start and mir_target):
-                self.log_message.emit("Mission mapping is incomplete; skip this cycle.")
-                time.sleep(1)
+                self._abort_invalid_pending_task(
+                    task_id,
+                    start_point,
+                    target_point,
+                    mission_content,
+                    mir_start,
+                    mir_target,
+                    mir_mission,
+                )
+                time.sleep(0.1)
                 continue
 
             before_max_id = self.functions.get_mission_queue_max_id()
