@@ -241,6 +241,93 @@ class SiteRuntimeMarkerMapTests(unittest.TestCase):
             runtime_maps["selected_map_location_names"],
         )
 
+    def test_selected_map_runtime_syncs_geometry_from_marker_world_coordinates(self):
+        site_config = {
+            "assets": {"selected_map": "picture/example.png"},
+            "calibration": {
+                "image_pts": [[100, 50], [100, 150], [200, 150]],
+                "world_pts": [[0, 0], [0, 10], [10, 10]],
+            },
+            "locations": [
+                {
+                    "mir_name": "mir-a",
+                    "display_name": "Alpha",
+                    "marker_id": "marker-alpha",
+                }
+            ],
+            "markers": [
+                {
+                    "marker_id": "marker-alpha",
+                    "x_px": 1,
+                    "y_px": 2,
+                    "world_x": 5,
+                    "world_y": 5,
+                    "width_px": 10,
+                    "height_px": 10,
+                }
+            ],
+            "missions": [],
+            "selected_map": {
+                "design_width_px": 1000,
+                "design_height_px": 500,
+                "selectable_points": [
+                    {
+                        "point_id": "alpha",
+                        "location_mir_name": "mir-a",
+                        "width_px": 40,
+                        "height_px": 20,
+                    }
+                ],
+            },
+        }
+
+        runtime_maps = build_site_runtime_maps(site_config)
+        runtime_point = runtime_maps["selected_map_points_by_id"]["alpha"]
+
+        self.assertEqual("marker-alpha", runtime_point["marker_id"])
+        self.assertEqual(130, runtime_point["x_px"])
+        self.assertEqual(90, runtime_point["y_px"])
+
+    def test_selected_map_runtime_syncs_geometry_from_marker_center_without_world_coords(self):
+        site_config = {
+            "assets": {"selected_map": "picture/example.png"},
+            "locations": [
+                {
+                    "mir_name": "mir-a",
+                    "display_name": "Alpha",
+                    "marker_id": "marker-alpha",
+                }
+            ],
+            "markers": [
+                {
+                    "marker_id": "marker-alpha",
+                    "x_px": 851,
+                    "y_px": 733,
+                    "width_px": 54,
+                    "height_px": 78,
+                }
+            ],
+            "missions": [],
+            "selected_map": {
+                "design_width_px": 3216,
+                "design_height_px": 1824,
+                "selectable_points": [
+                    {
+                        "point_id": "alpha",
+                        "location_mir_name": "mir-a",
+                        "width_px": 216,
+                        "height_px": 86,
+                    }
+                ],
+            },
+        }
+
+        runtime_maps = build_site_runtime_maps(site_config)
+        runtime_point = runtime_maps["selected_map_points_by_id"]["alpha"]
+
+        self.assertEqual(743, runtime_point["x_px"])
+        self.assertEqual(690, runtime_point["y_px"])
+
     def test_selected_map_runtime_skips_invalid_points_and_collects_warnings(self):
         site_config = {
             "assets": {"selected_map": "picture/example.png"},
@@ -331,8 +418,8 @@ class MapMarkerGeometryScalingTests(unittest.TestCase):
             display_height=608,
         )
 
-        self.assertEqual(107, scaled["x_px"])
-        self.assertEqual(152, scaled["y_px"])
+        self.assertEqual(104, scaled["x_px"])
+        self.assertEqual(148, scaled["y_px"])
         self.assertEqual(6, scaled["width_px"])
         self.assertEqual(9, scaled["height_px"])
 
@@ -391,8 +478,8 @@ class MapMarkerGeometryScalingTests(unittest.TestCase):
             world_to_image_fn=lambda world_x, world_y: (851, 733),
         )
 
-        self.assertEqual(284, scaled["x_px"])
-        self.assertEqual(244, scaled["y_px"])
+        self.assertEqual(275, scaled["x_px"])
+        self.assertEqual(231, scaled["y_px"])
         self.assertEqual(18, scaled["width_px"])
         self.assertEqual(26, scaled["height_px"])
 
