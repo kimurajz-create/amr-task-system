@@ -93,6 +93,28 @@ class SelectedMapDynamicWidgetTests(unittest.TestCase):
         self.assertNotEqual(original_geometry.width(), resized_geometry.width())
         self.assertNotEqual(original_geometry.height(), resized_geometry.height())
 
+    def test_runtime_button_width_expands_to_fit_full_label_text(self):
+        runtime_points = [
+            {
+                "point_id": "long-label",
+                "location_mir_name": "mir-long",
+                "location_display_name": "手術室10",
+                "selected_label": "手術室10",
+                "marker_id": "marker-long",
+                "x_px": 100,
+                "y_px": 120,
+                "width_px": 20,
+                "height_px": 20,
+                "order": 10,
+                "visible": True,
+            }
+        ]
+        dialog = self._build_dialog(runtime_points=runtime_points)
+        button = dialog.dynamic_location_buttons[0]
+
+        self.assertGreater(button.width(), 20)
+        self.assertEqual("手術室10", button.text())
+
     def test_empty_state_is_shown_when_no_runtime_points_exist(self):
         dialog = self._build_dialog(runtime_points=[])
 

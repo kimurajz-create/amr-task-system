@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QToolTip,
 )
 from PySide6.QtGui import (
-    QPixmap, QPainter, QPen, QIcon, QPalette, 
+    QPixmap, QPainter, QPen, QIcon, QPalette, QFontMetrics,
     QColor, QMouseEvent,QBrush,QWheelEvent
 )
 from PySide6.QtCore import (
@@ -100,7 +100,9 @@ SELECTED_MAP_POINT_BUTTON_STYLE = (
     "   border: none;\n"
     "   background-color: #33B1FF;\n"
     "   color: black;\n"
-    "   font-size: 12px;\n"
+    "   font-size: 13px;\n"
+    "   font-weight: 600;\n"
+    "   padding: 4px 8px;\n"
     "}\n"
 )
 
@@ -1123,7 +1125,7 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
         display_height = self.label_sm_map_1.height()
 
         for button, point in zip(self.dynamic_location_buttons, self.selected_map_runtime_points):
-            x_px, y_px = scale_point_to_display(
+            scaled_x_px, scaled_y_px = scale_point_to_display(
                 point["x_px"],
                 point["y_px"],
                 source_width,
@@ -1131,18 +1133,27 @@ class SelectedMap(QWidget,Ui_Form_SelectedMap):
                 display_width,
                 display_height,
             )
-            width_px = max(
+            base_width_px = max(
                 1,
                 int(round(point["width_px"] * display_width / source_width))
                 if source_width > 0 and display_width > 0
                 else 1,
             )
-            height_px = max(
+            base_height_px = max(
                 1,
                 int(round(point["height_px"] * display_height / source_height))
                 if source_height > 0 and display_height > 0
                 else 1,
             )
+            text_metrics = QFontMetrics(button.font())
+            min_width_px = text_metrics.horizontalAdvance(button.text()) + 16
+            min_height_px = text_metrics.height() + 8
+            width_px = max(base_width_px, min_width_px)
+            height_px = max(base_height_px, min_height_px)
+            scaled_center_x = scaled_x_px + base_width_px / 2
+            scaled_center_y = scaled_y_px + base_height_px / 2
+            x_px = int(round(scaled_center_x - width_px / 2))
+            y_px = int(round(scaled_center_y - height_px / 2))
             button.setGeometry(x_px, y_px, width_px, height_px)
 
     def _show_empty_state_if_needed(self):
