@@ -385,10 +385,43 @@ def _coerce_int(value):
         return None
 
 
+def build_affine_transform(image_pts, world_pts):
+    image_array = np.array(image_pts, dtype=np.float32)
+    world_array = np.array(world_pts, dtype=np.float32)
+
+    if image_array.shape != (3, 2) or world_array.shape != (3, 2):
+        raise ValueError("Calibration points must contain exactly 3 [x, y] pairs.")
+
+    matrix_input = np.hstack([world_array, np.ones((3, 1), dtype=np.float32)])
+    affine_matrix, _, _, _ = np.linalg.lstsq(matrix_input, image_array, rcond=None)
+    return affine_matrix
+
+
+def build_world_to_image_fn(site_config):
+    calibration = site_config.get("calibration") or {}
+    image_pts = calibration.get("image_pts")
+    world_pts = calibration.get("world_pts")
+    if not image_pts or not world_pts:
+        return None
+
+    try:
+        affine_matrix = build_affine_transform(image_pts, world_pts)
+    except (TypeError, ValueError, np.linalg.LinAlgError):
+        return None
+
+    def world_to_image(world_x, world_y):
+        pixel = np.array([world_x, world_y, 1.0], dtype=np.float32) @ affine_matrix
+        return int(pixel[0]), int(pixel[1])
+
+    return world_to_image
+
+
 def _build_selected_map_runtime(
     site_config,
     user_location_map,
     location_to_marker,
+    marker_specs_by_id,
+    world_to_image_fn=None,
 ):
     selected_map_config = site_config.get("selected_map") or {}
     design_width_px = _coerce_int(selected_map_config.get("design_width_px")) or 0
@@ -431,11 +464,9 @@ def _build_selected_map_runtime(
             )
             continue
 
-        x_px = _coerce_int(point.get("x_px"))
-        y_px = _coerce_int(point.get("y_px"))
         width_px = _coerce_int(point.get("width_px"))
         height_px = _coerce_int(point.get("height_px"))
-        if None in (x_px, y_px, width_px, height_px):
+        if None in (width_px, height_px):
             selected_map_config_warnings.append(
                 f"selected_map point '{point_id}' has non-integer geometry."
             )
@@ -450,15 +481,30 @@ def _build_selected_map_runtime(
         if not visible:
             continue
 
+        marker_id = point.get("marker_id") or location_to_marker.get(location_display_name)
+        marker_spec = marker_specs_by_id.get(marker_id) if marker_id else None
+        if marker_spec is not None:
+            marker_x, marker_y = resolve_marker_source_point(
+                marker_spec,
+                world_to_image_fn=world_to_image_fn,
+            )
+            x_px = int(round(marker_x - width_px / 2))
+            y_px = int(round(marker_y - height_px / 2))
+        else:
+            x_px = _coerce_int(point.get("x_px"))
+            y_px = _coerce_int(point.get("y_px"))
+            if None in (x_px, y_px):
+                selected_map_config_warnings.append(
+                    f"selected_map point '{point_id}' has non-integer geometry."
+                )
+                continue
+
         runtime_point = {
             "point_id": point_id,
             "location_mir_name": location_mir_name,
             "location_display_name": location_display_name,
             "selected_label": point.get("label") or location_display_name,
-            "marker_id": (
-                point.get("marker_id")
-                or location_to_marker.get(location_display_name)
-            ),
+            "marker_id": marker_id,
             "x_px": x_px,
             "y_px": y_px,
             "width_px": width_px,
@@ -526,6 +572,7 @@ def build_site_runtime_maps(site_config):
 
     location_records = site_config.get("locations") or []
     mission_records = site_config.get("missions") or []
+    world_to_image_fn = build_world_to_image_fn(site_config)
     marker_specs_by_id, marker_config_warnings = build_marker_specs_by_id(site_config)
 
     user_location_map = {}
@@ -611,6 +658,8 @@ def build_site_runtime_maps(site_config):
             site_config,
             runtime_maps["user_location_map"],
             runtime_maps["location_to_marker"],
+            marker_specs_by_id,
+            world_to_image_fn=world_to_image_fn,
         )
     )
 
