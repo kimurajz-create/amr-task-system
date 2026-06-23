@@ -4,7 +4,7 @@ date: 2026-06-22
 title: site location 單一真實來源與 ui_locations 發佈責任重整
 uuid: 8c33fce2f4d648318afefc3e2b54d9a7
 version: v1
-status: proposed
+status: in_progress
 ---
 
 # R07 site location 單一真實來源與 ui_locations 發佈責任重整
@@ -329,3 +329,66 @@ status: proposed
 3. 調整 `TaskDBManager` 命名與 SQL，使責任明確
 4. 補一個最小 DB 清理策略
 5. 最後才檢查 `desktop_software` 是否仍需微調過濾邏輯
+
+## 13. 實作記錄
+
+### 狀態
+部分實作
+
+### 實作摘要
+
+- 新增 `build_ui_location_publish_rows(site_config)`，明確由 `site/*.json` 產生 `ui_locations` 發佈資料。
+- 發佈規則先採最小假設：只發佈同一 active site 中具備 `display_name / mir_name / room_id` 的 location。
+- `MainWindow` 啟動時改為先發佈 site projection 到 `ui_locations`，不再把 MiR live combo 結果直接回寫 DB。
+- `TaskDBManager` 新增 `publish_ui_locations()`，以全量覆蓋方式清掉舊資料並重建當前 site projection。
+
+### 測試覆蓋
+
+- `tests/test_ui_locations_publishing.py`
+  - 驗證 hospital site 只發佈具備 `room_id` 的 location，且排除 `充電樁`
+  - 驗證 `publish_ui_locations()` 會先清空 `ui_locations`，再寫入 `(display_name, mir_code, room_id)` projection
+
+### 變更的檔案
+
+#### 生產代碼
+
+- `main.py`
+- `TaskDBManager.py`
+
+#### 測試代碼
+
+- `tests/test_ui_locations_publishing.py`
+
+### 驗收標準驗證
+
+| 驗收標準 | 狀態 | 依據 |
+|---|---|---|
+| R07-A1 | 部分 | 已改為由 site config 發佈 `ui_locations`；尚未做真 DB 內容人工核對 |
+| R07-A2 | 通過 | `build_ui_location_publish_rows()` 只發佈具備 `room_id` 的 location |
+| R07-A3 | 通過 | `load_map_positions()` 不再把 MiR live 掃描結果同步進 `ui_locations` |
+| R07-A4 | 部分 | 發佈資料與 `ROOM_ID_MAP` 同源於 site config；尚未做桌機端端到端驗證 |
+| R07-A5 | 部分 | 在「單一 active site」前提下改為全量覆蓋，可避免同庫殘留舊 site 髒資料；未處理多 site 並存 |
+
+### 執行的命令
+
+```bash
+python -m unittest tests.test_ui_locations_publishing
+python -m unittest tests.test_ui_locations_publishing tests.test_site_runtime_marker_maps tests.test_task_statistics_queries
+```
+
+### 假設與決策
+
+- 採用使用者補充前提：同一時間只啟用一個 site，不做多 site 同庫並存設計。
+- 目前最小發佈規則為「有 `room_id` 才發佈到桌機」，用來排除 `充電樁` 等非桌機目標點。
+- `load_map_positions()` 在執行期間會被多次呼叫，因此發佈流程放在啟動階段，避免反覆 `DELETE + INSERT`。
+
+### 延遲項目
+
+- 尚未補真實 DB 驗證步驟，確認現場 `ui_locations` 內容與目前 site config 完全一致。
+- 尚未驗證 `desktop_software` 實際下拉行為與任務建立流程。
+- 若未來需要更細的桌機發佈規則，仍建議在 site schema 補 `publish_to_desktop` 或同類欄位。
+
+### 備註
+
+- 這次屬於 R07 Phase 1 止血實作，先把 canonical source 與 published projection 的責任切開。
+- 若後續需求升級為多 site 並存或保留歷史版本，應改走 `ddd-plan` 拆成較大型資料模型重整。

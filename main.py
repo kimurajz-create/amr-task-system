@@ -668,6 +668,35 @@ def build_site_runtime_maps(site_config):
     return runtime_maps
 
 
+def build_ui_location_publish_rows(site_config):
+    """
+    從 site config 產生 ui_locations 發佈資料。
+
+    只有具備完整 display_name / mir_name / room_id 的 location
+    會進入桌機可讀取的 published projection。
+    """
+    published_rows_by_display_name = {}
+
+    for location in site_config.get("locations") or []:
+        display_name = location.get("display_name")
+        mir_name = location.get("mir_name")
+        room_id = location.get("room_id")
+
+        if not display_name or not mir_name or not room_id:
+            continue
+
+        published_rows_by_display_name[display_name] = (
+            display_name,
+            mir_name,
+            room_id,
+        )
+
+    return sorted(
+        published_rows_by_display_name.values(),
+        key=lambda row: row[0],
+    )
+
+
 def scale_point_to_display(
     source_x,
     source_y,
@@ -1321,6 +1350,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # site_runtime_maps = 新舊架構之間的過渡層。
         # UI / TaskThread 仍吃熟悉的 map，但來源已經優先改成 site config。
         self.site_runtime_maps = build_site_runtime_maps(self.site_config)
+        self.ui_location_publish_rows = build_ui_location_publish_rows(self.site_config)
         for marker_warning in self.site_runtime_maps["marker_config_warnings"]:
             print(f"[site marker warning] {marker_warning}")
         #########################################客製化title：穩健 ToolBar 方案########################################
@@ -1376,6 +1406,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ########################################儲存 Manager 實例，以便後續的方法可以使用################################
         self.user_db_manager = user_db_manager
         self.task_db_manager = task_db_manager # <-- 這是您需要的！
+        # R07: ui_locations 在啟動時由 site config 全量發佈一次，
+        # 與後續 MiR live 下拉更新分離，避免 live snapshot 汙染主資料。
+        self.task_db_manager.publish_ui_locations(self.ui_location_publish_rows)
         
         ########################################QTableWidget右下待執行任務表格########################################
         #右邊待執行任務表格 
@@ -3358,8 +3391,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # 將獨立的 Completer 設置給各自的 ComboBox
                 self.cmb_location.setCompleter(completer1) 
                 self.cmb_location2.setCompleter(completer2)
-            # ⭐ 同步到資料庫
-            self.task_db_manager.sync_ui_locations(sorted_combo_data)
                 
     # 取得全部任務名字
     def load_mission_positions(self):
