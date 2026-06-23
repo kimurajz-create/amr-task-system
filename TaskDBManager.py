@@ -223,6 +223,45 @@ class TaskDBManager:
             return False
 
     #-------------------------------------同步到資料庫系列---------------------------------------#
+    def publish_ui_locations(self, location_rows):
+        """
+        以 site config 整理出的 projection 全量發佈 ui_locations。
+
+        R07 前提是同一時間只服務單一 site，因此可直接以全量覆蓋方式
+        清掉歷史髒資料，避免舊 display_name 或缺 room_id 的資料殘留。
+        """
+        normalized_rows = [
+            (display_name, mir_code, room_id)
+            for display_name, mir_code, room_id in location_rows
+            if display_name and mir_code and room_id
+        ]
+
+        try:
+            delete_query = "DELETE FROM ui_locations;"
+            self._execute_query(delete_query, commit=True)
+
+            if not normalized_rows:
+                print("ui_locations 已清空；目前 site config 沒有可發佈的 location")
+                return True
+
+            sql_template = """
+            INSERT INTO ui_locations (display_name, mir_code, room_id)
+            VALUES %s;
+            """
+
+            success = self._execute_batch(sql_template, normalized_rows)
+
+            if success:
+                print(f"ui_locations 發佈完成，共 {len(normalized_rows)} 筆")
+            else:
+                print("ui_locations 發佈失敗")
+
+            return success
+
+        except Exception as e:
+            print(f"發佈 ui_locations 發生錯誤: {e}")
+            return False
+
     def sync_ui_locations(self, combo_data_list):
         """
         同步主控的下拉選單資料到 DB（安全版）
