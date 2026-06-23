@@ -36,19 +36,33 @@ class UiLocationsPublishingTests(unittest.TestCase):
         site_config = load_site_config("hospital")
 
         rows = build_ui_location_publish_rows(site_config)
+        expected_robot_location = next(
+            location
+            for location in site_config["locations"]
+            if location.get("room_id") == "OR01"
+            and location["mir_name"].startswith("MH_Robot position")
+        )
+        charging_station = next(
+            location
+            for location in site_config["locations"]
+            if location.get("is_charging_station")
+        )
 
         self.assertEqual(rows, sorted(rows, key=lambda row: row[0]))
-        self.assertIn(("手術室1", "MH_Robot position OA 1", "OR01"), rows)
-        self.assertIn(("洗滌室", "MH_Robot position wash room", "WR01"), rows)
-        self.assertFalse(any(display_name == "充電樁" for display_name, _, _ in rows))
+        self.assertIn(
+            (
+                expected_robot_location["display_name"],
+                expected_robot_location["mir_name"],
+                expected_robot_location["room_id"],
+            ),
+            rows,
+        )
+        self.assertFalse(any(mir_name == charging_station["mir_name"] for _, mir_name, _ in rows))
         self.assertTrue(all(room_id for _, _, room_id in rows))
 
     def test_publish_ui_locations_replaces_existing_rows_with_site_projection(self):
         manager = RecordingTaskDBManager()
-        rows = [
-            ("手術室1", "MH_Robot position OA 1", "OR01"),
-            ("洗滌室", "MH_Robot position wash room", "WR01"),
-        ]
+        rows = build_ui_location_publish_rows(load_site_config("hospital"))[:2]
 
         success = manager.publish_ui_locations(rows)
 
