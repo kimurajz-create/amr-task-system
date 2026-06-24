@@ -1391,6 +1391,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.workers = []          # ⭐ 存所有 thread（避免被 Python 回收 → crash）
         self.polling_busy = False  # ⭐ 防止 polling 還沒結束又啟動
         self.active_workers = 0    # ⭐ 記錄目前有幾個 thread 在跑（這版是1但保險留著）
+        self.worker_job_busy = {}
         self.last_mission_text = None
         self.current_mission_text = ""
         # Make room for a two-line status area: Status + Mission.
@@ -1530,8 +1531,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # ----------------------------------------
             self.fast_timer = QTimer(self)
             # 連接需要快速更新的函式
-            self.fast_timer.timeout.connect(self.query_mir_info)
-            self.fast_timer.timeout.connect(self.poll_mir_position)
+            self.fast_timer.timeout.connect(self.schedule_mir_info_refresh)
+            self.fast_timer.timeout.connect(self.schedule_mir_position_refresh)
             # 啟動快速定時器
             self.fast_timer.start(0.3 * 1000) # 秒
 
@@ -1553,8 +1554,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # ----------------------------------------
             self.refresh_timer = QTimer(self)
             # 定時觸發 refresh_task_list 函式
-            self.refresh_timer.timeout.connect(self.refresh_task_list)
-            self.refresh_timer.timeout.connect(self.query_mir_status_db)
+            self.refresh_timer.timeout.connect(self.schedule_task_list_refresh)
+            self.refresh_timer.timeout.connect(self.schedule_mir_status_reconcile)
             # 每 2000 毫秒 (2 秒) 刷新一次
             self.refresh_timer.start(2000) 
 
@@ -1568,7 +1569,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # self.loop_test_timer.start(240*1000) 
             
             # 第一次手動載入清單
-            self.refresh_task_list()
+            self.schedule_task_list_refresh()
             # ⭐ 主控啟動時載入地圖，同步一次 DB（單次初始化同步）
             self.load_map_positions()
             #cmb載入任務名字
@@ -2273,6 +2274,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         worker.error.connect(lambda: self._cleanup_poll_worker(worker))
 
         worker.start() # ⭐ 啟動 thread
+
+    def _start_guarded_worker(self, job_name, func, success_cb, error_cb):
+        if self.worker_job_busy.get(job_name):
+            return False
+
+        worker = DBWorker(func)
+        self.worker_job_busy[job_name] = True
+        worker.finished.connect(success_cb)
+        worker.error.connect(error_cb)
+        self.workers.append(worker)
+        worker.finished.connect(
+            lambda *_: self._cleanup_worker_job(job_name, worker)
+        )
+        worker.error.connect(
+            lambda *_: self._cleanup_worker_job(job_name, worker)
+        )
+        worker.start()
+        return True
+
+    def _cleanup_worker_job(self, job_name, worker):
+        if worker in self.workers:
+            self.workers.remove(worker)
+        self.worker_job_busy[job_name] = False
     
     def _cleanup_poll_worker(self, worker):
         # ⭐ 從列表移除（避免記憶體累積）
@@ -2563,13 +2587,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
    
    # 讀DB然後刷新GUI表格
-    def refresh_task_list(self):
+    def refresh_task_list(self, tasks=None):
         """
         [QTimer 連接的函式]
         從 DB 查詢 'Pending' 或 'Executing' 任務，並刷新 QTableWidget。
         """
-        # 呼叫 TaskDBManager 取得待執行任務 (已依 sequence 排序)
-        tasks = self.task_db_manager.get_pending_tasks()
+        if tasks is None:
+            tasks = self.task_db_manager.get_pending_tasks()
     
 
         # 確保表格總欄數為 8 欄 (1個隱藏DB_ID + 7個顯示欄位)
@@ -2629,11 +2653,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # 索引 7: 空白/操作按鈕欄位
             # self.tableWidget_pending_mission_list.setItem(row_idx, 7, ) 
             self.add_delete_button(row_idx) # add_delete_button
-            
 
-            # 重新呼叫你的置中函式和列寬調整 (這不會被前面的 setRowCount(0) 影響)
-            self.set_table_items_center(self.tableWidget_pending_mission_list)
-            self.tableWidget_pending_mission_list.resizeRowsToContents()
+        # 重新呼叫你的置中函式和列寬調整 (這不會被前面的 setRowCount(0) 影響)
+        self.set_table_items_center(self.tableWidget_pending_mission_list)
+        self.tableWidget_pending_mission_list.resizeRowsToContents()
 
     #######################刷新label&tooltip#######################
     def create_tooltip_html(self, task, role):
@@ -2725,69 +2748,121 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
     #######################自動詢問#################################
 
-    # 自動詢問當前任務狀態與等待中任務
-    def query_mir_info(self):
-        try:
-            status_info = functions.check_MiR_status()
-            #轉換成「格式化的 JSON 字串」，用來方便顯示（indent=4 表示用四個空格縮排）
-            status_info_str = json.dumps(status_info, indent = 4) 
-            self.api_error = False
-            self.current_mission_text = status_info.get("mission_text", self.current_mission_text)
-            timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
-            full_message = f"[{timestamp}] 狀態：\n{status_info_str}\n{'-'*40}"
-            self.plntxtEdit_Info.appendPlainText(full_message)
-            #取得等待任務名字
-            pm_names = functions.get_pending_mission_names()
-            if pm_names:
-                pm_names_with_index = [f"任務{index+1} {name}" for index, name in enumerate(pm_names)]
-                self.txtEdit_GetPM.setPlainText("\n".join(pm_names_with_index))
-                #self.txtEdit_GetPM.setPlainText("\n".join(pm_names))
-            else:
-                self.txtEdit_GetPM.setPlainText("No pending missions")
-                
-            state_ID = functions.check_MiR_status_state_ID()
-            self._refresh_robot_status_presentation(
-                state_id=state_ID,
-                advance_glow=True,
-            )
-        except Exception as e:
-            self.api_error = True
-            self._refresh_robot_status_presentation()
+    def schedule_mir_info_refresh(self):
+        self._start_guarded_worker(
+            "mir_info",
+            self._load_mir_info_snapshot,
+            self._apply_mir_info_snapshot,
+            self._handle_mir_info_refresh_error,
+        )
 
-    # 詢問車子資料庫是否有執行的任務，並用MiR API確認底層車子任務是否完成
-    def query_mir_status_db(self):
-       
+    def _load_mir_info_snapshot(self):
+        status_info = functions.check_MiR_status()
+        pending_mission_names = functions.get_pending_mission_names() or []
+        state_id = functions.check_MiR_status_state_ID()
+        return {
+            "status_info": status_info or {},
+            "pending_mission_names": pending_mission_names,
+            "state_id": state_id,
+        }
+
+    def _apply_mir_info_snapshot(self, snapshot):
+        status_info = snapshot.get("status_info", {})
+        status_info_str = json.dumps(status_info, indent=4)
+        self.api_error = False
+        self.current_mission_text = status_info.get(
+            "mission_text",
+            self.current_mission_text,
+        )
+        timestamp = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
+        full_message = f"[{timestamp}] 狀態：\n{status_info_str}\n{'-'*40}"
+        self.plntxtEdit_Info.appendPlainText(full_message)
+
+        pending_mission_names = snapshot.get("pending_mission_names", [])
+        if pending_mission_names:
+            pm_names_with_index = [
+                f"任務{index+1} {name}"
+                for index, name in enumerate(pending_mission_names)
+            ]
+            self.txtEdit_GetPM.setPlainText("\n".join(pm_names_with_index))
+        else:
+            self.txtEdit_GetPM.setPlainText("No pending missions")
+
+        self._refresh_robot_status_presentation(
+            state_id=snapshot.get("state_id"),
+            advance_glow=True,
+        )
+
+    def _handle_mir_info_refresh_error(self, error_message):
+        print(f"[MIR INFO] refresh failed: {error_message}")
+        self.api_error = True
+        self._refresh_robot_status_presentation()
+
+    def schedule_task_list_refresh(self):
+        self._start_guarded_worker(
+            "task_list",
+            self._load_task_list_snapshot,
+            self._apply_task_list_snapshot,
+            self._handle_task_list_refresh_error,
+        )
+
+    def _load_task_list_snapshot(self):
+        return self.task_db_manager.get_pending_tasks()
+
+    def _apply_task_list_snapshot(self, tasks):
+        self.refresh_task_list(tasks=tasks)
+
+    def _handle_task_list_refresh_error(self, error_message):
+        print(f"[TASK LIST] refresh failed: {error_message}")
+
+    def schedule_mir_status_reconcile(self):
+        self._start_guarded_worker(
+            "mir_status_reconcile",
+            self._load_mir_status_reconcile_snapshot,
+            self._apply_mir_status_reconcile_snapshot,
+            self._handle_mir_status_reconcile_error,
+        )
+
+    def _load_mir_status_reconcile_snapshot(self):
         executing_task_data = self.task_db_manager.get_currently_executing_task()
-        # 檢查是否有正在執行的任務
         if not executing_task_data:
-            was_disconnected = self.mir_status_poll_disconnected
-            self.mir_status_poll_disconnected = False
-            if was_disconnected:
-                self._refresh_robot_status_presentation()
-            # 沒有任務在執行，直接退出
-            return
-        
-        task_id = executing_task_data['id']
-        start_point = executing_task_data['start_point']
-        target_point = executing_task_data['target_point']
-        mq_id = executing_task_data.get('mq_id')  # ✅ 取出你綁定的 mq_id
+            return {"kind": "no_task"}
+
+        task_id = executing_task_data["id"]
+        start_point = executing_task_data["start_point"]
+        target_point = executing_task_data["target_point"]
+        mq_id = executing_task_data.get("mq_id")
 
         if not mq_id:
-            # 補綁 mq_id：如果 mission_queue 有新 id，就補回 DB
             latest_mq_id = functions.get_mission_queue_max_id()
             if latest_mq_id:
                 self.task_db_manager.update_task_mq_id(task_id, latest_mq_id)
                 mq_id = latest_mq_id
             else:
-                return
+                return {"kind": "awaiting_mq_id"}
 
-        state = functions.get_mission_queue_id_state(mq_id)  # ✅ 查指定 mq_id 的 state
+        return {
+            "kind": "task_state",
+            "task_id": task_id,
+            "start_point": start_point,
+            "target_point": target_point,
+            "mq_id": mq_id,
+            "state": functions.get_mission_queue_id_state(mq_id),
+        }
 
-        # mission_queue 的 id 以及 state
-        # max_id_state = functions.get_mission_queue_max_id_state()
-        # max_mission_id  = functions.get_mission_queue_max_id()
-        # print(f"max_id_state: {max_id_state}, max_mission_id: {max_mission_id}") 
+    def _apply_mir_status_reconcile_snapshot(self, snapshot):
+        if snapshot["kind"] == "no_task":
+            was_disconnected = self.mir_status_poll_disconnected
+            self.mir_status_poll_disconnected = False
+            if was_disconnected:
+                self._refresh_robot_status_presentation()
+            return
 
+        if snapshot["kind"] == "awaiting_mq_id":
+            return
+
+        mq_id = snapshot["mq_id"]
+        state = snapshot["state"]
         if state is None:
             if not self.mir_status_poll_disconnected:
                 print(f"[MIR RECONCILE] mission queue state unavailable for mq_id={mq_id}")
@@ -2800,19 +2875,41 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.mir_status_poll_disconnected = False
             self._refresh_robot_status_presentation()
 
-        if  state == "Done":
-            self._finalize_task_result(task_id, "Completed", start_point, target_point)
+        if state == "Done":
+            self._finalize_task_result(
+                snapshot["task_id"],
+                "Completed",
+                snapshot["start_point"],
+                snapshot["target_point"],
+            )
             return
-            self.add_notification_item("完成", f"{task_id} 任務完成: 從 {start_point} 前往 {target_point}")
 
-        elif state == "Aborted":
-            self._finalize_task_result(task_id, "Aborted", start_point, target_point)
+        if state == "Aborted":
+            self._finalize_task_result(
+                snapshot["task_id"],
+                "Aborted",
+                snapshot["start_point"],
+                snapshot["target_point"],
+            )
             return
-            self.is_AMR_idle = True
-            self.add_notification_item("取消", f"{task_id} 任務被取消/中止: 從 {start_point} 前往 {target_point}")
 
-        # 刷新 UI 任務列表
-        self.refresh_task_list() 
+        self.refresh_task_list()
+
+    def _handle_mir_status_reconcile_error(self, error_message):
+        print(f"[MIR RECONCILE] refresh failed: {error_message}")
+
+    # 自動詢問當前任務狀態與等待中任務
+    def query_mir_info(self):
+        try:
+            snapshot = MainWindow._load_mir_info_snapshot(self)
+            MainWindow._apply_mir_info_snapshot(self, snapshot)
+        except Exception as e:
+            MainWindow._handle_mir_info_refresh_error(self, str(e))
+
+    # 詢問車子資料庫是否有執行的任務，並用MiR API確認底層車子任務是否完成
+    def query_mir_status_db(self):
+        snapshot = MainWindow._load_mir_status_reconcile_snapshot(self)
+        MainWindow._apply_mir_status_reconcile_snapshot(self, snapshot)
 
     # 自動詢問Sent robot to車子狀態
     def query_mir_status(self):
@@ -3616,11 +3713,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.last_robot_world_pos = (world_x, world_y)
         self.draw_car_position(world_x,world_y)
 
+    def schedule_mir_position_refresh(self):
+        self._start_guarded_worker(
+            "mir_position",
+            self._load_mir_position_snapshot,
+            self._apply_mir_position_snapshot,
+            self._handle_mir_position_refresh_error,
+        )
+
+    def _load_mir_position_snapshot(self):
+        return functions.check_MiR_status_position()
+
+    def _apply_mir_position_snapshot(self, position_snapshot):
+        if not position_snapshot:
+            return
+        world_x, world_y = position_snapshot
+        self.update_robot_position(world_x, world_y)
+
+    def _handle_mir_position_refresh_error(self, error_message):
+        print(f"[MIR POSITION] refresh failed: {error_message}")
+
     # 自動取得當前MiR車子位置
     def poll_mir_position(self):
-        world_x,world_y= functions.check_MiR_status_position()
-        # print(f"目前位置：{world_x,world_y}")
-        self.update_robot_position(world_x,world_y)
+        position_snapshot = MainWindow._load_mir_position_snapshot(self)
+        MainWindow._apply_mir_position_snapshot(self, position_snapshot)
 
     ##################################跳出錯誤訊息############################################
     def show_error(self,msg):

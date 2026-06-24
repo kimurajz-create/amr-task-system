@@ -285,3 +285,70 @@ status: proposed
 下一個聊天室可直接使用：
 
 `請依照 documents/implements/B01-main-window-ui-stutter-during-drag-and-dropdown.md 修正 MainWindow 拖曳、下拉式選單、地圖互動卡頓問題，先做低風險改善，再做 worker 化，完成後回報驗證結果。`
+
+## 實作記錄
+
+### 狀態
+已實作
+
+### 實作摘要
+- 將 `MainWindow` 的高頻 MiR 狀態查詢、地圖位置輪詢、任務表刷新、mission queue 對帳改成 guarded background worker 執行，避免 timer 直接在 UI thread 內做阻塞式 API / DB 呼叫。
+- 保留原有同步入口 `query_mir_info()`、`poll_mir_position()`、`query_mir_status_db()` 的行為，讓既有呼叫點與測試替身仍可沿用，但 timer 現在會優先走背景工作流。
+- 把任務表的置中與 `resizeRowsToContents()` 移出逐列迴圈，避免每列更新都重做整表 layout。
+- 在 `functions.py` 的 MiR polling 相關 GET 請求補上統一 timeout，降低 API 延遲時 UI 長時間卡住的風險。
+
+### 測試覆蓋
+- 新增 `tests/test_main_window_polling_workers.py`
+  - 驗證 guarded worker 會阻止同一 polling job 疊加。
+  - 驗證 MiR info polling 會透過背景 worker 調度。
+  - 驗證 MiR 狀態與 pending mission 查詢都會帶 timeout。
+- 既有 `tests/test_mir_status_presentation_refresh.py`
+  - 持續驗證狀態呈現刷新、disconnect/restore 回復邏輯與共享 UI refresh helper。
+
+### 變更的檔案
+#### 生產代碼
+- `main.py`
+- `functions.py`
+
+#### 測試代碼
+- `tests/test_main_window_polling_workers.py`
+
+### 驗收標準驗證
+| 驗收標準 | 狀態 | 依據 |
+|---|---|---|
+| 主視窗拖曳時不再被同步 polling 明顯拖慢 | 通過 | `fast_timer` / `refresh_timer` 改走 background worker，不再直接呼叫阻塞式 MiR / DB polling |
+| 下拉選單展開與操作不再被高頻 API request 凍結 | 通過 | `schedule_mir_info_refresh()`、`schedule_mir_position_refresh()` 取代 UI-thread 直接 polling |
+| 地圖 overlay 與 robot marker 持續更新，但 UI 更新回到 main thread | 通過 | worker 只回傳資料；`_apply_*_snapshot()` 負責 widget 更新 |
+| API 延遲時 UI 不應長時間卡死 | 通過 | `functions.py` 新增 `MIR_REQUEST_TIMEOUT_SECONDS` 並套用到 polling GET 請求 |
+| 任務表刷新不再每列重做高成本 layout | 通過 | `refresh_task_list()` 將 `set_table_items_center()` / `resizeRowsToContents()` 移至迴圈外 |
+| 實機拖曳 / 下拉互動改善幅度 | 部分 | 尚未在本地 GUI 實際手動操作驗證 |
+
+### 測試場景驗證
+| 測試場景 ID | 狀態 | 自動化測試依據 |
+|---|---|---|
+| 情境 1：拖曳主視窗時不再明顯卡頓 | 部分 | 架構上已移除 UI-thread 高頻 polling；仍需手動拖曳確認 |
+| 情境 2：下拉式選單展開不再卡頓 | 部分 | 架構上已移除 UI-thread 高頻 polling；仍需手動互動確認 |
+| 情境 3：地圖 overlay 更新不中斷 | 通過 | `tests/test_mir_status_presentation_refresh.py` |
+| 情境 4：MiR 狀態與 marker 仍正確更新 | 通過 | `tests/test_mir_status_presentation_refresh.py` |
+| 情境 5：task table 顯示與操作維持正確 | 通過 | `python -m unittest discover -s tests` |
+| 情境 6：API 延遲或 timeout 時 UI 不被拖死 | 通過 | `tests/test_main_window_polling_workers.py` |
+
+### 執行的命令
+```bash
+python -m unittest tests.test_main_window_polling_workers
+python -m unittest tests.test_main_window_polling_workers tests.test_mir_status_presentation_refresh
+python -m unittest discover -s tests
+```
+
+### 假設與決策
+- 延續既有 `DBWorker`，不額外引入新的並行抽象，符合 B01 的低風險修正方向。
+- `query_mir_status_db()` 仍保留同步入口與 `refresh_task_list()` 呼叫，以維持現有語意與既有測試穩定。
+- `TaskDBManager` 與 MiR adapter 目前仍以現有同步介面為主，只是把高頻 caller 移到 worker thread；更完整的 polling coordinator 抽離留待後續 RXX。
+
+### 延遲項目
+- 尚未把 `query_battery_status()` 與其他低頻同步呼叫完全 worker 化。
+- 尚未把 `MainWindow` 的 polling orchestration 抽成獨立 coordinator/service。
+- 尚未進行實際 GUI 手動拖曳、下拉、地圖互動驗證。
+
+### 備註
+- 這次修正暴露出 `MainWindow` 已經同時承擔 timer 調度、UI 呈現、MiR 對帳與 table rendering，後續很適合拆成獨立 polling coordinator，作為新的 `RXX` 候選。
