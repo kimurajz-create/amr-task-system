@@ -1,4 +1,4 @@
-import requests
+﻿import requests
 from requests.auth import HTTPBasicAuth
 import time
 import base64
@@ -337,9 +337,9 @@ def get_mission_queue_max_id():
             queue_ids = [item["id"] for item in mission_queue_list if "id" in item]
             return max(queue_ids) if queue_ids else None
 
-        print(f"???⊥???mission_queue?”_01: {response.text}")
+        print(f"❌ 無法取得 mission_queue 列表_01: {response.text}")
     except requests.RequestException as exc:
-        print(f"???⊥???mission_queue?”_01: {exc}")
+        print(f"❌ 無法取得 mission_queue 列表_01: {exc}")
     return None
     response = requests.get(url,headers = headers)
     if response.status_code == 200:
@@ -370,9 +370,9 @@ def get_mission_queue_id_state(mission_queue_id):
             mission_data = response.json()
             return mission_data["state"]
 
-        print(f"???⊥???mission_queue?”_03: {response.text}")
+        print(f"❌ 無法取得 mission_queue 狀態_03: {response.text}")
     except requests.RequestException as exc:
-        print(f"???⊥???mission_queue?”_03: {exc}")
+        print(f"❌ 無法取得 mission_queue 狀態_03: {exc}")
     return None
     response = requests.get(url,headers = headers)
     if response.status_code == 200:
@@ -404,7 +404,7 @@ def move_to_position_multi_var(start_uuid,goal_uuid,mission_id):
     url = f"{MIR_IP}/api/v2.0.0/mission_queue"
     mission_data = {
         "mission_id": mission_id,
-        "parameters": [{"id": "target", "value": start_uuid},{"id": "target_2", "value": goal_uuid}]
+        "parameters": [{"id": "target_1", "value": start_uuid},{"id": "target_2", "value": goal_uuid}]
     }
     print(f"任務參數:{mission_data}") 
     headers = get_auth_headers()
@@ -425,8 +425,8 @@ def move_to_position_with_sound(start_uuid, goal_uuid, mission_id, duration_seco
     mission_data = {
         "mission_id": mission_id,
         "parameters": [
-            {"id": "target1", "value": start_uuid},
-            {"id": "target2", "value": goal_uuid},
+            {"id": "target_1", "value": start_uuid},
+            {"id": "target_2", "value": goal_uuid},
             {"id": "test_0610", "value": str(duration_seconds)}
         ]
     }
