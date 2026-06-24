@@ -19,6 +19,7 @@ DEFAULT_CONFIG = {
     "heartbeat_display_count": 13,
 }
 REQUEST_TIMEOUT_SECONDS = 3
+MIR_REQUEST_TIMEOUT_SECONDS = REQUEST_TIMEOUT_SECONDS
 ##################################IP############################################
 # 從設定檔讀取 IP，並且回傳這個 IP
 def load_config():
@@ -88,7 +89,11 @@ def get_auth_headers():
 def check_api_status():
     url = f"{MIR_IP}/api/v2.0.0/status"
     headers = get_auth_headers()
-    response = requests.get(url,headers=headers)
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+    )
     if response.status_code == 200:
         print(f"API 回應成功: {response.status_code},{response.text}")
     else:
@@ -99,7 +104,11 @@ def check_api_status_v2():
     try:
         url = f"{Full_IP}/api/v2.0.0/status"
         headers = get_auth_headers()
-        response = requests.get(url,headers=headers)
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+        )
         if response.status_code == 200:
             return 0
         else:
@@ -116,7 +125,11 @@ def check_api_status_v3():
         url = f"{MIR_IP}/api/v2.0.0/status"
         headers = get_auth_headers()
 
-        response = requests.get(url, headers=headers, timeout=3)
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+        )
 
         if response.status_code != 200:
             raise Exception(f"API error: {response.status_code}")
@@ -133,7 +146,11 @@ def check_api_status_v3():
 def check_MiR_status():
     url = f"{MIR_IP}/api/v2.0.0/status"
     headers = get_auth_headers()
-    response = requests.get(url,headers=headers)
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+    )
     if response.status_code == 200:
         #print(f"API 回應成功")
         return response.json()
@@ -148,7 +165,11 @@ def get_mission_text():
 def check_MiR_status_state_ID():
     url = f"{MIR_IP}/api/v2.0.0/status"
     headers = get_auth_headers()
-    response = requests.get(url, headers = headers)
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+    )
     if response.status_code ==200:
         nums = response.json()
         return nums["state_id"]
@@ -159,7 +180,11 @@ def check_MiR_status_state_ID():
 def check_MiR_status_maps_ID():
     url = f"{MIR_IP}/api/v2.0.0/status"
     headers = get_auth_headers()
-    response = requests.get(url, headers = headers)
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+    )
     if response.status_code ==200:
         strings = response.json()
         return strings["map_id"]
@@ -170,7 +195,11 @@ def check_MiR_status_maps_ID():
 def get_battery_level():
     url = f"{MIR_IP}/api/v2.0.0/status"
     headers = get_auth_headers()
-    response = requests.get(url, headers = headers)
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+    )
     if response.status_code ==200:
         percentage = response.json()
         return percentage["battery_percentage"]
@@ -182,7 +211,11 @@ def get_battery_level():
 def check_MiR_status_position():
     url = f"{MIR_IP}/api/v2.0.0/status"
     headers = get_auth_headers()
-    response = requests.get(url, headers = headers)
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+    )
     if response.status_code ==200:
         data = response.json()
         positions = data["position"]
@@ -495,7 +528,11 @@ def play_sound(sound_type):
 def get_pending_mission_names():
     url = f"{MIR_IP}/api/v2.0.0/mission_queue"
     headers = get_auth_headers()
-    response = requests.get(url,headers = headers)
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+    )
     if response.status_code == 200:
         states = response.json()
         # pending_ids = [state["id"] for state in states if state["state"] == "Pending"]
@@ -505,14 +542,22 @@ def get_pending_mission_names():
             if state["state"] == "Pending":
                 pending_ids = state["id"]
                 url = f"{MIR_IP}/api/v2.0.0/mission_queue/{pending_ids}"
-                response = requests.get(url,headers = headers)
+                response = requests.get(
+                    url,
+                    headers=headers,
+                    timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+                )
                 if response.status_code == 200:
                     states_02 = response.json()
                     url_mission_id =states_02["mission"]
                     #print(url_mission_id)
                     url = f"{MIR_IP}/api{url_mission_id}" # 網址找名字
                     #print(url)
-                    response = requests.get(url,headers = headers)
+                    response = requests.get(
+                        url,
+                        headers=headers,
+                        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+                    )
                     if response.status_code == 200:
                         mission_data = response.json()
                         mission_name = mission_data["name"]
