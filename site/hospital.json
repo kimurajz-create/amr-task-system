@@ -160,7 +160,7 @@
       "x_px": 130,
       "y_px": 286,
       "world_x": 26.626,
-      "world_y": -1.611,
+      "world_y": -0.411,
       "width_px": 26,
       "height_px": 18
     },
@@ -186,8 +186,8 @@
       "marker_id": "label_rp_5",
       "x_px": 901,
       "y_px": 277,
-      "world_x": 22.639,
-      "world_y": 17.76,
+      "world_x": 19.98,
+      "world_y": 18.098,
       "width_px": 26,
       "height_px": 18
     },
@@ -195,8 +195,8 @@
       "marker_id": "label_rp_6",
       "x_px": 579,
       "y_px": 277,
-      "world_x": 12.394,
-      "world_y": 17.984,
+      "world_x": 12.347,
+      "world_y": 17.945,
       "width_px": 26,
       "height_px": 18
     },
@@ -214,7 +214,7 @@
       "x_px": 829,
       "y_px": 462,
       "world_x": -4.893,
-      "world_y": 18.252,
+      "world_y": 18.247,
       "width_px": 26,
       "height_px": 18
     },
@@ -222,8 +222,8 @@
       "marker_id": "label_rp_9",
       "x_px": 704,
       "y_px": 462,
-      "world_x": -6.22,
-      "world_y": 17.033,
+      "world_x": -6.239,
+      "world_y": 17.081,
       "width_px": 26,
       "height_px": 18
     },
@@ -231,8 +231,8 @@
       "marker_id": "label_rp_10",
       "x_px": 408,
       "y_px": 140,
-      "world_x": -0.209,
-      "world_y": 15.449,
+      "world_x": -0.214,
+      "world_y": 15.466,
       "width_px": 26,
       "height_px": 18
     },
@@ -240,8 +240,8 @@
       "marker_id": "label_rp_11",
       "x_px": 676,
       "y_px": 277,
-      "world_x": 8.752,
-      "world_y": 15.607,
+      "world_x": 8.75,
+      "world_y": 15.38,
       "width_px": 26,
       "height_px": 18
     },
@@ -258,8 +258,8 @@
       "marker_id": "label_rp_13",
       "x_px": 787,
       "y_px": 111,
-      "world_x": 25.742,
-      "world_y": 12.946,
+      "world_x": 25.298,
+      "world_y": 8.747,
       "width_px": 26,
       "height_px": 18
     },
@@ -267,17 +267,8 @@
       "marker_id": "label_charge_station",
       "x_px": 364,
       "y_px": 77,
-      "world_x": 25.307,
-      "world_y": -4.069,
-      "width_px": 26,
-      "height_px": 18
-    },
-    {
-      "marker_id": "label_sr_1",
-      "x_px": 353,
-      "y_px": 208,
-      "world_x": 25.923,
-      "world_y": 4.898,
+      "world_x": 24.813,
+      "world_y": 7.62,
       "width_px": 26,
       "height_px": 18
     },
@@ -383,13 +374,6 @@
       "marker_id": "label_charge_station",
       "room_id": null,
       "is_charging_station": true
-    },
-    {
-      "mir_name": "MH_Shelf position SR 1",
-      "display_name": "滅菌室",
-      "marker_id": "label_sr_1",
-      "room_id": "SR01",
-      "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position SR 2",
