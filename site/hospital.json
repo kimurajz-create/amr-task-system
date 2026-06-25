@@ -384,84 +384,84 @@
     },
     {
       "mir_name": "MH_Shelf position OR 1",
-      "display_name": "車架位置(手術室1)",
+      "display_name": "手術室1",
       "marker_id": "label_rp_1",
       "room_id": "OR01",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 2",
-      "display_name": "車架位置(手術室2)",
+      "display_name": "手術室2",
       "marker_id": "label_rp_2",
       "room_id": "OR02",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 3",
-      "display_name": "車架位置(手術室3)",
+      "display_name": "手術室3",
       "marker_id": "label_rp_3",
       "room_id": "OR03",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 5",
-      "display_name": "車架位置(手術室5)",
+      "display_name": "手術室5",
       "marker_id": "label_rp_5",
       "room_id": "OR05",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 6",
-      "display_name": "車架位置(手術室6)",
+      "display_name": "手術室6",
       "marker_id": "label_rp_6",
       "room_id": "OR06",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 7",
-      "display_name": "車架位置(手術室7)",
+      "display_name": "手術室7",
       "marker_id": "label_rp_7",
       "room_id": "OR07",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 8",
-      "display_name": "車架位置(手術室8)",
+      "display_name": "手術室8",
       "marker_id": "label_rp_8",
       "room_id": "OR08",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 9",
-      "display_name": "車架位置(手術室9)",
+      "display_name": "手術室9",
       "marker_id": "label_rp_9",
       "room_id": "OR09",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 10",
-      "display_name": "車架位置(手術室10)",
+      "display_name": "手術室10",
       "marker_id": "label_rp_10",
       "room_id": "OR10",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 11",
-      "display_name": "車架位置(手術室11)",
+      "display_name": "手術室11",
       "marker_id": "label_rp_11",
       "room_id": "OR11",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 12",
-      "display_name": "車架位置(手術室12)",
+      "display_name": "手術室12",
       "marker_id": "label_rp_12",
       "room_id": "OR12",
       "is_charging_station": false
     },
     {
       "mir_name": "MH_Shelf position OR 13",
-      "display_name": "車架位置(手術室13)",
+      "display_name": "手術室13",
       "marker_id": "label_rp_13",
       "room_id": "OR13",
       "is_charging_station": false
