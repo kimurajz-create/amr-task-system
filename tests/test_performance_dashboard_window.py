@@ -109,6 +109,10 @@ class PerformanceDashboardWindowTests(unittest.TestCase):
             {"label": "Lobby -> Lab", "value": "3"},
             snapshot["sections"][-1]["rows"][0],
         )
+        self.assertEqual(
+            "最高任務類型：Empty Cart (6)",
+            snapshot["sections"][0]["summary"],
+        )
 
     def test_window_refresh_applies_provider_snapshot(self):
         def snapshot_provider():
@@ -148,6 +152,10 @@ class PerformanceDashboardWindowTests(unittest.TestCase):
         self.assertEqual(
             "Empty Cart: 9\nCart Delivery: 4",
             window.section_body_labels["task-volume"].text(),
+        )
+        self.assertEqual(
+            2,
+            window.section_chart_widgets["task-volume"].row_count(),
         )
         self.assertIn("60", window.last_refresh_label.text())
 
