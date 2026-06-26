@@ -480,3 +480,660 @@ class PerformanceDashboardController:
         self.window.activateWindow()
         self.window.refresh_dashboard()
         return self.window
+
+
+# Clean override block for the dashboard UI. The original file contains
+# legacy strings that are hard to maintain, so we redefine the public API
+# below with chart-based section cards while keeping the same module surface.
+from PySide6.QtWidgets import QProgressBar, QScrollArea
+
+
+DASHBOARD_AUTO_REFRESH_MS = 15_000
+
+SUMMARY_CARD_SPECS = [
+    ("pending_count", "待執行", "等待派送到 MiR 的任務數量。"),
+    ("executing_count", "執行中", "目前由 MiR 執行中的任務數量。"),
+    ("completed_count", "已完成", "已正常完成的任務數量。"),
+    ("aborted_count", "已中止", "提早結束或被停止的任務數量。"),
+    ("total_count", "總任務", "資料庫目前累積的任務總數。"),
+]
+
+SECTION_SPECS = [
+    {
+        "key": "task-volume",
+        "title": "任務類型分組",
+        "row_label_key": "mission_content",
+        "empty_text": "目前沒有任務類型統計資料。",
+        "accent": "#4f8cff",
+        "summary_prefix": "最高任務類型",
+    },
+    {
+        "key": "start-hotspots",
+        "title": "起點 Top N",
+        "row_label_key": "start_point",
+        "empty_text": "目前沒有起點熱區統計資料。",
+        "accent": "#2ec27e",
+        "summary_prefix": "最熱門起點",
+    },
+    {
+        "key": "target-hotspots",
+        "title": "目的地 Top N",
+        "row_label_key": "target_point",
+        "empty_text": "目前沒有目的地熱區統計資料。",
+        "accent": "#f6c445",
+        "summary_prefix": "最熱門目的地",
+    },
+    {
+        "key": "route-hotspots",
+        "title": "熱門路線 Top N",
+        "row_label_key": "route_label",
+        "empty_text": "目前沒有熱門路線統計資料。",
+        "accent": "#ff7a59",
+        "summary_prefix": "最熱門路線",
+    },
+]
+
+
+def _normalize_section_label(value):
+    if value is None:
+        return "(未命名)"
+
+    text = str(value).strip()
+    return text if text else "(未命名)"
+
+
+def _safe_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _normalize_section_rows(items, label_key):
+    rows = []
+    for item in items or []:
+        rows.append(
+            {
+                "label": _normalize_section_label(item.get(label_key)),
+                "value": str(item.get("task_count", 0)),
+            }
+        )
+    return rows
+
+
+def _format_section_body(rows, empty_text):
+    if not rows:
+        return empty_text
+    return "\n".join(f"{row['label']}: {row['value']}" for row in rows)
+
+
+def _build_section_summary(rows, empty_text, prefix):
+    if not rows:
+        return empty_text
+
+    top_row = rows[0]
+    return f"{prefix}：{top_row['label']} ({top_row['value']})"
+
+
+def build_performance_dashboard_snapshot(
+    task_status_summary=None,
+    task_volume_by_mission=None,
+    start_hotspots=None,
+    target_hotspots=None,
+    route_hotspots=None,
+    warning_message=None,
+):
+    summary = task_status_summary or {}
+
+    summary_cards = [
+        {
+            "key": key,
+            "title": title,
+            "value": str(summary.get(key, 0)),
+            "caption": caption,
+        }
+        for key, title, caption in SUMMARY_CARD_SPECS
+    ]
+
+    section_data = {
+        "task-volume": task_volume_by_mission,
+        "start-hotspots": start_hotspots,
+        "target-hotspots": target_hotspots,
+        "route-hotspots": route_hotspots,
+    }
+    sections = []
+    for spec in SECTION_SPECS:
+        rows = _normalize_section_rows(
+            section_data.get(spec["key"]),
+            spec["row_label_key"],
+        )
+        sections.append(
+            {
+                "key": spec["key"],
+                "title": spec["title"],
+                "rows": rows,
+                "body": _format_section_body(rows, spec["empty_text"]),
+                "summary": _build_section_summary(
+                    rows,
+                    spec["empty_text"],
+                    spec["summary_prefix"],
+                ),
+            }
+        )
+
+    if warning_message:
+        status_level = "warning"
+        status_text = warning_message
+    elif task_status_summary is None:
+        status_level = "info"
+        status_text = "績效 dashboard 已開啟，等待載入任務量與熱區統計。"
+    else:
+        status_level = "ready"
+        status_text = "任務量與熱區統計已刷新完成。"
+
+    return {
+        "status_level": status_level,
+        "status_text": status_text,
+        "summary_cards": summary_cards,
+        "sections": sections,
+    }
+
+
+def build_performance_dashboard_snapshot_from_db(
+    task_db_manager,
+    hotspot_limit=10,
+):
+    if task_db_manager is None:
+        return build_performance_dashboard_snapshot(
+            warning_message="尚未提供 TaskDBManager，無法讀取任務統計資料。"
+        )
+
+    summary = task_db_manager.get_task_status_summary()
+    task_volume_by_mission = task_db_manager.get_task_volume_by_mission()
+    start_hotspots = task_db_manager.get_task_start_hotspots(limit=hotspot_limit)
+    target_hotspots = task_db_manager.get_task_target_hotspots(limit=hotspot_limit)
+    route_hotspots = task_db_manager.get_task_route_hotspots(limit=hotspot_limit)
+
+    return build_performance_dashboard_snapshot(
+        task_status_summary=summary,
+        task_volume_by_mission=task_volume_by_mission,
+        start_hotspots=start_hotspots,
+        target_hotspots=target_hotspots,
+        route_hotspots=route_hotspots,
+    )
+
+
+class SectionBarChartWidget(QWidget):
+    def __init__(self, accent_color, empty_text, parent=None):
+        super().__init__(parent)
+        self.accent_color = accent_color
+        self.empty_text = empty_text
+        self.row_frames = []
+
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(10)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.NoFrame)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setStyleSheet("background: transparent;")
+
+        self.rows_host = QWidget()
+        self.rows_layout = QVBoxLayout(self.rows_host)
+        self.rows_layout.setContentsMargins(0, 0, 0, 0)
+        self.rows_layout.setSpacing(10)
+
+        self.scroll_area.setWidget(self.rows_host)
+
+        self.summary_label = QLabel(empty_text)
+        self.summary_label.setObjectName("dashboardSectionMeta")
+        self.summary_label.setWordWrap(True)
+
+        root_layout.addWidget(self.scroll_area, 1)
+        root_layout.addWidget(self.summary_label)
+
+    def _delete_layout(self, layout):
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            child_layout = item.layout()
+            if widget is not None:
+                widget.deleteLater()
+            elif child_layout is not None:
+                self._delete_layout(child_layout)
+
+    def _clear_rows(self):
+        while self.rows_layout.count():
+            item = self.rows_layout.takeAt(0)
+            widget = item.widget()
+            child_layout = item.layout()
+            if widget is not None:
+                widget.deleteLater()
+            elif child_layout is not None:
+                self._delete_layout(child_layout)
+
+        self.row_frames = []
+
+    def _build_bar_row(self, label_text, value, max_value):
+        frame = QFrame()
+        frame.setObjectName("dashboardBarRow")
+
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(8)
+
+        label = QLabel(label_text)
+        label.setObjectName("dashboardBarLabel")
+        label.setWordWrap(True)
+
+        value_label = QLabel(str(value))
+        value_label.setObjectName("dashboardBarValue")
+        value_label.setAlignment(Qt.AlignRight | Qt.AlignTop)
+
+        progress_bar = QProgressBar()
+        progress_bar.setObjectName("dashboardBarProgress")
+        progress_bar.setTextVisible(False)
+        progress_bar.setRange(0, max(max_value, 1))
+        progress_bar.setValue(value)
+        progress_bar.setFixedHeight(10)
+        progress_bar.setStyleSheet(
+            """
+            QProgressBar {
+                border: none;
+                border-radius: 5px;
+                background-color: #1a2531;
+            }
+            QProgressBar::chunk {
+                border-radius: 5px;
+                background-color: %s;
+            }
+            """
+            % self.accent_color
+        )
+
+        header_layout.addWidget(label, 1)
+        header_layout.addWidget(value_label, 0)
+
+        layout.addLayout(header_layout)
+        layout.addWidget(progress_bar)
+        return frame
+
+    def set_rows(self, rows, body_text=None, summary_text=None):
+        self._clear_rows()
+
+        if not rows:
+            empty_label = QLabel(self.empty_text)
+            empty_label.setObjectName("dashboardSectionEmpty")
+            empty_label.setAlignment(Qt.AlignCenter)
+            empty_label.setWordWrap(True)
+            self.rows_layout.addWidget(empty_label)
+            self.rows_layout.addStretch()
+            self.summary_label.setText(summary_text or body_text or self.empty_text)
+            return
+
+        numeric_values = [_safe_int(row.get("value")) for row in rows]
+        max_value = max(numeric_values) if numeric_values else 1
+
+        for row in rows:
+            row_value = _safe_int(row.get("value"))
+            row_frame = self._build_bar_row(
+                str(row.get("label", "")),
+                row_value,
+                max_value,
+            )
+            self.rows_layout.addWidget(row_frame)
+            self.row_frames.append(row_frame)
+
+        self.rows_layout.addStretch()
+        self.summary_label.setText(summary_text or body_text or self.empty_text)
+
+    def row_count(self):
+        return len(self.row_frames)
+
+
+class PerformanceDashboardWindow(QWidget):
+    def __init__(
+        self,
+        snapshot_provider=None,
+        refresh_interval_ms=DASHBOARD_AUTO_REFRESH_MS,
+        parent=None,
+    ):
+        super().__init__(None)
+        self.setWindowFlags(
+            Qt.Window
+            | Qt.WindowMinMaxButtonsHint
+            | Qt.WindowCloseButtonHint
+        )
+        self.setAttribute(Qt.WA_DeleteOnClose, False)
+
+        self.snapshot_provider = snapshot_provider or build_performance_dashboard_snapshot
+        self.refresh_interval_ms = refresh_interval_ms
+        self.summary_value_labels = {}
+        self.section_body_labels = {}
+        self.section_chart_widgets = {}
+
+        self.setObjectName("PerformanceDashboardWindow")
+        self.setWindowTitle("MiR 績效儀表板")
+        self.resize(980, 720)
+        self.setMinimumSize(860, 620)
+
+        self._build_ui()
+        self._apply_styles()
+
+        self.refresh_timer = QTimer(self)
+        self.refresh_timer.timeout.connect(self.refresh_dashboard)
+        self.refresh_timer.start(self.refresh_interval_ms)
+
+        self.refresh_dashboard()
+
+    def _build_ui(self):
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(24, 24, 24, 24)
+        root_layout.setSpacing(18)
+
+        title_label = QLabel("MiR 績效儀表板")
+        title_label.setObjectName("dashboardTitleLabel")
+
+        subtitle_label = QLabel(
+            "P04 / P3 任務統計視圖，集中顯示摘要數量、任務類型分組與熱門路線。"
+        )
+        subtitle_label.setObjectName("dashboardSubtitleLabel")
+        subtitle_label.setWordWrap(True)
+
+        header_actions_layout = QHBoxLayout()
+        header_actions_layout.setSpacing(12)
+
+        self.last_refresh_label = QLabel("最後刷新：等待載入中")
+        self.last_refresh_label.setObjectName("dashboardMetaLabel")
+
+        self.refresh_button = QPushButton("立即刷新")
+        self.refresh_button.setObjectName("dashboardRefreshButton")
+        self.refresh_button.clicked.connect(self.refresh_dashboard)
+
+        header_actions_layout.addWidget(self.last_refresh_label)
+        header_actions_layout.addStretch()
+        header_actions_layout.addWidget(self.refresh_button)
+
+        self.status_banner = QLabel("")
+        self.status_banner.setObjectName("dashboardStatusBanner")
+        self.status_banner.setWordWrap(True)
+
+        summary_frame = QFrame()
+        summary_frame.setObjectName("dashboardPanel")
+        summary_layout = QVBoxLayout(summary_frame)
+        summary_layout.setContentsMargins(18, 18, 18, 18)
+        summary_layout.setSpacing(14)
+
+        summary_title = QLabel("任務摘要")
+        summary_title.setObjectName("dashboardSectionTitle")
+        summary_layout.addWidget(summary_title)
+
+        summary_cards_layout = QGridLayout()
+        summary_cards_layout.setHorizontalSpacing(12)
+        summary_cards_layout.setVerticalSpacing(12)
+        for index, (key, title, caption) in enumerate(SUMMARY_CARD_SPECS):
+            summary_cards_layout.addWidget(
+                self._build_summary_card(key, title, caption),
+                index // 3,
+                index % 3,
+            )
+        summary_layout.addLayout(summary_cards_layout)
+
+        sections_frame = QFrame()
+        sections_frame.setObjectName("dashboardPanel")
+        sections_layout = QVBoxLayout(sections_frame)
+        sections_layout.setContentsMargins(18, 18, 18, 18)
+        sections_layout.setSpacing(14)
+
+        sections_title = QLabel("任務量與熱區統計")
+        sections_title.setObjectName("dashboardSectionTitle")
+        sections_layout.addWidget(sections_title)
+
+        section_cards_layout = QGridLayout()
+        section_cards_layout.setHorizontalSpacing(12)
+        section_cards_layout.setVerticalSpacing(12)
+        for index, spec in enumerate(SECTION_SPECS):
+            section_cards_layout.addWidget(
+                self._build_section_card(
+                    spec["key"],
+                    spec["title"],
+                    spec["empty_text"],
+                    spec["accent"],
+                ),
+                index // 2,
+                index % 2,
+            )
+        sections_layout.addLayout(section_cards_layout)
+
+        root_layout.addWidget(title_label)
+        root_layout.addWidget(subtitle_label)
+        root_layout.addLayout(header_actions_layout)
+        root_layout.addWidget(self.status_banner)
+        root_layout.addWidget(summary_frame)
+        root_layout.addWidget(sections_frame)
+        root_layout.addStretch()
+
+    def _build_summary_card(self, key, title, caption):
+        frame = QFrame()
+        frame.setObjectName("dashboardSummaryCard")
+        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(6)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("dashboardCardTitle")
+
+        value_label = QLabel("0")
+        value_label.setObjectName("dashboardCardValue")
+
+        caption_label = QLabel(caption)
+        caption_label.setObjectName("dashboardCardCaption")
+        caption_label.setWordWrap(True)
+
+        layout.addWidget(title_label)
+        layout.addWidget(value_label)
+        layout.addWidget(caption_label)
+
+        self.summary_value_labels[key] = value_label
+        return frame
+
+    def _build_section_card(self, key, title, empty_text, accent_color):
+        frame = QFrame()
+        frame.setObjectName("dashboardSectionCard")
+        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(10)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("dashboardSectionCardTitle")
+
+        chart_widget = SectionBarChartWidget(
+            accent_color=accent_color,
+            empty_text=empty_text,
+        )
+
+        layout.addWidget(title_label)
+        layout.addWidget(chart_widget, 1)
+
+        self.section_chart_widgets[key] = chart_widget
+        self.section_body_labels[key] = chart_widget.summary_label
+        return frame
+
+    def _apply_styles(self):
+        self.setStyleSheet(
+            """
+            QWidget#PerformanceDashboardWindow {
+                background-color: #131a22;
+                color: #f4f7fb;
+            }
+            QLabel#dashboardTitleLabel {
+                font-size: 26px;
+                font-weight: 700;
+                color: #f8fbff;
+            }
+            QLabel#dashboardSubtitleLabel, QLabel#dashboardMetaLabel {
+                color: #9fb0c3;
+                font-size: 13px;
+            }
+            QLabel#dashboardStatusBanner {
+                border-radius: 10px;
+                padding: 12px 14px;
+                font-size: 13px;
+                background-color: #1f3146;
+                color: #dbe8f8;
+            }
+            QFrame#dashboardPanel {
+                background-color: #19222d;
+                border: 1px solid #243445;
+                border-radius: 16px;
+            }
+            QLabel#dashboardSectionTitle {
+                font-size: 17px;
+                font-weight: 700;
+                color: #f4f7fb;
+            }
+            QFrame#dashboardSummaryCard, QFrame#dashboardSectionCard {
+                background-color: #10171f;
+                border: 1px solid #233243;
+                border-radius: 12px;
+            }
+            QLabel#dashboardCardTitle, QLabel#dashboardSectionCardTitle {
+                font-size: 14px;
+                font-weight: 600;
+                color: #d7e2ef;
+            }
+            QLabel#dashboardCardValue {
+                font-size: 28px;
+                font-weight: 700;
+                color: #f8fbff;
+            }
+            QLabel#dashboardCardCaption,
+            QLabel#dashboardSectionMeta,
+            QLabel#dashboardSectionEmpty,
+            QLabel#dashboardBarLabel,
+            QLabel#dashboardBarValue {
+                font-size: 12px;
+                color: #92a6bc;
+            }
+            QLabel#dashboardSectionMeta {
+                color: #c3d3e4;
+            }
+            QLabel#dashboardBarLabel {
+                color: #dce8f4;
+            }
+            QLabel#dashboardBarValue {
+                color: #f8fbff;
+                font-weight: 600;
+                min-width: 36px;
+            }
+            QScrollArea {
+                background: transparent;
+            }
+            QPushButton#dashboardRefreshButton {
+                background-color: #2f81f7;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 9px 16px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            QPushButton#dashboardRefreshButton:hover {
+                background-color: #4691fa;
+            }
+            """
+        )
+
+    def set_snapshot_provider(self, snapshot_provider):
+        self.snapshot_provider = snapshot_provider or build_performance_dashboard_snapshot
+
+    def refresh_dashboard(self):
+        try:
+            snapshot = self.snapshot_provider() or build_performance_dashboard_snapshot()
+        except Exception as exc:
+            snapshot = build_performance_dashboard_snapshot(
+                warning_message=f"統計資料刷新失敗：{exc}"
+            )
+
+        self.apply_snapshot(snapshot)
+        refreshed_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.last_refresh_label.setText(
+            f"最後刷新：{refreshed_at}  |  自動刷新：{self.refresh_interval_ms // 1000} 秒"
+        )
+
+    def apply_snapshot(self, snapshot):
+        status_level = snapshot.get("status_level", "info")
+        status_text = snapshot.get("status_text", "")
+        self.status_banner.setText(status_text)
+
+        palette = {
+            "ready": ("#173326", "#b6f0cd"),
+            "warning": ("#3a2a14", "#ffd89a"),
+            "error": ("#431d1d", "#ffb0b0"),
+            "info": ("#1f3146", "#dbe8f8"),
+        }
+        background, foreground = palette.get(status_level, palette["info"])
+        self.status_banner.setStyleSheet(
+            "border-radius: 10px; padding: 12px 14px; "
+            f"background-color: {background}; color: {foreground};"
+        )
+
+        for card in snapshot.get("summary_cards", []):
+            value_label = self.summary_value_labels.get(card.get("key"))
+            if value_label is not None:
+                value_label.setText(str(card.get("value", "0")))
+
+        section_specs_by_key = {spec["key"]: spec for spec in SECTION_SPECS}
+        for section in snapshot.get("sections", []):
+            chart_widget = self.section_chart_widgets.get(section.get("key"))
+            if chart_widget is None:
+                continue
+
+            body_text = section.get("body")
+            if body_text is None:
+                spec = section_specs_by_key.get(section.get("key"), {})
+                body_text = _format_section_body(
+                    section.get("rows", []),
+                    spec.get("empty_text", "目前沒有統計資料。"),
+                )
+
+            chart_widget.set_rows(
+                section.get("rows", []),
+                body_text=body_text,
+                summary_text=section.get("summary"),
+            )
+
+    def closeEvent(self, event: QCloseEvent):
+        self.hide()
+        event.ignore()
+
+
+class PerformanceDashboardController:
+    def __init__(self, window_factory=None):
+        self.window_factory = window_factory or PerformanceDashboardWindow
+        self.window = None
+
+    def open(self, snapshot_provider=None, parent=None):
+        if self.window is None:
+            self.window = self.window_factory(
+                snapshot_provider=snapshot_provider,
+                parent=parent,
+            )
+        else:
+            self.window.set_snapshot_provider(snapshot_provider)
+
+        self.window.show()
+        self.window.raise_()
+        self.window.activateWindow()
+        self.window.refresh_dashboard()
+        return self.window
