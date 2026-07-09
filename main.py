@@ -2510,9 +2510,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if new_id:
             print(f"✅ 新增任務成功，DB ID: {new_id}")
-            self.cmb_location2.setCurrentIndex(0)
-            self.cmb_location.setCurrentIndex(0)
-            self.cmb_mission.setCurrentIndex(0)
             # 刷新表格，顯示新任務
             self.refresh_task_list()
         else:
@@ -2587,9 +2584,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if new_id:
             print(f"🚨 緊急插單成功，DB ID: {new_id}")
-            self.cmb_location2.setCurrentIndex(0)
-            self.cmb_location.setCurrentIndex(0)
-            self.cmb_mission.setCurrentIndex(0)
         
             # 刷新表格，顯示新任務
             self.refresh_task_list()
