@@ -15,3 +15,8 @@ dist/
 # config
 config.json
 users.json
+
+# local docs drafts
+documents/使用者說明書_第1-3章草稿.docx
+documents/使用者說明書_第1-3章草稿.backup-*
+documents/文件截圖/
