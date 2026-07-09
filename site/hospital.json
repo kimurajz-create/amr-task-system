@@ -82,6 +82,7 @@
         "y_px": 446,
         "width_px": 46,
         "height_px": 24,
+        "offset_x_px": -30,
         "order": 70,
         "visible": true
       },
@@ -93,6 +94,7 @@
         "y_px": 446,
         "width_px": 46,
         "height_px": 24,
+        "offset_x_px": 30,
         "order": 80,
         "visible": true
       },
@@ -116,7 +118,7 @@
         "width_px": 46,
         "height_px": 24,
         "order": 100,
-        "visible": true
+        "visible": false
       },
       {
         "point_id": "or11_shelf",
@@ -127,7 +129,7 @@
         "width_px": 46,
         "height_px": 24,
         "order": 110,
-        "visible": true
+        "visible": false
       },
       {
         "point_id": "wash_room",
@@ -185,8 +187,8 @@
       "marker_id": "label_rp_6",
       "x_px": 579,
       "y_px": 277,
-      "world_x": 17.084,
-      "world_y": -9.192,
+      "world_x": 23.805,
+      "world_y": -9.287,
       "width_px": 26,
       "height_px": 18
     },
@@ -194,8 +196,8 @@
       "marker_id": "label_rp_7",
       "x_px": 579,
       "y_px": 462,
-      "world_x": 22.863,
-      "world_y": -9.322,
+      "world_x": 30.669,
+      "world_y": -9.208,
       "width_px": 26,
       "height_px": 18
     },
@@ -203,8 +205,8 @@
       "marker_id": "label_rp_8",
       "x_px": 829,
       "y_px": 462,
-      "world_x": 31.802,
-      "world_y": -9.173,
+      "world_x": 32.74,
+      "world_y": -9.259,
       "width_px": 26,
       "height_px": 18
     },
@@ -212,8 +214,8 @@
       "marker_id": "label_rp_9",
       "x_px": 704,
       "y_px": 462,
-      "world_x": 34.158,
-      "world_y": 15.393,
+      "world_x": 36.058,
+      "world_y": 15.369,
       "width_px": 26,
       "height_px": 18
     },
@@ -224,7 +226,8 @@
       "world_x": 29.41,
       "world_y": 13.536,
       "width_px": 26,
-      "height_px": 18
+      "height_px": 18,
+      "visible": false
     },
     {
       "marker_id": "label_rp_11",
@@ -233,7 +236,8 @@
       "world_x": 22.492,
       "world_y": 13.631,
       "width_px": 26,
-      "height_px": 18
+      "height_px": 18,
+      "visible": false
     },
     {
       "marker_id": "label_charge_station",

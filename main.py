@@ -501,6 +501,11 @@ def _build_selected_map_runtime(
                 )
                 continue
 
+        offset_x_px = _coerce_int(point.get("offset_x_px")) or 0
+        offset_y_px = _coerce_int(point.get("offset_y_px")) or 0
+        x_px += offset_x_px
+        y_px += offset_y_px
+
         runtime_point = {
             "point_id": point_id,
             "location_mir_name": location_mir_name,
@@ -2116,7 +2121,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _build_map_marker_widgets(self):
         self._clear_map_marker_widgets()
 
-        for marker_id in self.MARKER_SPECS_BY_ID:
+        for marker_id, marker_spec in self.MARKER_SPECS_BY_ID.items():
+            if marker_spec.get("visible", True) is False:
+                continue
+
             marker_label = QLabel(self.label_car_overlay)
             marker_label.setObjectName(marker_id)
             marker_label.setAlignment(Qt.AlignCenter)
@@ -2147,6 +2155,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for marker_id, marker_spec in self.MARKER_SPECS_BY_ID.items():
             marker_widget = self.map_marker_widgets.get(marker_id)
             if marker_widget is None:
+                continue
+            if marker_spec.get("visible", True) is False:
+                marker_widget.hide()
                 continue
 
             world_to_image_fn = (

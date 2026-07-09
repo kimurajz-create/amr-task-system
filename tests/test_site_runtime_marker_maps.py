@@ -328,6 +328,54 @@ class SiteRuntimeMarkerMapTests(unittest.TestCase):
         self.assertEqual(743, runtime_point["x_px"])
         self.assertEqual(690, runtime_point["y_px"])
 
+    def test_selected_map_runtime_applies_configured_offsets_after_marker_sync(self):
+        site_config = {
+            "assets": {"selected_map": "picture/example.png"},
+            "calibration": {
+                "image_pts": [[100, 50], [100, 150], [200, 150]],
+                "world_pts": [[0, 0], [0, 10], [10, 10]],
+            },
+            "locations": [
+                {
+                    "mir_name": "mir-a",
+                    "display_name": "Alpha",
+                    "marker_id": "marker-alpha",
+                }
+            ],
+            "markers": [
+                {
+                    "marker_id": "marker-alpha",
+                    "x_px": 1,
+                    "y_px": 2,
+                    "world_x": 5,
+                    "world_y": 5,
+                    "width_px": 10,
+                    "height_px": 10,
+                }
+            ],
+            "missions": [],
+            "selected_map": {
+                "design_width_px": 1000,
+                "design_height_px": 500,
+                "selectable_points": [
+                    {
+                        "point_id": "alpha",
+                        "location_mir_name": "mir-a",
+                        "width_px": 40,
+                        "height_px": 20,
+                        "offset_x_px": -12,
+                        "offset_y_px": 8,
+                    }
+                ],
+            },
+        }
+
+        runtime_maps = build_site_runtime_maps(site_config)
+        runtime_point = runtime_maps["selected_map_points_by_id"]["alpha"]
+
+        self.assertEqual(118, runtime_point["x_px"])
+        self.assertEqual(98, runtime_point["y_px"])
+
     def test_selected_map_runtime_skips_invalid_points_and_collects_warnings(self):
         site_config = {
             "assets": {"selected_map": "picture/example.png"},
