@@ -212,6 +212,55 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def apply_room_display_text(self):
         self.label_5.setText(self.get_room_display_text())
 
+    def get_current_room_default_text(self):
+        prefix = str(self.config.get("ROOM_DISPLAY_PREFIX", "手術室"))
+        number = self.config.get("ROOM_DISPLAY_NUMBER")
+
+        if number is None:
+            room_id = str(self.config.get("ROOM_ID", ""))
+            match = re.search(r"(\d+)$", room_id)
+            number = match.group(1) if match else room_id
+
+        number_text = str(number).strip()
+        if number_text.isdigit():
+            number_text = str(int(number_text))
+
+        return f"{prefix}{number_text}"
+
+    def resolve_default_task_value(self, value):
+        if value == "${CURRENT_ROOM}":
+            return self.get_current_room_default_text()
+        return str(value) if value else None
+
+    def set_combobox_default_value(self, combo, expected_text):
+        if not expected_text or combo.count() == 0:
+            return False
+
+        for index in range(combo.count()):
+            if combo.itemText(index) == expected_text:
+                combo.setCurrentIndex(index)
+                return True
+
+        return False
+
+    def apply_default_task_selection(self):
+        default_task = self.config.get("DEFAULT_TASK", {})
+        if not isinstance(default_task, dict):
+            return
+
+        self.set_combobox_default_value(
+            self.cmb_start_point,
+            self.resolve_default_task_value(default_task.get("start_point")),
+        )
+        self.set_combobox_default_value(
+            self.cmb_end_point,
+            self.resolve_default_task_value(default_task.get("end_point")),
+        )
+        self.set_combobox_default_value(
+            self.cmb_mission,
+            self.resolve_default_task_value(default_task.get("mission")),
+        )
+
     def setup_responsive_layout(self):
         """Convert the fixed-geometry UI into layouts that resize with the window."""
         self.central_layout = QVBoxLayout(self.centralwidget)
@@ -395,6 +444,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             completer.setCaseSensitivity(Qt.CaseInsensitive)
             self.cmb_start_point.setCompleter(completer)
             self.cmb_end_point.setCompleter(completer)
+
+        self.apply_default_task_selection()
   
 
     def load_mission_groups_from_db(self, rows):
@@ -430,6 +481,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             completer = QCompleter(user_names_list)
             completer.setCaseSensitivity(Qt.CaseInsensitive)
             self.cmb_mission.setCompleter(completer)
+
+        self.apply_default_task_selection()
 
     def fetch_locations_from_db(self):
         """
@@ -513,6 +566,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
 
         self.db_manager.delete_task(int(task_id))
+        self.txt_delete_task_id.clear()
 
         self.log(f"🗑 任務 {task_id} 已刪除")
 

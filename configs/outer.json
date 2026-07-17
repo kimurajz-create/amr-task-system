@@ -8,9 +8,14 @@
   },
 
   "MIR_IP": "http://10.10.10.123",
-  "ROOM_ID": "OR01",
+  "ROOM_ID": "OR05",
   "ROOM_DISPLAY_PREFIX": "手術室",
-  "ROOM_DISPLAY_NUMBER": "01",
+  "ROOM_DISPLAY_NUMBER": "05",
+  "DEFAULT_TASK": {
+    "start_point": "${CURRENT_ROOM}",
+    "end_point": "洗滌室",
+    "mission": "國軍台中醫院載貨運輸"
+  },
   "POLL_INTERVAL": 10000,
 
   "DB_CONFIG": {
