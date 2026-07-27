@@ -562,6 +562,10 @@ def build_site_runtime_maps(site_config):
         "room_id_map": ROOM_ID_MAP.copy(),
         "location_to_marker": LOCATION_TO_MARKER.copy(),
         "required_mission_codes": set(REQUIRED_MISSION_CODES),
+        "target_3_rule": {
+            "default": -1.4,
+            "positive_targets": set(),
+        },
         "charging_station_name": CHARGING_STATION_NAME,
         "marker_specs_by_id": {},
         "marker_location_names_by_id": {},
@@ -578,8 +582,16 @@ def build_site_runtime_maps(site_config):
 
     location_records = site_config.get("locations") or []
     mission_records = site_config.get("missions") or []
+    target_3_rule = site_config.get("target_3_rule") or {}
     world_to_image_fn = build_world_to_image_fn(site_config)
     marker_specs_by_id, marker_config_warnings = build_marker_specs_by_id(site_config)
+
+    target_3_default = target_3_rule.get("default", -1.4)
+    positive_targets = target_3_rule.get("positive_targets") or []
+    runtime_maps["target_3_rule"] = {
+        "default": target_3_default,
+        "positive_targets": set(positive_targets),
+    }
 
     user_location_map = {}
     location_to_marker = {}
@@ -1482,6 +1494,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ROOM_ID_MAP = self.site_runtime_maps["room_id_map"]
         self.LOCATION_TO_MARKER = self.site_runtime_maps["location_to_marker"]
         self.REQUIRED_MISSION_CODES = self.site_runtime_maps["required_mission_codes"]
+        self.TARGET_3_RULE = self.site_runtime_maps["target_3_rule"]
         self.MARKER_SPECS_BY_ID = self.site_runtime_maps["marker_specs_by_id"]
         self.MARKER_LOCATION_NAMES_BY_ID = self.site_runtime_maps["marker_location_names_by_id"]
         self.LOCATIONS_WITHOUT_MARKERS = self.site_runtime_maps["locations_without_markers"]
@@ -3198,7 +3211,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             
             mir_code_id = priority_tasks[0]['id']
             mir_code_s = priority_tasks[0]['start_point']
-            mir_code_d = priority_tasks[0]['target_point']      
+            mir_code_d = priority_tasks[0]['target_point']
+            positive_targets = self.TARGET_3_RULE.get("positive_targets", set())
+            target_3_default = self.TARGET_3_RULE.get("default", -1.4)
+            target_3_value = 1.4 if mir_code_d in positive_targets else target_3_default
             mir_code = priority_tasks[0]['mission_content']
 
             mir_code_s = self.MIR_LOCATION_MAP.get(mir_code_s)
@@ -3213,7 +3229,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if "Charge" in mir_code_d:
                 if mir_code and mir_code_s and mir_code_d:
                     # functions.run_combo_location(mir_code)
-                    functions.run_combo_location_multi_var(mir_code_s,mir_code_d,mir_code)
+                    functions.run_combo_location_multi_var(mir_code_s,mir_code_d,mir_code,target_3_value)
                     self.task_db_manager.update_task_status(mir_code_id, new_status="Executing", command_sent=True)
 
                     # ⭐ 關鍵修正點 1：發送任務後，AMR 狀態應為忙碌 (False)
@@ -3228,7 +3244,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 if mir_code and mir_code_s and mir_code_d:
                     # functions.run_combo_location(mir_code)
                     print(mir_code_s,mir_code_d,mir_code)
-                    functions.run_combo_location_multi_var(mir_code_s,mir_code_d,mir_code)
+                    functions.run_combo_location_multi_var(mir_code_s,mir_code_d,mir_code,target_3_value)
                     self.task_db_manager.update_task_status(mir_code_id, new_status="Executing", command_sent=True)
 
                     # ⭐ 關鍵修正點 2：發送任務後，AMR 狀態應為忙碌 (False)

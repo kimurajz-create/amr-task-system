@@ -21,6 +21,7 @@ class TaskThread(QThread):
         self.MIR_LOCATION_MAP = self.main_window.MIR_LOCATION_MAP
         self.MIR_MISSION_GROUP_MAP = self.main_window.MIR_MISSION_GROUP_MAP
         self.CHARGING_STATION_NAME = self.main_window.CHARGING_STATION_NAME
+        self.TARGET_3_RULE = self.main_window.TARGET_3_RULE
 
     def _set_mir_connection_state(self, connected, context):
         if connected:
@@ -92,6 +93,13 @@ class TaskThread(QThread):
     def _send_robot_to_charge_station(self):
         charge_code = self.MIR_LOCATION_MAP.get(self.CHARGING_STATION_NAME)
         self.functions.run_combo_location(charge_code)
+
+    def _resolve_target_3_value(self, target_point):
+        positive_targets = self.TARGET_3_RULE.get("positive_targets", set())
+        target_3_default = self.TARGET_3_RULE.get("default", -1.4)
+        if target_point in positive_targets:
+            return 1.4
+        return target_3_default
 
     def _describe_missing_mapping(
         self,
@@ -191,6 +199,7 @@ class TaskThread(QThread):
             mir_start = self.MIR_LOCATION_MAP.get(start_point)
             mir_target = self.MIR_LOCATION_MAP.get(target_point)
             mir_mission = self.MIR_MISSION_GROUP_MAP.get(mission_content)
+            target_3_value = self._resolve_target_3_value(target_point)
 
             self.log_message.emit(
                 f"Dispatching task ID:{task_id} from {mir_start} to {mir_target}."
@@ -212,7 +221,7 @@ class TaskThread(QThread):
             before_max_id = self.functions.get_mission_queue_max_id()
             try:
                 self.functions.run_combo_location_multi_var(
-                    mir_start, mir_target, mir_mission
+                    mir_start, mir_target, mir_mission, target_3_value
                 )
                 self._set_mir_connection_state(True, f"sending task ID:{task_id}")
             except Exception as exc:
