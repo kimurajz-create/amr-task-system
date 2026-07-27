@@ -13,6 +13,10 @@
     "image_pts": [[174, 54], [112, 539], [950, 541]],
     "world_pts": [[-3.839, 25.809], [-7.736, -7.885], [43.669, -7.801]]
   },
+  "target_3_rule": {
+    "default": -1.4,
+    "positive_targets": ["手術室6", "手術室7"]
+  },
   "selected_map": {
     "_comment": "P03 P1 selected-map schema. Hospital selected-map currently exposes shelf-position points only.",
     "design_width_px": 1024,
