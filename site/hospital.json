@@ -15,7 +15,7 @@
   },
   "target_3_rule": {
     "default": -1.4,
-    "positive_targets": ["手術室6", "手術室7"]
+    "positive_targets": ["手術室1", "手術室2", "手術室3","手術室5",  "手術室8", "手術室9"]
   },
   "selected_map": {
     "_comment": "P03 P1 selected-map schema. Hospital selected-map currently exposes shelf-position points only.",
