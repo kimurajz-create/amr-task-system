@@ -20,7 +20,7 @@
 
   "DB_CONFIG": {
     "user": "postgres",
-    "host": "localhost",
+    "host": "10.15.30.195",
     "database": "military_mir250_project",
     "password": "123456",
     "port": 5432
@@ -28,6 +28,6 @@
 
   "EXPECTED_DB_HOST": {
     "INNER": "10.11.202.86",
-    "OUTER": "10.11.203.50"
+    "OUTER": "10.15.30.195"
   }
 }
