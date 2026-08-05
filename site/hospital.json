@@ -511,21 +511,21 @@
     {
       "mir_name": "Lobby Demo Cart Transport",
       "display_name": "Demo_載貨運輸",
-      "scheduler_enabled": true
+      "scheduler_enabled": false
     },
     {
       "mir_name": "Lobby Demo Empty Cart Transport",
       "display_name": "Demo_空車運輸",
-      "scheduler_enabled": true
+      "scheduler_enabled": false
     },
     {
       "mir_name": "Taichung Military Hospital Empty Cart Transport",
-      "display_name": "Demo_國軍台中醫院空車運輸",
+      "display_name": "國軍台中醫院空車運輸",
       "scheduler_enabled": true
     },
     {
       "mir_name": "Taichung Military Hospital Cart Transport",
-      "display_name": "Demo_國軍台中醫院載貨運輸",
+      "display_name": "國軍台中醫院載貨運輸",
       "scheduler_enabled": true
     }
   ]
