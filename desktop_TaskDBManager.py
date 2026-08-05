@@ -1,7 +1,6 @@
 import psycopg2
 from datetime import datetime
 from psycopg2.extras import execute_values
-from desktop_config import ROOM_ID_MAP
 
 
 # =========================

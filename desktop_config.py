@@ -53,7 +53,4 @@ CONFIG = load_config()
 
 # SOUND = CONFIG["SOUND"]
 
-ROOM_ID_MAP = CONFIG["ROOM_ID_MAP"]
-
-
   
