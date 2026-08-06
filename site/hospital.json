@@ -381,7 +381,7 @@
     },
     {
       "mir_name": "MH_Shelf position SR 2",
-      "display_name": "滅菌室2",
+      "display_name": "滅菌室",
       "marker_id": "label_sr_2",
       "room_id": "SR02",
       "is_charging_station": false
