@@ -146,6 +146,16 @@
         "height_px": 24,
         "order": 120,
         "visible": true
+      },
+      {
+        "point_id": "cf01_shelf",
+        "location_mir_name": "MH_Shelf position CF 1",
+        "marker_id": "label_CF_1",
+        "label": "封閉式架子放置處",
+        "width_px": 46,
+        "height_px": 24,
+        "order": 130,
+        "visible": true
       }
     ]
   },
@@ -258,6 +268,15 @@
       "y_px": 208,
       "world_x": 18.291,
       "world_y": 15.432,
+      "width_px": 26,
+      "height_px": 18
+    },
+    {
+      "marker_id": "label_CF_1",
+      "x_px": 93,
+      "y_px": 585,
+      "world_x": -8.928,
+      "world_y": -11.083,
       "width_px": 26,
       "height_px": 18
     }
@@ -416,6 +435,13 @@
       "display_name": "手術室11",
       "marker_id": "label_rp_11",
       "room_id": "OR11",
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "MH_Shelf position CF 1",
+      "display_name": "封閉式架子放置處",
+      "marker_id": "label_CF_1",
+      "room_id": "CF01",
       "is_charging_station": false
     }
   ],
