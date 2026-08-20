@@ -154,6 +154,17 @@
         "height_px": 40,
         "order": 130,
         "visible": true
+      },
+      {
+        "point_id": "sr02_shelf",
+        "location_mir_name": "MH_Shelf position SR 2",
+        "marker_id": "label_sr_2",
+        "x_px": 378,
+        "y_px": 142,
+        "width_px": 76,
+        "height_px": 40,
+        "order": 140,
+        "visible": true
       }
     ]
   },
