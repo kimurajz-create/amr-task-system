@@ -154,7 +154,19 @@
         "label": "封閉式架子放置處",
         "width_px": 46,
         "height_px": 24,
+        "offset_y_px": -48,
         "order": 130,
+        "visible": true
+      },
+      {
+        "point_id": "charge_station",
+        "location_mir_name": "MH_MiR Charge 48V 35A OA",
+        "marker_id": "label_charge_station",
+        "label": "充電樁",
+        "width_px": 46,
+        "height_px": 24,
+        "offset_y_px": -48,
+        "order": 140,
         "visible": true
       }
     ]
