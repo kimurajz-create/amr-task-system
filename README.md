@@ -1,6 +1,6 @@
-# AMR Task System Outer Ring
+# AMR Task System Inner Ring
 
-這份 README 對應的是外環版本。這個專案是給 MiR AMR 使用的桌面任務管理系統，使用 `PySide6` 製作 GUI，透過 `requests` 呼叫 MiR REST API，並用 `PostgreSQL` 保存任務佇列、使用者帳號、UI 位置對照與房間心跳資料。
+這份 README 對應的是內環版本。這個專案是給 MiR AMR 使用的桌面任務管理系統，使用 `PySide6` 製作 GUI，透過 `requests` 呼叫 MiR REST API，並用 `PostgreSQL` 保存任務佇列、使用者帳號、UI 位置對照與房間心跳資料。
 
 目前程式的主要入口是 `main.py`。執行後會開啟登入視窗，登入成功後進入主畫面，提供下列能力：
 
