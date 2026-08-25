@@ -138,18 +138,33 @@ class TaskDBManager:
             # 但為了滿足外部的 `if new_id` 檢查，我們返回 None (如果獲取 ID 失敗)
             return None
         
-    def emergency_insert_task(self, start_point: str, target_point: str, content: str = ""):
+    def emergency_insert_task(
+        self,
+        start_point: str,
+        target_point: str,
+        content: str = "",
+        room_id: str | None = None,
+    ):
         """
         緊急插單：將新任務插入 sequence 極小值，然後呼叫重排序確保它排在第一位 (sequence=1)。
         """
         try:
-            insert_query = """
-            INSERT INTO tasks 
-            (sequence, start_point, target_point, mission_content)
-            VALUES (0, %s, %s, %s)
-            RETURNING id; -- 返回新增任務的 ID (可選) 這是 PostgreSQL (Postgres) 資料庫特有的強大功能
-            """
-            params = (start_point, target_point, content)
+            if room_id:
+                insert_query = """
+                INSERT INTO tasks 
+                (sequence, start_point, target_point, mission_content, room_id)
+                VALUES (0, %s, %s, %s, %s)
+                RETURNING id; -- 返回新增任務的 ID (可選) 這是 PostgreSQL (Postgres) 資料庫特有的強大功能
+                """
+                params = (start_point, target_point, content, room_id)
+            else:
+                insert_query = """
+                INSERT INTO tasks 
+                (sequence, start_point, target_point, mission_content)
+                VALUES (0, %s, %s, %s)
+                RETURNING id; -- 返回新增任務的 ID (可選) 這是 PostgreSQL (Postgres) 資料庫特有的強大功能
+                """
+                params = (start_point, target_point, content)
 
              # 執行插入，但暫不提交 (commit=False)
             rows = self._execute_query(insert_query, params, fetch=True, commit=False)

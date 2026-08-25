@@ -22,17 +22,17 @@ class _EmergencyTaskDbStub:
         self.new_id = new_id
         self.calls = []
 
-    def emergency_insert_task(self, start_place, destination, mission_content):
-        self.calls.append((start_place, destination, mission_content))
+    def emergency_insert_task(self, start_place, destination, mission_content, room_id=None):
+        self.calls.append((start_place, destination, mission_content, room_id))
         return self.new_id
 
 
 class TaskCreationKeepsDropdownSelectionTests(unittest.TestCase):
     def test_add_new_mission_success_does_not_reset_dropdowns(self):
         fake_window = SimpleNamespace()
-        fake_window.cmb_location2 = _FakeComboBox("充電樁")
-        fake_window.cmb_location = _FakeComboBox("手術室1")
-        fake_window.cmb_mission = _FakeComboBox("國軍台中醫院空車運輸")
+        fake_window.cmb_location2 = _FakeComboBox("Sterilization")
+        fake_window.cmb_location = _FakeComboBox("Operating Room 1")
+        fake_window.cmb_mission = _FakeComboBox("Deliver sterile items")
         fake_window.create_new_db_task = lambda start_place, destination, mission_content: 123
         fake_window.refresh_task_list_called = 0
         fake_window.refresh_task_list = lambda: setattr(
@@ -49,9 +49,10 @@ class TaskCreationKeepsDropdownSelectionTests(unittest.TestCase):
 
     def test_emergency_insert_success_does_not_reset_dropdowns(self):
         fake_window = SimpleNamespace()
-        fake_window.cmb_location2 = _FakeComboBox("充電樁")
-        fake_window.cmb_location = _FakeComboBox("手術室1")
-        fake_window.cmb_mission = _FakeComboBox("國軍台中醫院空車運輸")
+        fake_window.ROOM_ID_MAP = {}
+        fake_window.cmb_location2 = _FakeComboBox("Sterilization")
+        fake_window.cmb_location = _FakeComboBox("Operating Room 1")
+        fake_window.cmb_mission = _FakeComboBox("Deliver sterile items")
         fake_window.task_db_manager = _EmergencyTaskDbStub(456)
         fake_window.refresh_task_list_called = 0
         fake_window.refresh_task_list = lambda: setattr(
@@ -62,7 +63,7 @@ class TaskCreationKeepsDropdownSelectionTests(unittest.TestCase):
             MainWindow.on_emergency_cut_line_clicked(fake_window)
 
         self.assertEqual(
-            [("充電樁", "手術室1", "國軍台中醫院空車運輸")],
+            [("Sterilization", "Operating Room 1", "Deliver sterile items", None)],
             fake_window.task_db_manager.calls,
         )
         self.assertEqual(1, fake_window.refresh_task_list_called)
