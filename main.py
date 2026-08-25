@@ -2584,6 +2584,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         start_place = self.cmb_location2.currentText()
         destination = self.cmb_location.currentText()
         mission_content = self.cmb_mission.currentText()
+        room_id = self.ROOM_ID_MAP.get(destination)
         
         # 檢查欄位是否為空
         if not start_place or not destination or not  mission_content :
@@ -2592,7 +2593,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         # 呼叫 TaskDBManager 寫入 DB
         # DB 會自動處理 sequence (排隊順序) 和 id (流水號)
-        new_id = self.task_db_manager.emergency_insert_task(start_place, destination, mission_content)
+        new_id = self.task_db_manager.emergency_insert_task(
+            start_place,
+            destination,
+            mission_content,
+            room_id=room_id,
+        )
         print("new_id", new_id)
 
         if new_id:
