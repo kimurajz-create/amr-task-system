@@ -17,7 +17,7 @@
 - 狀態：目前內環第二版
 - 用途：院方初版之後，依回饋修正的版本
 - 參考 commit：`22ba4dc` - `Fix emergency task room_id persistence`
-- 建議 Git tag：`v1.1.0-hospital-revision-1`
+- 建議 Git tag：`v1.1.0-inner-ring-revision-1`
 - 建議交付包檔名：`AMR_Task_System_v1.1.0_院方修正版.zip`
 - 備註：這是目前內環分支最近一個功能/修正版本
 
@@ -26,6 +26,6 @@
 - 狀態：內環院方初版
 - 用途：對應上一個 commit，作為第一個交付給院方確認的版本
 - 參考 commit：`82bd775` - `Add sterilization room selected-map point for hospital profile`
-- 建議 Git tag：`v1.0.0-hospital-initial`
+- 建議 Git tag：`v1.0.0-inner-ring-initial`
 - 建議交付包檔名：`AMR_Task_System_v1.0.0_院方初版.zip`
 - 備註：若院方實際收到檔案的日期不同，可再把此日期改成實際交付日
