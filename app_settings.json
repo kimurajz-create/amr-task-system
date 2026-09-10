@@ -1,4 +1,8 @@
 {
   "_comment": "一般使用者在這裡切換場域。可填 company 或 hospital。若有設定 AMR_SITE_PROFILE 環境變數，會以環境變數為主。",
-  "site_profile": "hospital"
+  "site_profile": "hospital",
+  "_comment_skip_login": "skip_login=true 時略過登入視窗。也可用環境變數 AMR_SKIP_LOGIN=1 / AMR_AUTO_LOGIN_USER / AMR_AUTO_LOGIN_PASSWORD 覆蓋。",
+  "skip_login": true,
+  "auto_login_username": "apple",
+  "auto_login_password": "apple"
 }

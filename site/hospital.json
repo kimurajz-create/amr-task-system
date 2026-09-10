@@ -17,6 +17,14 @@
     "default": -1.4,
     "positive_targets": ["手術室8", "手術室9","手術室11"]
   },
+  "ui_defaults": {
+    "_comment": "主畫面下拉選單與排程預設。auto_start_pending_scheduler=true 會自動啟動右側待執行清單 play（btn_StartMission），不影響左側啟用地圖點擊。外環請改 destination 為洗滌室。",
+    "start_point": "滅菌室",
+    "destination": "",
+    "mission_content": "載運",
+    "auto_start_pending_scheduler": true,
+    "exclude_charging_station_from_combobox": true
+  },
   "selected_map": {
     "_comment": "P03 P1 selected-map schema. Hospital selected-map currently exposes shelf-position points only.",
     "design_width_px": 1024,
@@ -531,12 +539,12 @@
     },
     {
       "mir_name": "Taichung Military Hospital Empty Cart Transport",
-      "display_name": "國軍台中醫院空車運輸",
-      "scheduler_enabled": true
+      "display_name": "空車",
+      "scheduler_enabled": false
     },
     {
       "mir_name": "Taichung Military Hospital Cart Transport",
-      "display_name": "國軍台中醫院載貨運輸",
+      "display_name": "載運",
       "scheduler_enabled": true
     }
   ]
