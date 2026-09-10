@@ -1,0 +1,22 @@
+{
+  "_comment": "套用到外環 branch 的 site/hospital.json：合併此 ui_defaults，並把 missions 的載貨/空車改名與 scheduler 開關。",
+  "ui_defaults": {
+    "start_point": "",
+    "destination": "洗滌室",
+    "mission_content": "載運",
+    "auto_start_pending_scheduler": true,
+    "exclude_charging_station_from_combobox": true
+  },
+  "missions_patch": [
+    {
+      "mir_name": "Taichung Military Hospital Empty Cart Transport",
+      "display_name": "空車",
+      "scheduler_enabled": false
+    },
+    {
+      "mir_name": "Taichung Military Hospital Cart Transport",
+      "display_name": "載運",
+      "scheduler_enabled": true
+    }
+  ]
+}
