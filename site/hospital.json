@@ -18,9 +18,9 @@
     "positive_targets": ["手術室6", "手術室7"]
   },
   "ui_defaults": {
-    "_comment": "主畫面下拉選單與排程預設。auto_start_pending_scheduler=true 會自動啟動右側待執行清單 play（btn_StartMission），不影響左側啟用地圖點擊。外環請改 destination 為洗滌室。",
-    "start_point": "滅菌室",
-    "destination": "",
+    "_comment": "外環預設：目的地洗滌室；任務載運；充電樁不進 combobox；右側待執行清單 play 自動啟動。",
+    "start_point": "",
+    "destination": "洗滌室",
     "mission_content": "載運",
     "auto_start_pending_scheduler": true,
     "exclude_charging_station_from_combobox": true
