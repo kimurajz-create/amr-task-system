@@ -71,6 +71,62 @@ RUNTIME_SEARCH_DIRS = _get_runtime_search_dirs()
 # 正常情況下應修改 app_settings.json，而不是直接改 main.py。
 DEFAULT_APP_SETTINGS = {
     "site_profile": "company",
+    "skip_login": False,
+    "auto_login_username": "",
+    "auto_login_password": "",
+}
+
+DEFAULT_UI_DEFAULTS = {
+    "start_point": "",
+    "destination": "",
+    "mission_content": "",
+    "auto_start_pending_scheduler": False,
+    "exclude_charging_station_from_combobox": False,
+}
+
+# MiR mission_text / alarm 常見英文 → 中文顯示（僅影響 GUI 顯示，不改 API 原文）。
+MIR_MISSION_TEXT_TRANSLATIONS = (
+    ("Waiting for obstacles to be removed", "等待障礙物移除"),
+    ("Waiting for new missions", "等待新任務"),
+    ("Waiting for MiR to finish the task", "等待機器人完成任務"),
+    ("Waiting for", "等待中"),
+    ("IfAction: Started!", "動作已開始"),
+    ("IfAction: Started", "動作已開始"),
+    ("Obstacle detected", "偵測到障礙物"),
+    ("obstacles to be removed", "等待障礙物移除"),
+    ("Obstacle", "障礙物"),
+    ("Moving to", "前往"),
+    ("Path is blocked", "路徑被阻擋"),
+    ("Path blocked", "路徑被阻擋"),
+    ("Blocked by", "被阻擋："),
+    ("Footprint occupied", "佔用區被占用"),
+    ("Area occupied", "區域被占用"),
+    ("Occupied", "被占用"),
+    ("Replanning path", "重新規劃路徑"),
+    ("Replanning", "重新規劃路徑"),
+    ("Clearing path", "清除路徑"),
+    ("Docking", "對接中"),
+    ("Charging", "充電中"),
+    ("Goal reached", "已到達目標"),
+    ("Emergency stop", "緊急停止"),
+    ("Manual control", "手動控制"),
+    ("No pending missions", "目前沒有待執行任務"),
+)
+
+MIR_STATE_LABEL_ZH = {
+    "Starting": "啟動中",
+    "ShuttingDown": "關機中",
+    "Ready": "就緒",
+    "Pause": "暫停",
+    "Executing": "執行中",
+    "Aborted": "已中止",
+    "GoalReached": "已到達",
+    "Docked": "已對接",
+    "Docking": "對接中",
+    "EmergencyStop": "緊急停止",
+    "ManualControl": "手動控制",
+    "Error": "錯誤",
+    "Unknown/Offline": "未知/離線",
 }
 
 # 保底用的資源路徑。
@@ -158,6 +214,74 @@ DEFAULT_SITE_PROFILE = os.environ.get(
     "AMR_SITE_PROFILE",
     APP_SETTINGS.get("site_profile", "company"),
 )
+
+
+def _env_flag_true(name):
+    value = os.environ.get(name)
+    if value is None:
+        return None
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def resolve_login_bootstrap_settings(app_settings=None):
+    """Resolve skip-login options from env first, then app_settings.json."""
+    settings = DEFAULT_APP_SETTINGS.copy()
+    if isinstance(app_settings, dict):
+        settings.update(app_settings)
+
+    env_skip = _env_flag_true("AMR_SKIP_LOGIN")
+    skip_login = settings.get("skip_login", False) if env_skip is None else env_skip
+
+    username = os.environ.get(
+        "AMR_AUTO_LOGIN_USER",
+        settings.get("auto_login_username", ""),
+    )
+    password = os.environ.get(
+        "AMR_AUTO_LOGIN_PASSWORD",
+        settings.get("auto_login_password", ""),
+    )
+    return {
+        "skip_login": bool(skip_login),
+        "username": (username or "").strip(),
+        "password": (password or "").strip(),
+    }
+
+
+def resolve_ui_defaults(site_config):
+    defaults = DEFAULT_UI_DEFAULTS.copy()
+    configured = (site_config or {}).get("ui_defaults") or {}
+    if isinstance(configured, dict):
+        defaults.update({k: v for k, v in configured.items() if not str(k).startswith("_")})
+    return defaults
+
+
+def translate_mir_mission_text(mission_text):
+    if mission_text is None:
+        return ""
+    text = str(mission_text).strip()
+    if not text or text == "-":
+        return text
+
+    translated = text
+    lowered = translated.lower()
+    for english, chinese in MIR_MISSION_TEXT_TRANSLATIONS:
+        needle = english.lower()
+        if needle not in lowered:
+            continue
+        # Case-insensitive replace while preserving surrounding details.
+        start = lowered.find(needle)
+        while start >= 0:
+            end = start + len(english)
+            translated = translated[:start] + chinese + translated[end:]
+            lowered = translated.lower()
+            start = lowered.find(needle, start + len(chinese))
+    return translated
+
+
+def translate_mir_state_label(state_name):
+    if not state_name:
+        return ""
+    return MIR_STATE_LABEL_ZH.get(state_name, state_name)
 
 
 def load_site_config(site_profile=None):
@@ -885,6 +1009,40 @@ class LoginWindow(QWidget, Ui_Form_LoginWindow):
         # 如果您的 UI 中沒有此按鈕，請註解或刪除下面這行
         # self.btn_register_info.clicked.connect(self.show_register_info)
 
+    def try_auto_login(self, quiet=True):
+        """Skip login UI when external settings/env request it. Returns True on success."""
+        bootstrap = resolve_login_bootstrap_settings(APP_SETTINGS)
+        if not bootstrap["skip_login"]:
+            return False
+
+        username = bootstrap["username"]
+        password = bootstrap["password"]
+        if not username:
+            print("skip_login 已啟用，但未設定 auto_login_username / AMR_AUTO_LOGIN_USER。")
+            return False
+
+        if username == "admin" and password and hash_password(password) == DEV_BACKDOOR_HASH:
+            self.open_admin_panel("admin", self.user_db_manager)
+            return True
+
+        stored_hash = self.user_db_manager.get_user_password_hash(username)
+        if not stored_hash:
+            print(f"自動登入失敗：找不到帳號 {username}")
+            return False
+
+        if password and stored_hash != hash_password(password):
+            print(f"自動登入失敗：帳號 {username} 密碼不符")
+            return False
+
+        if not quiet:
+            QMessageBox.information(self, "成功", f"歡迎回來，{username}！")
+
+        if username == "admin":
+            self.open_admin_panel(username, self.user_db_manager)
+        else:
+            self.open_main_window(username, self.user_db_manager)
+        return True
+
     def apply_login_dark_theme(self):
         self.setStyleSheet("""
         QWidget {
@@ -1491,6 +1649,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.MARKER_LOCATION_NAMES_BY_ID = self.site_runtime_maps["marker_location_names_by_id"]
         self.LOCATIONS_WITHOUT_MARKERS = self.site_runtime_maps["locations_without_markers"]
         self.MARKER_CONFIG_WARNINGS = self.site_runtime_maps["marker_config_warnings"]
+        self.ui_defaults = resolve_ui_defaults(self.site_config)
         self.map_marker_widgets = {}
 
         # 初始化 MiR 函數
@@ -1593,6 +1752,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             #cmb載入任務名字
             # self.load_mission_positions()
             self.load_mission_groups_positions()
+            self._apply_ui_defaults()
 
 
         
@@ -2094,14 +2254,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _update_status_label(self, state_id):
         # Final status renderer used by the UI: line 1 = robot state, line 2 = mission text.
         state_ui = self._get_mir_state_ui(state_id)
-        mission_line = self.current_mission_text or "-"
-        label_text = f"Status: {state_ui['name']}\nMission: {mission_line}"
+        mission_line = translate_mir_mission_text(self.current_mission_text) or "-"
+        state_name = translate_mir_state_label(state_ui["name"])
+        label_text = f"狀態: {state_name}\n任務: {mission_line}"
 
         self.label_Status_1.setText(label_text)
         self.label_Status_1.setStyleSheet(
             f"color: {state_ui['label_color']}; font-size: 24px;"
         )
-        self.label_Status_1.setToolTip(f"Mission: {mission_line}")
+        self.label_Status_1.setToolTip(f"任務: {mission_line}")
 
     def _adjust_status_area_layout(self):
         # Expand the status container so the second "Mission" line is not clipped.
@@ -2805,12 +2966,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         pending_mission_names = snapshot.get("pending_mission_names", [])
         if pending_mission_names:
             pm_names_with_index = [
-                f"任務{index+1} {name}"
+                f"任務{index+1} {translate_mir_mission_text(name)}"
                 for index, name in enumerate(pending_mission_names)
             ]
             self.txtEdit_GetPM.setPlainText("\n".join(pm_names_with_index))
         else:
-            self.txtEdit_GetPM.setPlainText("No pending missions")
+            self.txtEdit_GetPM.setPlainText("目前沒有待執行任務")
 
         self._refresh_robot_status_presentation(
             state_id=snapshot.get("state_id"),
@@ -3128,7 +3289,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if pm_names:
             self.txtEdit_GetPM.setPlainText("\n".join(pm_names))
         else:
-            self.txtEdit_GetPM.setPlainText("No pending missions")
+            self.txtEdit_GetPM.setPlainText("目前沒有待執行任務")
 
 
     # 按鈕(取得當前任務狀態)
@@ -3466,6 +3627,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # 改英文、中文、數字排序
     def load_map_positions(self):
+        previous_start = self.cmb_location2.currentText() if self.cmb_location2.count() else ""
+        previous_destination = self.cmb_location.currentText() if self.cmb_location.count() else ""
+
         # 1. 初始化下拉式選單
         self.cmb_location.clear()
         self.cmb_location2.clear()
@@ -3476,11 +3640,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         combo_data_list = []
         # 用於檢查重複的中文名稱，以確保每個地理位置只出現一次
         unique_user_names = set() 
+        exclude_charging = bool(
+            self.ui_defaults.get("exclude_charging_station_from_combobox")
+        )
         
         if mir_codes_list:
             for mir_code in mir_codes_list:
                 # 名稱轉換，查找中文名稱，如果找不到，就顯示原始的英文代碼
                 user_name = self.USER_LOCATION_MAP.get(mir_code, mir_code)
+                if (
+                    exclude_charging
+                    and user_name == self.CHARGING_STATION_NAME
+                ):
+                    continue
                 # --- 關鍵去重邏輯 ---
                 if user_name not in unique_user_names:
                     unique_user_names.add(user_name)
@@ -3515,6 +3687,49 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 # 將獨立的 Completer 設置給各自的 ComboBox
                 self.cmb_location.setCompleter(completer1) 
                 self.cmb_location2.setCompleter(completer2)
+
+            # 盡量保留使用者目前選擇；否則套用場域預設。
+            defaults = self.ui_defaults or {}
+            if not self._set_combo_text_if_available(self.cmb_location2, previous_start):
+                self._set_combo_text_if_available(
+                    self.cmb_location2,
+                    defaults.get("start_point"),
+                )
+            if not self._set_combo_text_if_available(self.cmb_location, previous_destination):
+                self._set_combo_text_if_available(
+                    self.cmb_location,
+                    defaults.get("destination"),
+                )
+
+    def _set_combo_text_if_available(self, combo, text):
+        if not combo or not text:
+            return False
+        index = combo.findText(text)
+        if index < 0:
+            return False
+        combo.setCurrentIndex(index)
+        return True
+
+    def _apply_ui_defaults(self):
+        """Apply optional site ui_defaults without changing behavior when unset."""
+        defaults = getattr(self, "ui_defaults", None) or DEFAULT_UI_DEFAULTS
+
+        self._set_combo_text_if_available(
+            getattr(self, "cmb_location2", None),
+            defaults.get("start_point"),
+        )
+        self._set_combo_text_if_available(
+            getattr(self, "cmb_location", None),
+            defaults.get("destination"),
+        )
+        self._set_combo_text_if_available(
+            getattr(self, "cmb_mission", None),
+            defaults.get("mission_content"),
+        )
+
+        if defaults.get("auto_start_pending_scheduler"):
+            # 右側「待執行任務清單」三角形 play（btn_StartMission），不是左側地圖點擊。
+            self.on_map_location_clicked()
                 
     # 取得全部任務名字
     def load_mission_positions(self):
@@ -3569,8 +3784,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # ⭐⭐ 核心：同步到 DB（照抄 map）
             self.task_db_manager.sync_ui_missions(combo_data_list)
 
-       
- 
+            defaults = self.ui_defaults or {}
+            self._set_combo_text_if_available(
+                self.cmb_mission,
+                defaults.get("mission_content"),
+            )
 
     ##################################仿射矩陣演算法&畫車位置############################################
 
@@ -3942,8 +4160,11 @@ if __name__ == "__main__":
 
     # 4. 🚨 將所有需要的 Manager 傳遞給 LoginWindow
     # LoginWindow 必須調整為接收 user_db_manager 和 task_db_manager
-    login_win = LoginWindow(user_db_manager, task_db_manager) 
-    login_win.show()
+    login_win = LoginWindow(user_db_manager, task_db_manager)
+    if login_win.try_auto_login(quiet=True):
+        print("已依外部參數略過登入視窗。")
+    else:
+        login_win.show()
     
     # 5. 確保在程式關閉前關閉資料庫連線 (可選但推薦)
     app.aboutToQuit.connect(user_db_manager.close)
