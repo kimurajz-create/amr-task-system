@@ -515,7 +515,7 @@
     {
       "mir_name": "Taichung Military Hospital Empty Cart Transport",
       "display_name": "空車",
-      "scheduler_enabled": false
+      "scheduler_enabled": true
     },
     {
       "mir_name": "Taichung Military Hospital Cart Transport",
