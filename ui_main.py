@@ -1095,7 +1095,7 @@ class Ui_MainWindow(object):
         self.btn_save_ip.setText("")
         self.lineEdit_MiR250_A.setText(QCoreApplication.translate("MainWindow", u"MiR250-A", None))
         self.btn_ChargeMission.setText(QCoreApplication.translate("MainWindow", u"\u7acb\u5373\u8fd4\u56de\u5145\u96fb", None))
-        self.btn_Reset.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
+        self.btn_Reset.setText(QCoreApplication.translate("MainWindow", u"\u91cd\u7f6e", None))
         self.btn_Emergency_Cut_Line.setText(QCoreApplication.translate("MainWindow", u"\u7dca\u6025\u63d2\u55ae", None))
         self.btn_Add_New_Mission.setText(QCoreApplication.translate("MainWindow", u"\u65b0\u589e\u4efb\u52d9", None))
         self.label_map_1.setText("")

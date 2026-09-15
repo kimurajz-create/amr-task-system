@@ -742,7 +742,7 @@ QPushButton:hover {
 }</string>
        </property>
        <property name="text">
-        <string>Reset</string>
+        <string>重置</string>
        </property>
       </widget>
      </item>
