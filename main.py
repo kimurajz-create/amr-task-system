@@ -687,6 +687,7 @@ def build_site_runtime_maps(site_config):
         "location_to_marker": LOCATION_TO_MARKER.copy(),
         "required_mission_codes": set(REQUIRED_MISSION_CODES),
         "target_3_rule": {
+            "enabled": False,
             "default": -1.4,
             "positive_targets": set(),
         },
@@ -706,16 +707,23 @@ def build_site_runtime_maps(site_config):
 
     location_records = site_config.get("locations") or []
     mission_records = site_config.get("missions") or []
-    target_3_rule = site_config.get("target_3_rule") or {}
+    target_3_rule = site_config.get("target_3_rule")
     world_to_image_fn = build_world_to_image_fn(site_config)
     marker_specs_by_id, marker_config_warnings = build_marker_specs_by_id(site_config)
 
-    target_3_default = target_3_rule.get("default", -1.4)
-    positive_targets = target_3_rule.get("positive_targets") or []
-    runtime_maps["target_3_rule"] = {
-        "default": target_3_default,
-        "positive_targets": set(positive_targets),
-    }
+    # 有設定 target_3_rule 且 enabled 才送 target_3（hospital）；沒設定 / enabled=false 則不送（company Demo）。
+    if isinstance(target_3_rule, dict) and target_3_rule:
+        runtime_maps["target_3_rule"] = {
+            "enabled": bool(target_3_rule.get("enabled", True)),
+            "default": target_3_rule.get("default", -1.4),
+            "positive_targets": set(target_3_rule.get("positive_targets") or []),
+        }
+    else:
+        runtime_maps["target_3_rule"] = {
+            "enabled": False,
+            "default": -1.4,
+            "positive_targets": set(),
+        }
 
     user_location_map = {}
     location_to_marker = {}
@@ -3379,9 +3387,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             mir_code_id = priority_tasks[0]['id']
             mir_code_s = priority_tasks[0]['start_point']
             mir_code_d = priority_tasks[0]['target_point']
-            positive_targets = self.TARGET_3_RULE.get("positive_targets", set())
-            target_3_default = self.TARGET_3_RULE.get("default", -1.4)
-            target_3_value = 1.4 if mir_code_d in positive_targets else target_3_default
+            # company：enabled=False → None（API 不帶 target_3）；hospital：依規則送 ±1.4
+            if not self.TARGET_3_RULE.get("enabled", False):
+                target_3_value = None
+            else:
+                positive_targets = self.TARGET_3_RULE.get("positive_targets", set())
+                target_3_default = self.TARGET_3_RULE.get("default", -1.4)
+                target_3_value = 1.4 if mir_code_d in positive_targets else target_3_default
             mir_code = priority_tasks[0]['mission_content']
 
             mir_code_s = self.MIR_LOCATION_MAP.get(mir_code_s)

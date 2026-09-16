@@ -14,6 +14,8 @@
     "world_pts": [[-7.209, 18.944], [27.55, 15.386], [27.683, -1.588]]
   },
   "target_3_rule": {
+    "_comment": "hospital mission 需要 target_3；enabled 預設 true。",
+    "enabled": true,
     "default": -1.4,
     "positive_targets": ["手術室8", "手術室9","手術室11"]
   },

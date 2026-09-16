@@ -433,15 +433,19 @@ def move_to_position(mission_id,position_uuid):
 
 
 # 多變數版，發送移動命令(透過任務id、地圖id當參數，搭配dashboard那邊的Mission設定移動任務才行)
-def move_to_position_multi_var(start_uuid,goal_uuid,mission_id,target_3_value=-1.4):
+# target_3_value=None 時不送 target_3（company Demo mission 通常只有 target_1/target_2）
+def move_to_position_multi_var(start_uuid, goal_uuid, mission_id, target_3_value=None):
     url = f"{MIR_IP}/api/v2.0.0/mission_queue"
+    parameters = [
+        {"id": "target_1", "value": start_uuid},
+        {"id": "target_2", "value": goal_uuid},
+    ]
+    if target_3_value is not None:
+        parameters.append({"id": "target_3", "value": target_3_value})
+
     mission_data = {
         "mission_id": mission_id,
-        "parameters": [
-            {"id": "target_1", "value": start_uuid},
-            {"id": "target_2", "value": goal_uuid},
-            {"id": "target_3", "value": target_3_value},
-        ]
+        "parameters": parameters,
     }
     print(f"任務參數:{mission_data}") 
     headers = get_auth_headers()
@@ -643,12 +647,13 @@ def run_combo_location(map_marker):
 
 
 # 執行任務(地圖)地圖名字要注意!!!!Critical
-def run_combo_location_multi_var(start,goal,mission,target_3_value=-1.4):
+# target_3_value=None 時不送 target_3
+def run_combo_location_multi_var(start, goal, mission, target_3_value=None):
         point_uuid_start = get_mission_point_uuid(start)
         point_uuid_goal = get_mission_point_uuid(goal)       
         mission_id = get_mission_id(f"{mission}")
         print(f"起點uuid:{point_uuid_start},終點uuid:{point_uuid_goal},任務id:{mission_id}")
-        move_to_position_multi_var(point_uuid_start,point_uuid_goal,mission_id,target_3_value)
+        move_to_position_multi_var(point_uuid_start, point_uuid_goal, mission_id, target_3_value)
         
    
     

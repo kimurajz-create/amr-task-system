@@ -95,6 +95,9 @@ class TaskThread(QThread):
         self.functions.run_combo_location(charge_code)
 
     def _resolve_target_3_value(self, target_point):
+        # company 等沒有 target_3 參數的 mission：enabled=False → 回傳 None，API 不帶 target_3。
+        if not self.TARGET_3_RULE.get("enabled", False):
+            return None
         positive_targets = self.TARGET_3_RULE.get("positive_targets", set())
         target_3_default = self.TARGET_3_RULE.get("default", -1.4)
         if target_point in positive_targets:
