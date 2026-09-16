@@ -17,6 +17,10 @@
     "_comment": "company Demo mission 只有 target_1/target_2；enabled=false 時不送 target_3。",
     "enabled": false
   },
+  "ui_defaults": {
+    "_comment": "company 與 hospital 相同：右側待執行清單 play 自動啟動。",
+    "auto_start_pending_scheduler": true
+  },
   "selected_map": {
     "_comment": "P03 P1 selected-map schema. P2/P3 will consume this runtime contract instead of fixed btn_sm_rp* wiring.",
     "design_width_px": 3216,
@@ -280,6 +284,21 @@
       "display_name": "車架位置(櫃台)",
       "marker_id": "label_rp_7",
       "room_id": "OR08",
+      "is_charging_station": false
+    },
+    {
+      "_comment": "測試場車架點：MiR 地圖上的 UL/UR，補進對照後 combobox 才會顯示中文並可派送。",
+      "mir_name": "LbV2_Shelf position_UL",
+      "display_name": "車等候位置(測試場_UL)",
+      "marker_id": null,
+      "room_id": "TS_UL",
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Shelf position_UR",
+      "display_name": "車等候位置(測試場_UR)",
+      "marker_id": null,
+      "room_id": "TS_UR",
       "is_charging_station": false
     }
   ],
