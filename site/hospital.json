@@ -513,13 +513,13 @@
       "scheduler_enabled": false
     },
     {
-      "mir_name": "Taichung Military Hospital Empty Cart Transport",
-      "display_name": "空車",
+      "mir_name": "Taichung Military Hospital Cart Transport",
+      "display_name": "載運",
       "scheduler_enabled": true
     },
     {
-      "mir_name": "Taichung Military Hospital Cart Transport",
-      "display_name": "載運",
+      "mir_name": "Taichung Military Hospital Empty Cart Transport",
+      "display_name": "空車",
       "scheduler_enabled": true
     }
   ]

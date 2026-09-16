@@ -3755,6 +3755,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # print("MiR 傳回的代碼列表:", mir_codes_list)
 
         if mir_codes_list:
+            preferred_mission_order = {"載運": 0, "空車": 1}
+            matched_missions = []
+
             for mir_code in mir_codes_list:
 
                 # 【篩選步驟】：只處理你想要的兩種任務代碼
@@ -3764,7 +3767,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     # 字典名稱.get(Key,Default Value)。
                     # A (第一個參數)，Python 會嘗試將這個值作為 Key 去字典裡查找；B (第二個參數)，如果找不到 Key 的值，則返回這個預設值
                     user_name = self.USER_MISSION_GROUP_MAP.get(mir_code, mir_code)
-                    
+                    matched_missions.append((user_name, mir_code))
+
+            matched_missions.sort(
+                key=lambda item: (
+                    preferred_mission_order.get(item[0], 100),
+                    item[0],
+                )
+            )
+
+            for user_name, mir_code in matched_missions:
                     # 2. 載入 ComboBox (加蓋)
                     # 顯示給使用者看中文 (user_name)，隱藏 MiR 英文代碼 (mir_code)
                     self.cmb_mission.addItem(user_name, mir_code)
