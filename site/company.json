@@ -13,6 +13,10 @@
     "image_pts": [[933, 552], [567, 1381], [2635, 950]],
     "world_pts": [[1.465, 28.374], [-5.091, 9.006], [34.138, 17.249]]
   },
+  "target_3_rule": {
+    "_comment": "company Demo mission 只有 target_1/target_2；enabled=false 時不送 target_3。",
+    "enabled": false
+  },
   "selected_map": {
     "_comment": "P03 P1 selected-map schema. P2/P3 will consume this runtime contract instead of fixed btn_sm_rp* wiring.",
     "design_width_px": 3216,

@@ -45,6 +45,24 @@ class SiteRuntimeMarkerMapTests(unittest.TestCase):
                         self.assertIn(key, marker_spec)
                         self.assertIsInstance(marker_spec[key], int)
 
+    def test_company_disables_target_3_hospital_enables(self):
+        company_maps = build_site_runtime_maps(load_site_profile("company"))
+        hospital_maps = build_site_runtime_maps(load_site_profile("hospital"))
+
+        self.assertFalse(company_maps["target_3_rule"]["enabled"])
+        self.assertTrue(hospital_maps["target_3_rule"]["enabled"])
+        self.assertEqual(-1.4, hospital_maps["target_3_rule"]["default"])
+
+    def test_missing_target_3_rule_defaults_to_disabled(self):
+        runtime_maps = build_site_runtime_maps(
+            {
+                "locations": [],
+                "missions": [],
+                "markers": [],
+            }
+        )
+        self.assertFalse(runtime_maps["target_3_rule"]["enabled"])
+
     def test_runtime_maps_track_shared_and_unbound_locations_separately(self):
         site_config = load_site_profile("company")
         runtime_maps = build_site_runtime_maps(site_config)
