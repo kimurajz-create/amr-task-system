@@ -1,11 +1,12 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from TaskDBManager import TaskDBManager
 
 
 class DeleteTaskBlocksExecutingTests(unittest.TestCase):
-    def test_delete_task_rejects_executing_status(self):
+    @patch("builtins.print")
+    def test_delete_task_rejects_executing_status(self, _print):
         manager = TaskDBManager.__new__(TaskDBManager)
         manager._execute_query = MagicMock(
             return_value=[{"status": "Executing"}]
@@ -18,7 +19,8 @@ class DeleteTaskBlocksExecutingTests(unittest.TestCase):
         args, kwargs = manager._execute_query.call_args
         self.assertIn("SELECT status", args[0])
 
-    def test_delete_task_allows_pending_status(self):
+    @patch("builtins.print")
+    def test_delete_task_allows_pending_status(self, _print):
         manager = TaskDBManager.__new__(TaskDBManager)
         manager._execute_query = MagicMock(
             side_effect=[
