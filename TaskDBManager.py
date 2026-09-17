@@ -671,10 +671,23 @@ class TaskDBManager:
         self._execute_query(resequence_query, commit=True)
 
     def delete_task(self, task_id: int):
+        """
+        刪除任務。Executing 狀態禁止刪除，回傳 False；成功刪除回傳 True。
+        """
+        status_rows = self._execute_query(
+            "SELECT status FROM tasks WHERE id = %s;",
+            (task_id,),
+            fetch=True,
+        )
+        if status_rows and status_rows[0].get("status") == "Executing":
+            print(f"⚠️ 任務 ID {task_id} 為 Executing，禁止刪除。")
+            return False
+
         query = "DELETE FROM tasks WHERE id = %s;"
         params = (task_id,)
         self._execute_query(query, params, commit=True)
         print(f"✅ 任務 ID {task_id} 已刪除。")
+        return True
 
 
     #-------------------------------------房間心跳監控系列---------------------------------------------#
