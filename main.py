@@ -2590,9 +2590,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     #  self.add_delete_button(row_count)
         
     # 建立一個刪除按鈕
-    # 建立一個刪除按鈕
-    def add_delete_button(self, row):
-        """建立一個帶有刪除圖示的按鈕，並加入表格"""
+    def add_delete_button(self, row, status=None):
+        """建立一個帶有刪除圖示的按鈕，並加入表格。Executing 時禁用。"""
 
         # 建立一個中央對齊的 Widget (容器)
         container_widget = QWidget()
@@ -2608,37 +2607,56 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 載入垃圾桶圖示
         delete_icon = QIcon(":/icons/icons/trash-2.svg") 
         delete_btn.setIcon(delete_icon)
-        delete_btn.setIconSize(QSize(20, 20)) 
-        
-        # 設置按鈕的樣式 (省略部分樣式程式碼)
-        delete_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #FF5252;
-                border: none;
-                border-radius: 12px;
-                padding: 2px;
-            }
-        """)
+        delete_btn.setIconSize(QSize(20, 20))
+
+        is_executing = status == "Executing"
+        if is_executing:
+            delete_btn.setEnabled(False)
+            delete_btn.setToolTip("執行中不可刪除")
+            delete_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #9E9E9E;
+                    border: none;
+                    border-radius: 12px;
+                    padding: 2px;
+                }
+            """)
+        else:
+            # 設置按鈕的樣式 (省略部分樣式程式碼)
+            delete_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #FF5252;
+                    border: none;
+                    border-radius: 12px;
+                    padding: 2px;
+                }
+            """)
+            # 連接按鈕的點擊事件到一個刪除函式
+            delete_btn.clicked.connect(lambda: self.handle_delete_action(row))
         
         # 將按鈕加入佈局 (現在按鈕在容器內置中了)
         layout.addWidget(delete_btn)
-        
-        # 連接按鈕的點擊事件到一個刪除函式
-        delete_btn.clicked.connect(lambda: self.handle_delete_action(row))
         
         # 將這個中央對齊的 Widget (包含按鈕) 放入表格單元格
         self.tableWidget_pending_mission_list.setCellWidget(row, 7, container_widget)
         
     # 刪除表格中的行
     def handle_delete_action(self, row):
-        """根據行號刪除表格中的行"""
+        """根據行號刪除表格中的行；Executing 不可刪。"""
         # 這邊col是隱藏的，也就是db第一行
         task_id_item = self.tableWidget_pending_mission_list.item(row, 0)
         if task_id_item is None:
             return
+        status_item = self.tableWidget_pending_mission_list.item(row, 6)
+        if status_item is not None and status_item.text() == "Executing":
+            QMessageBox.warning(self, "無法刪除", "執行中的任務不可刪除。")
+            return
         try:
             task_id = task_id_item.text()
-            self.task_db_manager.delete_task(task_id)
+            deleted = self.task_db_manager.delete_task(task_id)
+            if not deleted:
+                QMessageBox.warning(self, "無法刪除", "執行中的任務不可刪除。")
+                return
             self.task_db_manager._resequence_pending_tasks()
         except ValueError:
             print("錯誤：無法取得有效的任務 ID。")
@@ -2847,7 +2865,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             
             # 索引 7: 空白/操作按鈕欄位
             # self.tableWidget_pending_mission_list.setItem(row_idx, 7, ) 
-            self.add_delete_button(row_idx) # add_delete_button
+            self.add_delete_button(row_idx, task.get("status")) # add_delete_button
 
         # 重新呼叫你的置中函式和列寬調整 (這不會被前面的 setRowCount(0) 影響)
         self.set_table_items_center(self.tableWidget_pending_mission_list)
