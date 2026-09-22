@@ -12,14 +12,24 @@
 
 ## Released
 
+### v1.2.0 - 2026-09-22
+
+- 狀態：目前內環第三版（UI 優化交付）
+- 用途：醫院端操作流程與介面預設優化（略過登入、起始點預設滅菌室、載運、自動 play、充電樁不進選單、中文警報、Executing 不可刪）
+- 參考 commit：`e38ea17` - `Fix delete-task unit tests for Windows console encoding.`
+- 相關 commit：`01d6fd1` `94cae82` `57920e4` `ec1d50d` `029e6eb`
+- 建議 Git tag：`v1.2.0-inner-ring-ui-optimize`
+- 建議交付包檔名：`AMR_Task_System_InnerRing_v1.2.0_UI優化_20260922`
+- 備註：交付資料夾名稱含版本號、UI優化、日期，方便辨識
+
 ### v1.1.0 - 2026-08-25
 
-- 狀態：目前內環第二版
+- 狀態：內環第二版
 - 用途：院方初版之後，依回饋修正的版本
 - 參考 commit：`22ba4dc` - `Fix emergency task room_id persistence`
 - 建議 Git tag：`v1.1.0-inner-ring-revision-1`
 - 建議交付包檔名：`AMR_Task_System_v1.1.0_院方修正版.zip`
-- 備註：這是目前內環分支最近一個功能/修正版本
+- 備註：已被 v1.2.0 取代為目前最新交付版
 
 ### v1.0.0 - 2026-08-20
 
