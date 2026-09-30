@@ -3350,7 +3350,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # 按鈕(重製任務狀態)
     def on_reset_status_clicked(self):
-        functions.clear_MiR_error()
+        # functions.clear_MiR_error()
+        import reset_all
+
+        mir_ip = (functions.MIR_IP or "").strip().rstrip("/")
+        if mir_ip.startswith("http://") or mir_ip.startswith("https://"):
+            reset_all.API_URL = f"{mir_ip}/api/v2.0.0"
+        else:
+            reset_all.API_URL = f"http://{mir_ip}/api/v2.0.0"
+        headers = functions.get_auth_headers()
+        headers["Accept-Language"] = "en-US"
+        reset_all.HEADERS = headers
+        reset_all.reset_mir_complete()
 
     
     # 按鈕(前往地圖位置) 
