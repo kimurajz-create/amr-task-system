@@ -2115,10 +2115,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     # ====== 每 n 秒查一次 API 狀態記錄下來給手術室桌機軟體確認用======
-    def get_performance_dashboard_snapshot(self):
+    def get_performance_dashboard_snapshot(self, start_at=None, end_at=None):
         try:
             return build_performance_dashboard_snapshot_from_db(
-                self.task_db_manager
+                self.task_db_manager,
+                start_at=start_at,
+                end_at=end_at,
             )
         except Exception as exc:
             return build_performance_dashboard_snapshot(
@@ -3353,15 +3355,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # functions.clear_MiR_error()
         import reset_all
 
-        mir_ip = (functions.MIR_IP or "").strip().rstrip("/")
-        if mir_ip.startswith("http://") or mir_ip.startswith("https://"):
-            reset_all.API_URL = f"{mir_ip}/api/v2.0.0"
-        else:
-            reset_all.API_URL = f"http://{mir_ip}/api/v2.0.0"
-        headers = functions.get_auth_headers()
-        headers["Accept-Language"] = "en-US"
-        reset_all.HEADERS = headers
-        reset_all.reset_mir_complete()
+        # 等同待執行清單右側 stop：停掉本機排程，避免 Reset 期間繼續派任務。
+        # 不把 MiR Status 設成 Pause。
+        print("[Reset] 停止待執行清單排程（右側 stop）...")
+        self.on_stop_mission_clicked()
+        if getattr(self, "task_thread", None) and self.task_thread.isRunning():
+            self.task_thread.wait(5000)
+
+        try:
+            mir_ip = (functions.MIR_IP or "").strip().rstrip("/")
+            if mir_ip.startswith("http://") or mir_ip.startswith("https://"):
+                reset_all.API_URL = f"{mir_ip}/api/v2.0.0"
+            else:
+                reset_all.API_URL = f"http://{mir_ip}/api/v2.0.0"
+            headers = functions.get_auth_headers()
+            headers["Accept-Language"] = "en-US"
+            reset_all.HEADERS = headers
+            reset_all.reset_mir_complete()
+        finally:
+            # 重新打開左側 play，待執行清單才會再吃新任務。
+            print("[Reset] 重新開啟待執行清單 play...")
+            self.on_map_location_clicked()
 
     
     # 按鈕(前往地圖位置) 

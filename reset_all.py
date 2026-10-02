@@ -38,29 +38,10 @@ TOP_LIFT_DOWN_PORT = 2
 TOP_LIFT_UP_PORT = 3
 CHARGE_MISSION_NAME = "Charge"
 
-# 依 MiR GetStatus 的 hook_status.cart_attached 判斷是否掛載車架。
-def get_shelf_attached_status(status_data):
-    """回傳 True=有架、False=明確空車、None=狀態不足以確認。"""
-    hook_status = status_data.get("hook_status")
-    if not isinstance(hook_status, dict):
-        return None
-
-    cart_attached = hook_status.get("cart_attached")
-    return cart_attached if isinstance(cart_attached, bool) else None
-
 
 def pause_robot(reason):
-    """安全中止流程時嘗試讓 AMR 保持 Pause。"""
-    print(f"  -> {reason}，嘗試切回 Pause。")
-    try:
-        pause_res = requests.put(
-            f"{API_URL}/status", json={"state_id": STATE_ID_PAUSE}, headers=HEADERS,
-            timeout=REQUEST_TIMEOUT,
-        )
-        if pause_res.status_code != 200:
-            print(f"  -> [嚴重] 切回 Pause 失敗：{pause_res.status_code} {pause_res.text}")
-    except requests.RequestException as exc:
-        print(f"  -> [嚴重] 無法送出 Pause：{exc}")
+    """中止 Reset。不把 MiR Status 設成 Pause，否則後續任務無法執行。"""
+    print(f"  -> {reason}。已停止 Reset，MiR Status 維持不變。")
 
 
 def get_distance_m(status_data):
@@ -579,10 +560,10 @@ def reset_mir_complete():
 
     try:
         # -------------------------------------------------------------------
-        # 步驟 1: 先 clear_error，再暫停機器人 (Pause)
-        # State 12 (Error) 未清除時，後續 Delete Queue 與 Status 可能被拒絕。
+        # 步驟 1: 清除錯誤。待執行清單的 stop/play 由主畫面按鈕處理，
+        # 這裡不把 MiR Status 設成 Pause，否則無法執行後續降柱與回充。
         # -------------------------------------------------------------------
-        print("[步驟 1] 清除錯誤 (clear_error)，再切換至 Pause...")
+        print("[步驟 1] 清除錯誤 (clear_error)，不變更 MiR Status 為 Pause...")
         clear_res = requests.put(
             f"{API_URL}/status",
             json={"clear_error": True},
@@ -597,19 +578,6 @@ def reset_mir_complete():
             pause_robot("clear_error 失敗，停止 Reset")
             return False
         print("  -> 已送出 clear_error。")
-
-        print(f"  -> 將狀態切換至 Pause (State ID: {STATE_ID_PAUSE})...")
-        pause_res = requests.put(
-            f"{API_URL}/status", json={"state_id": STATE_ID_PAUSE}, headers=HEADERS,
-            timeout=REQUEST_TIMEOUT,
-        )
-        if pause_res.status_code != 200:
-            print(
-                f"  -> [失敗] 切換 Pause 失敗："
-                f"{pause_res.status_code} {pause_res.text}"
-            )
-            pause_robot("無法進入 Pause，停止 Reset")
-            return False
         time.sleep(0.5)
 
         # -------------------------------------------------------------------
@@ -630,169 +598,10 @@ def reset_mir_complete():
             return False
 
         # -------------------------------------------------------------------
-        # 步驟 3: 檢查並退出 Shelf (若車上有 Shelf)
-        # 需撰寫mission "unload shelf" ccccccccc
+        # 步驟 3: Shelf Carrier 沒有 hook_status。直接降下頂升柱：
+        # 先關上升腳位 3，再開下降腳位 2。
         # -------------------------------------------------------------------
-        print("[步驟 3] 檢查車上是否掛載/運載 Shelf...")
-        status = get_mir_status()
-        shelf_attached = get_shelf_attached_status(status)
-        if shelf_attached is True:
-            print("  -> 偵測到車上裝有 Shelf，開始派送退出/脫離任務...")
-
-            unload_shelf_mission_id = get_mission_guid_by_name("Unload Shelf")
-            if not unload_shelf_mission_id:
-                print("  -> [失敗] 找不到 Unload Shelf 任務，停止 Reset 以避免帶架移動。")
-                pause_robot("找不到 Unload Shelf 任務")
-                return False
-
-            # 派送卸載 Mission
-            post_mission = requests.post(
-                f"{API_URL}/mission_queue",
-                json={"mission_id": unload_shelf_mission_id},
-                headers=HEADERS,
-                timeout=REQUEST_TIMEOUT,
-            )
-
-            if post_mission.status_code == 201:
-                try:
-                    queue_response = post_mission.json()
-                except ValueError:
-                    queue_response = {}
-                queue_id = queue_response.get("id") or queue_response.get("mission_queue_id")
-                if queue_id is None:
-                    queue_url = queue_response.get("url", "")
-                    queue_id = queue_url.rstrip("/").split("/")[-1] if queue_url else None
-                    if queue_id and not queue_id.isdigit():
-                        queue_id = None
-
-                print("  -> 已成功派送 Shelf 退出任務，將狀態切至 Ready 以執行任務...")
-                ready_res = requests.put(
-                    f"{API_URL}/status", json={"state_id": STATE_ID_READY}, headers=HEADERS,
-                    timeout=REQUEST_TIMEOUT,
-                )
-                if ready_res.status_code != 200:
-                    pause_robot("無法切換至 Ready 執行 Shelf 退出任務")
-                    print(f"  -> [失敗] Ready 切換失敗：{ready_res.status_code} {ready_res.text}")
-                    return False
-
-                # 以 queue 的 Executing/Done 與正式文件列出的 status.moved 記錄任務時間和距離。
-                unload_deadline = time.monotonic() + SHELF_UNLOAD_TIMEOUT_SECONDS
-                task_started_at = None
-                task_started_monotonic = None
-                distance_start_m = None
-                metrics_written = False
-                mission_done = False
-                while time.monotonic() < unload_deadline:
-                    time.sleep(1)
-                    queue_entry = get_mission_queue_entry(queue_id, unload_shelf_mission_id)
-                    queue_state = str((queue_entry or {}).get("state", "")).casefold()
-                    cur_status = get_mir_status()
-                    cur_state = cur_status.get("state_id")
-
-                    if queue_state == "executing" and task_started_monotonic is None:
-                        observed_start = datetime.now().astimezone()
-                        task_started_at = (queue_entry or {}).get("started") or observed_start.isoformat()
-                        task_started_monotonic = time.monotonic()
-                        distance_start_m = get_distance_m(cur_status)
-                        print(f"  -> 任務開始：{task_started_at}；起始累計里程：{distance_start_m} m")
-
-                    if queue_state in {"done", "failed", "aborted", "cancelled", "canceled"} and not metrics_written:
-                        observed_finish = datetime.now().astimezone()
-                        finished_at = (queue_entry or {}).get("finished") or observed_finish.isoformat()
-                        api_start = parse_api_timestamp(task_started_at or (queue_entry or {}).get("started"))
-                        api_finish = parse_api_timestamp(finished_at)
-                        if api_start and api_finish:
-                            try:
-                                duration_seconds = max(0.0, (api_finish - api_start).total_seconds())
-                            except TypeError:
-                                duration_seconds = max(0.0, (api_finish.replace(tzinfo=None) - api_start.replace(tzinfo=None)).total_seconds())
-                        elif task_started_monotonic is not None:
-                            duration_seconds = max(0.0, time.monotonic() - task_started_monotonic)
-                        else:
-                            duration_seconds = None
-
-                        distance_end_m = get_distance_m(cur_status)
-                        distance_traveled_m = None
-                        if distance_start_m is not None and distance_end_m is not None and distance_end_m >= distance_start_m:
-                            distance_traveled_m = distance_end_m - distance_start_m
-                        append_task_metrics({
-                            "mission_name": "Unload Shelf",
-                            "mission_id": unload_shelf_mission_id,
-                            "queue_id": queue_id or (queue_entry or {}).get("id"),
-                            "result": queue_state,
-                            "started_at": task_started_at or (queue_entry or {}).get("started"),
-                            "finished_at": finished_at,
-                            "duration_seconds": duration_seconds,
-                            "distance_start_m": distance_start_m,
-                            "distance_end_m": distance_end_m,
-                            "distance_traveled_m": distance_traveled_m,
-                        })
-                        metrics_written = True
-                        mission_done = queue_state == "done"
-                        print(f"  -> 任務結果：{queue_state}；耗時：{duration_seconds} 秒；行走距離：{distance_traveled_m} m")
-                        if not mission_done:
-                            pause_robot(f"Shelf 任務狀態為 {queue_state}")
-                            print("  -> [失敗] Shelf 退出任務未成功完成，停止 Reset。")
-                            return False
-
-                    # 必須確認 Mission Done、回到 Ready，且感測與 Hook 均確認無 Shelf。
-                    if mission_done and cur_state == STATE_ID_READY and get_shelf_attached_status(cur_status) is False:
-                        print("  -> Shelf 退出作業已順利完成！")
-                        break
-                    print("  -> 正在等待 Shelf 退出中...")
-                else:
-                    if not metrics_written:
-                        timeout_status = get_mir_status()
-                        observed_finish = datetime.now().astimezone()
-                        duration_seconds = (
-                            max(0.0, time.monotonic() - task_started_monotonic)
-                            if task_started_monotonic is not None else None
-                        )
-                        distance_end_m = get_distance_m(timeout_status)
-                        distance_traveled_m = None
-                        if distance_start_m is not None and distance_end_m is not None and distance_end_m >= distance_start_m:
-                            distance_traveled_m = distance_end_m - distance_start_m
-                        append_task_metrics({
-                            "mission_name": "Unload Shelf",
-                            "mission_id": unload_shelf_mission_id,
-                            "queue_id": queue_id,
-                            "result": "timeout",
-                            "started_at": task_started_at,
-                            "finished_at": observed_finish.isoformat(),
-                            "duration_seconds": duration_seconds,
-                            "distance_start_m": distance_start_m,
-                            "distance_end_m": distance_end_m,
-                            "distance_traveled_m": distance_traveled_m,
-                        })
-                    pause_robot("Shelf 退出逾時或仍偵測到車架")
-                    print("  -> [失敗] 無法確認 AMR 已成為空車，停止 Reset。")
-                    return False
-            else:
-                print(
-                    f"  -> [錯誤] 派送 Shelf 退出任務失敗: "
-                    f"{post_mission.status_code} {post_mission.text}"
-                )
-                pause_robot("派送 Shelf 退出任務失敗")
-                return False
-        elif shelf_attached is False:
-            print("  -> 車上無 Shelf，不需執行退出作業。")
-        else:
-            pause_robot("Shelf 狀態欄位缺失，無法確認是否載架")
-            print("  -> [失敗] 無法確認 AMR 是否空車，停止 Reset。")
-            return False
-
-        # 無論是否派送退出任務，都在進入後續 Reset 前再次確認空車。
-        status = get_mir_status()
-        if get_shelf_attached_status(status) is not False:
-            pause_robot("仍偵測到 Shelf，或 Shelf 狀態無法確認")
-            print("  -> [失敗] 無法確認 AMR 已成為空車，停止 Reset。")
-            return False
-        print("  -> 已確認 Shelf 感測與 Hook 狀態均為空車。")
-
-        # -------------------------------------------------------------------
-        # 步驟 3.5: 強制降下車頂頂升柱 (Top Lift)
-        # -------------------------------------------------------------------
-        print("[步驟 3.5] 強制降下 Top Lift 頂升柱...")
+        print("[步驟 3] 降下 Shelf Carrier 頂升柱（先關腳位 3，再開腳位 2）...")
         if not lower_top_lift():
             pause_robot("Top Lift 降下失敗，停止 Reset")
             return False
@@ -871,16 +680,8 @@ def reset_mir_complete():
                 last_safety_status = f"讀取失敗：{exc}"
             time.sleep(1)
 
-        print(f"  -> [失敗] 未能確認安全系統已 enabled；最後讀取值：{last_safety_status!r}。嘗試切回 Pause。")
-        try:
-            pause_res = requests.put(
-                f"{API_URL}/status", json={"state_id": STATE_ID_PAUSE}, headers=HEADERS,
-                timeout=REQUEST_TIMEOUT,
-            )
-            if pause_res.status_code != 200:
-                print(f"  -> [嚴重] 切回 Pause 失敗：{pause_res.status_code} {pause_res.text}")
-        except requests.RequestException as exc:
-            print(f"  -> [嚴重] 無法送出 Pause：{exc}")
+        print(f"  -> [失敗] 未能確認安全系統已 enabled；最後讀取值：{last_safety_status!r}。")
+        pause_robot("安全系統仍為 Muted 或狀態無法確認")
         print("  -> 請確認現場狀況及 MiR 安全系統，確認恢復後再重新執行 Reset。")
         return False
 

@@ -407,6 +407,20 @@ class TaskDBManager:
             return "", None
         return "LIMIT %s", (normalized_limit,)
 
+    def _task_created_at_filter(self, start_at=None, end_at=None):
+        """依 tasks.created_at 產生可選的監控區間條件。未指定時不過濾。"""
+        clauses = []
+        params = []
+        if start_at is not None:
+            clauses.append("created_at >= %s")
+            params.append(start_at)
+        if end_at is not None:
+            clauses.append("created_at <= %s")
+            params.append(end_at)
+        if not clauses:
+            return "", tuple()
+        return "WHERE " + " AND ".join(clauses), tuple(params)
+
     def _normalize_group_label(self, value):
         if value is None:
             return "(未填寫)"
@@ -419,20 +433,25 @@ class TaskDBManager:
             return 0
         return int(value)
 
-    def get_task_status_summary(self):
+    def get_task_status_summary(self, start_at=None, end_at=None):
         """
         回傳目前 tasks 保留資料的狀態摘要。
 
         備註:
         - Pending / Executing 較接近即時佇列狀態。
         - Completed / Aborted / Total 反映目前資料表保留中的累積資料。
+        - start_at / end_at 有值時只統計該 created_at 區間。
         """
-        query = """
+        where_sql, where_params = self._task_created_at_filter(start_at, end_at)
+        query = f"""
         SELECT status, COUNT(*) AS task_count
         FROM tasks
+        {where_sql}
         GROUP BY status;
         """
-        rows = self._execute_query(query, fetch=True) or []
+        rows = self._execute_query(
+            query, params=where_params or None, fetch=True
+        ) or []
 
         summary = {
             "pending_count": 0,
@@ -473,17 +492,20 @@ class TaskDBManager:
         )
         return summary
 
-    def get_task_volume_by_mission(self, limit=None):
-        limit_clause, params = self._build_limit_clause(limit)
+    def get_task_volume_by_mission(self, limit=None, start_at=None, end_at=None):
+        limit_clause, limit_params = self._build_limit_clause(limit)
+        where_sql, where_params = self._task_created_at_filter(start_at, end_at)
+        params = where_params + (limit_params or tuple())
         mission_expr = "COALESCE(NULLIF(BTRIM(mission_content), ''), '(未填寫)')"
         query = f"""
         SELECT {mission_expr} AS mission_content, COUNT(*) AS task_count
         FROM tasks
+        {where_sql}
         GROUP BY {mission_expr}
         ORDER BY COUNT(*) DESC, mission_content ASC
         {limit_clause};
         """
-        rows = self._execute_query(query, params=params, fetch=True) or []
+        rows = self._execute_query(query, params=params or None, fetch=True) or []
         return [
             {
                 "mission_content": self._normalize_group_label(
@@ -494,17 +516,20 @@ class TaskDBManager:
             for row in rows
         ]
 
-    def get_task_start_hotspots(self, limit=10):
-        limit_clause, params = self._build_limit_clause(limit, default=10)
+    def get_task_start_hotspots(self, limit=10, start_at=None, end_at=None):
+        limit_clause, limit_params = self._build_limit_clause(limit, default=10)
+        where_sql, where_params = self._task_created_at_filter(start_at, end_at)
+        params = where_params + (limit_params or tuple())
         start_expr = "COALESCE(NULLIF(BTRIM(start_point), ''), '(未填寫)')"
         query = f"""
         SELECT {start_expr} AS start_point, COUNT(*) AS task_count
         FROM tasks
+        {where_sql}
         GROUP BY {start_expr}
         ORDER BY COUNT(*) DESC, start_point ASC
         {limit_clause};
         """
-        rows = self._execute_query(query, params=params, fetch=True) or []
+        rows = self._execute_query(query, params=params or None, fetch=True) or []
         return [
             {
                 "start_point": self._normalize_group_label(row.get("start_point")),
@@ -513,17 +538,20 @@ class TaskDBManager:
             for row in rows
         ]
 
-    def get_task_target_hotspots(self, limit=10):
-        limit_clause, params = self._build_limit_clause(limit, default=10)
+    def get_task_target_hotspots(self, limit=10, start_at=None, end_at=None):
+        limit_clause, limit_params = self._build_limit_clause(limit, default=10)
+        where_sql, where_params = self._task_created_at_filter(start_at, end_at)
+        params = where_params + (limit_params or tuple())
         target_expr = "COALESCE(NULLIF(BTRIM(target_point), ''), '(未填寫)')"
         query = f"""
         SELECT {target_expr} AS target_point, COUNT(*) AS task_count
         FROM tasks
+        {where_sql}
         GROUP BY {target_expr}
         ORDER BY COUNT(*) DESC, target_point ASC
         {limit_clause};
         """
-        rows = self._execute_query(query, params=params, fetch=True) or []
+        rows = self._execute_query(query, params=params or None, fetch=True) or []
         return [
             {
                 "target_point": self._normalize_group_label(row.get("target_point")),
@@ -532,8 +560,10 @@ class TaskDBManager:
             for row in rows
         ]
 
-    def get_task_route_hotspots(self, limit=10):
-        limit_clause, params = self._build_limit_clause(limit, default=10)
+    def get_task_route_hotspots(self, limit=10, start_at=None, end_at=None):
+        limit_clause, limit_params = self._build_limit_clause(limit, default=10)
+        where_sql, where_params = self._task_created_at_filter(start_at, end_at)
+        params = where_params + (limit_params or tuple())
         start_expr = "COALESCE(NULLIF(BTRIM(start_point), ''), '(未填寫)')"
         target_expr = "COALESCE(NULLIF(BTRIM(target_point), ''), '(未填寫)')"
         query = f"""
@@ -542,11 +572,12 @@ class TaskDBManager:
             {target_expr} AS target_point,
             COUNT(*) AS task_count
         FROM tasks
+        {where_sql}
         GROUP BY {start_expr}, {target_expr}
         ORDER BY COUNT(*) DESC, start_point ASC, target_point ASC
         {limit_clause};
         """
-        rows = self._execute_query(query, params=params, fetch=True) or []
+        rows = self._execute_query(query, params=params or None, fetch=True) or []
         return [
             {
                 "start_point": self._normalize_group_label(row.get("start_point")),
