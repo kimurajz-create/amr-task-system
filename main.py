@@ -3356,8 +3356,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         import reset_all
 
         # 等同待執行清單右側 stop：停掉本機排程，避免 Reset 期間繼續派任務。
-        # 不把 MiR Status 設成 Pause。
-        print("[Reset] 停止待執行清單排程（右側 stop）...")
+        # 不把 MiR Status 設成 Pause，也不要在車子還位於貨架底下時先派去充電。
+        print("[Reset] 停止待執行清單排程（右側 stop），先不派回充...")
+        if getattr(self, "task_thread", None):
+            self.task_thread.return_to_charge_on_stop = False
         self.on_stop_mission_clicked()
         if getattr(self, "task_thread", None) and self.task_thread.isRunning():
             self.task_thread.wait(5000)
@@ -3374,6 +3376,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             reset_all.reset_mir_complete()
         finally:
             # 重新打開左側 play，待執行清單才會再吃新任務。
+            # 回充由 Reset 的 Charge 任務負責，這次不要再插一筆充電站移動。
+            if getattr(self, "task_thread", None):
+                if not self.task_thread.isRunning():
+                    self.task_thread.return_to_charge_on_stop = True
+                self.task_thread.skip_idle_charge_once = True
             print("[Reset] 重新開啟待執行清單 play...")
             self.on_map_location_clicked()
 

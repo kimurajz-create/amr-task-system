@@ -1,3 +1,4 @@
+import json
 import sys
 import time
 import csv
@@ -33,9 +34,20 @@ STATE_ID_EMERGENCY_STOP = 10
 STATE_ID_ERROR = 12
 
 # 車頂頂升柱：與主程式 set_lift_position(False) 相同，internal IO 先關上升再開下降。
+# 載運任務會等 Internal I/O input 3 從 off 變 on，那個回授代表頂升柱已到頂。
 TOP_LIFT_IO_GUID = "mirconst-guid-0000-0001-internalIO00"
 TOP_LIFT_DOWN_PORT = 2
 TOP_LIFT_UP_PORT = 3
+TOP_LIFT_UP_INPUT = 3
+LIFT_DOWN_MIN_SECONDS = 8
+LIFT_DOWN_TIMEOUT_SECONDS = 25
+LIFT_POLL_SECONDS = 0.5
+# 載運任務離開貨架時會先倒退約 0.66 公尺。這裡多留一點，確認架子坐穩後再退出。
+SHELF_EXIT_DISTANCE_M = 0.7
+SHELF_EXIT_CLEAR_M = 0.5
+SHELF_EXIT_TIMEOUT_SECONDS = 40
+MOVE_TO_TARGET_MISSION_NAME = "MoveToTarget_Critical"
+NARROW_FOOTPRINT_NAME = "default"
 CHARGE_MISSION_NAME = "Charge"
 
 
@@ -494,31 +506,499 @@ def monitor_mir():
             print(f"\n[{datetime.now():%Y-%m-%d %H:%M:%S}] [資料異常] 狀態資料格式無法解析：{exc}")
         time.sleep(MONITOR_INTERVAL_SECONDS)
 
-def lower_top_lift():
-    """強制降下車頂頂升柱。任一步失敗回傳 False，由呼叫端切回 Pause。"""
-    url = f"{API_URL}/io_modules/{TOP_LIFT_IO_GUID}/status"
-    sequence = [
-        {"port": TOP_LIFT_UP_PORT, "on": False},
-        {"port": TOP_LIFT_DOWN_PORT, "on": True},
+def shelf_exit_pose(x, y, orientation_deg, distance_m):
+    """沿車頭反方向退 distance_m。MiR orientation 0 度朝 +X，逆時針為正。"""
+    radians = math.radians(float(orientation_deg))
+    return (
+        float(x) - math.cos(radians) * distance_m,
+        float(y) - math.sin(radians) * distance_m,
+        float(orientation_deg),
+    )
+
+
+def lift_input_is_on(payload, port):
+    """從 io_modules 回傳裡讀指定 input。找不到回傳 None。"""
+    points = []
+    if isinstance(payload, dict):
+        inputs = payload.get("inputs")
+        if isinstance(inputs, list):
+            points.extend(inputs)
+    elif isinstance(payload, list):
+        points.extend(payload)
+
+    for item in points:
+        if not isinstance(item, dict):
+            continue
+        ident = item.get("id", item.get("index", item.get("port")))
+        name = str(item.get("name") or "").strip()
+        matched = name == str(port)
+        if not matched:
+            try:
+                matched = int(ident) == port
+            except (TypeError, ValueError):
+                matched = False
+        if not matched:
+            continue
+        value = item.get("value", item.get("on", item.get("state")))
+        if isinstance(value, str):
+            return value.strip().lower() in ("1", "true", "on")
+        return bool(value)
+    return None
+
+
+def status_is_protective_stop(status_data):
+    """急停、錯誤，或文字裡出現 protective stop。"""
+    if not isinstance(status_data, dict):
+        return False
+    if status_data.get("state_id") in (STATE_ID_EMERGENCY_STOP, STATE_ID_ERROR):
+        return True
+    texts = [
+        status_data.get("state_text"),
+        status_data.get("mission_text"),
     ]
-    for cmd in sequence:
-        payload = {**cmd, "timeout": 0}
-        try:
-            response = requests.put(
-                url, json=payload, headers=HEADERS, timeout=REQUEST_TIMEOUT
+    errors = status_data.get("errors") or []
+    if isinstance(errors, list):
+        for error in errors:
+            if isinstance(error, dict):
+                texts.append(error.get("description"))
+                texts.append(error.get("error_human"))
+    combined = " ".join(str(text) for text in texts if text).lower()
+    return "protective" in combined
+
+
+def _set_lift_output(port, on, announce=True):
+    url = f"{API_URL}/io_modules/{TOP_LIFT_IO_GUID}/status"
+    response = requests.put(
+        url,
+        json={"port": port, "on": on, "timeout": 0},
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code != 200:
+        print(
+            f"  -> [失敗] Top Lift port {port} 設定失敗："
+            f"{response.status_code} {response.text}"
+        )
+        return False
+    if announce:
+        print(f"  -> Top Lift port {port} 設為 {on}")
+    return True
+
+
+def command_lift_down(announce=True):
+    """先關上升腳位 3，再開下降腳位 2。"""
+    if not _set_lift_output(TOP_LIFT_UP_PORT, False, announce=announce):
+        return False
+    time.sleep(0.2)
+    return _set_lift_output(TOP_LIFT_DOWN_PORT, True, announce=announce)
+
+
+def read_lift_up_input(announce=True):
+    """讀上升到位回授。讀不到不中止 Reset，回傳 None。"""
+    try:
+        response = requests.get(
+            f"{API_URL}/io_modules/{TOP_LIFT_IO_GUID}",
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        if announce:
+            print(f"  -> 讀取頂升柱回授失敗：{exc}")
+        return None
+    if response.status_code != 200:
+        if announce:
+            print(
+                f"  -> 讀取頂升柱回授失敗：{response.status_code} {response.text}"
             )
-        except requests.RequestException as exc:
-            print(f"  -> [失敗] Top Lift port {cmd['port']} 請求失敗：{exc}")
+        return None
+    try:
+        return lift_input_is_on(response.json(), TOP_LIFT_UP_INPUT)
+    except ValueError as exc:
+        if announce:
+            print(f"  -> 頂升柱回授內容無法解析：{exc}")
+        return None
+
+
+def lower_top_lift_fully():
+    """降下頂升柱並等到坐穩。仍在上升、或出現保護性停止時回傳 False。"""
+    started = time.monotonic()
+    deadline = started + LIFT_DOWN_TIMEOUT_SECONDS
+    sensor_seen = False
+    released_up_input = False
+    announced = False
+    announced_sensor_error = False
+    while time.monotonic() < deadline:
+        if not command_lift_down(announce=not announced):
             return False
+        announced = True
+        status = get_mir_status()
+        if status_is_protective_stop(status):
+            print("  -> [失敗] 降下過程出現保護性停止或錯誤，停止 Reset。")
+            return False
+        up_input = read_lift_up_input(announce=not announced_sensor_error)
+        announced_sensor_error = True
+        if up_input is not None:
+            sensor_seen = True
+        if up_input is False:
+            released_up_input = True
+        elapsed = time.monotonic() - started
+        if elapsed >= LIFT_DOWN_MIN_SECONDS and released_up_input:
+            print(
+                f"  -> 上升回授 input {TOP_LIFT_UP_INPUT} 已關閉，"
+                f"且已持續降下 {elapsed:.1f} 秒，頂升柱已降到底。"
+            )
+            return True
+        if elapsed >= LIFT_DOWN_MIN_SECONDS and up_input is None and not sensor_seen:
+            print(
+                f"  -> 讀不到上升回授。已持續降下 {elapsed:.1f} 秒，"
+                "依行程時間視為頂升柱已降到底。"
+            )
+            return True
+        time.sleep(LIFT_POLL_SECONDS)
+
+    print(
+        f"  -> [失敗] {LIFT_DOWN_TIMEOUT_SECONDS} 秒內頂升柱沒有降到底，"
+        "不倒車、不回充。"
+    )
+    return False
+
+
+def parse_footprint_polygon(value):
+    """把 footprint 字串或點列轉成可比對的座標。格式不符回傳 None。"""
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            value = json.loads(text)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(value, list) or len(value) < 3:
+        return None
+    points = []
+    for point in value:
+        if not isinstance(point, (list, tuple)) or len(point) < 2:
+            return None
+        try:
+            points.append((round(float(point[0]), 3), round(float(point[1]), 3)))
+        except (TypeError, ValueError):
+            return None
+    return points
+
+
+def footprints_match(current, candidate):
+    current_points = parse_footprint_polygon(current)
+    candidate_points = parse_footprint_polygon(candidate)
+    if not current_points or not candidate_points:
+        return False
+    return current_points == candidate_points
+
+
+def choose_narrow_footprint(footprints):
+    """窄外形是清單裡名稱為 default 的那一個。"""
+    if not isinstance(footprints, list):
+        return None
+    for item in footprints:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("name") or "").strip().lower() == NARROW_FOOTPRINT_NAME:
+            return item
+    return None
+
+
+def clear_mission_queue():
+    print("[步驟 4] 架子已坐下，清空任務佇列...")
+    del_res = requests.delete(
+        f"{API_URL}/mission_queue", headers=HEADERS, timeout=REQUEST_TIMEOUT
+    )
+    if del_res.status_code == 204:
+        print("  -> 任務佇列已順利清空。")
+        return True
+    print(
+        f"  -> [失敗] 清除任務佇列未成功 (Status: {del_res.status_code}): {del_res.text}"
+    )
+    return False
+
+
+def find_relative_move_mission_id():
+    response = requests.get(
+        f"{API_URL}/missions", headers=HEADERS, timeout=REQUEST_TIMEOUT
+    )
+    if response.status_code != 200:
+        print(f"  -> 讀取任務清單失敗：{response.status_code} {response.text}")
+        return None
+    missions = response.json()
+    if not isinstance(missions, list):
+        return None
+    for mission in missions:
+        if not isinstance(mission, dict):
+            continue
+        name = str(mission.get("name") or "")
+        if "relative" in name.lower():
+            mission_id = mission.get("guid") or mission.get("id")
+            print(f"  -> 使用相對移動任務: {name} -> {mission_id}")
+            return mission_id
+    return None
+
+
+def post_relative_shelf_exit(mission_id):
+    payload = {
+        "mission_id": mission_id,
+        "parameters": [
+            {"id": "x", "value": -SHELF_EXIT_DISTANCE_M},
+            {"id": "y", "value": 0},
+            {"id": "ori", "value": 0},
+        ],
+    }
+    response = requests.post(
+        f"{API_URL}/mission_queue",
+        json=payload,
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code == 201:
+        print(f"  -> 已派送倒車 {SHELF_EXIT_DISTANCE_M:.2f} 公尺。")
+        return True
+    print(f"  -> 相對移動任務失敗：{response.status_code} {response.text}")
+    return False
+
+
+def post_backoff_position_move(status):
+    """沒有相對移動任務時，在車後建立暫時點，再用 MoveToTarget_Critical 過去。"""
+    position = status.get("position") if isinstance(status, dict) else None
+    map_id = status.get("map_id") if isinstance(status, dict) else None
+    if not isinstance(position, dict) or not map_id:
+        print("  -> [失敗] 無法取得目前座標或 map_id，不能倒車離開貨架。")
+        return None
+    try:
+        exit_x, exit_y, exit_orientation = shelf_exit_pose(
+            position["x"],
+            position["y"],
+            position["orientation"],
+            SHELF_EXIT_DISTANCE_M,
+        )
+    except (KeyError, TypeError, ValueError):
+        print("  -> [失敗] 目前座標無法換算倒車目標。")
+        return None
+
+    mission_id = get_mission_guid_by_name(MOVE_TO_TARGET_MISSION_NAME)
+    if not mission_id:
+        return None
+
+    position_name = f"reset_shelf_exit_{int(time.time())}"
+    created = requests.post(
+        f"{API_URL}/positions",
+        json={
+            "name": position_name,
+            "map_id": map_id,
+            "pos_x": exit_x,
+            "pos_y": exit_y,
+            "orientation": exit_orientation,
+            "type_id": 0,
+        },
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if created.status_code not in (200, 201):
+        print(f"  -> [失敗] 建立倒車目標失敗：{created.status_code} {created.text}")
+        return None
+    try:
+        position_guid = created.json().get("guid")
+    except ValueError:
+        position_guid = None
+    if not position_guid:
+        print("  -> [失敗] 倒車目標沒有 guid。")
+        return None
+
+    queued = requests.post(
+        f"{API_URL}/mission_queue",
+        json={
+            "mission_id": mission_id,
+            "parameters": [{"id": "target", "value": position_guid}],
+        },
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if queued.status_code != 201:
+        print(f"  -> [失敗] 派送倒車移動失敗：{queued.status_code} {queued.text}")
+        delete_exit_position(position_guid)
+        return None
+    print(
+        f"  -> 已派送倒車至暫時點 {position_name} "
+        f"({exit_x:.2f}, {exit_y:.2f})。"
+    )
+    return position_guid
+
+
+def delete_exit_position(position_guid):
+    if not position_guid:
+        return
+    try:
+        response = requests.delete(
+            f"{API_URL}/positions/{position_guid}",
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        print(f"  -> 刪除暫時倒車點失敗：{exc}")
+        return
+    if response.status_code not in (200, 204):
+        print(f"  -> 刪除暫時倒車點失敗：{response.status_code} {response.text}")
+
+
+def _linear_velocity(status):
+    velocity = status.get("velocity") if isinstance(status, dict) else None
+    if not isinstance(velocity, dict):
+        return None
+    try:
+        return float(velocity.get("linear"))
+    except (TypeError, ValueError):
+        return None
+
+
+def wait_until_left_shelf(start_xy):
+    deadline = time.monotonic() + SHELF_EXIT_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        status = get_mir_status()
+        if status_is_protective_stop(status):
+            print("  -> [失敗] 倒車離開貨架時出現保護性停止或錯誤。")
+            return False
+        position = status.get("position") if isinstance(status, dict) else None
+        try:
+            distance = math.hypot(
+                float(position["x"]) - start_xy[0],
+                float(position["y"]) - start_xy[1],
+            )
+        except (TypeError, ValueError, KeyError):
+            distance = 0.0
+        speed = _linear_velocity(status)
+        if distance >= SHELF_EXIT_CLEAR_M and speed is not None and abs(speed) < 0.05:
+            print(f"  -> 已離開貨架，位移 {distance:.2f} 公尺。")
+            return True
+        time.sleep(LIFT_POLL_SECONDS)
+    print("  -> [失敗] 倒車離開貨架逾時。")
+    return False
+
+
+def back_out_from_shelf():
+    """頂升柱降到底之後，倒車離開貨架。離開前不派回充。"""
+    print("[步驟 5] 倒車離開貨架...")
+    status = get_mir_status()
+    position = status.get("position") if isinstance(status, dict) else None
+    try:
+        start_xy = (float(position["x"]), float(position["y"]))
+    except (TypeError, ValueError, KeyError):
+        print("  -> [失敗] 無法讀取倒車前座標。")
+        return False
+
+    exit_position_guid = None
+    try:
+        relative_mission_id = find_relative_move_mission_id()
+        if relative_mission_id and post_relative_shelf_exit(relative_mission_id):
+            return wait_until_left_shelf(start_xy)
+        print("  -> 找不到可用的相對移動任務，改派送到車後暫時點。")
+        exit_position_guid = post_backoff_position_move(status)
+        if not exit_position_guid:
+            return False
+        return wait_until_left_shelf(start_xy)
+    finally:
+        delete_exit_position(exit_position_guid)
+
+
+def _footprint_put_candidates(footprint):
+    guid = footprint.get("guid")
+    url = footprint.get("url")
+    candidates = []
+    if isinstance(url, str) and url.strip():
+        candidates.append(url.strip())
+    if guid:
+        candidates.append(f"/v2.0.0/footprints/{guid}")
+        candidates.append(guid)
+    points = footprint.get("footprint_points")
+    if isinstance(points, list):
+        candidates.append(json.dumps(points, separators=(",", ":")))
+    elif isinstance(points, str) and points.strip():
+        candidates.append(points.strip())
+    unique = []
+    for candidate in candidates:
+        if candidate not in unique:
+            unique.append(candidate)
+    return unique
+
+
+def apply_narrow_footprint():
+    """降下頂升柱前，把目前的寬外形改回名稱為 default 的窄外形。"""
+    print("[步驟 2] 將 Footprint 改回窄外形 (default)，再降下頂升柱...")
+    listed = requests.get(
+        f"{API_URL}/footprints", headers=HEADERS, timeout=REQUEST_TIMEOUT
+    )
+    if listed.status_code != 200:
+        print(f"  -> [失敗] 讀取 Footprint 清單失敗：{listed.status_code} {listed.text}")
+        return False
+    try:
+        footprints = listed.json()
+    except ValueError as exc:
+        print(f"  -> [失敗] Footprint 清單無法解析：{exc}")
+        return False
+
+    narrow = choose_narrow_footprint(footprints)
+    if not isinstance(narrow, dict) or not narrow.get("guid"):
+        print("  -> [失敗] Footprint 清單沒有名稱為 default 的窄外形。")
+        return False
+
+    detail = requests.get(
+        f"{API_URL}/footprints/{narrow['guid']}",
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if detail.status_code != 200:
+        print(
+            f"  -> [失敗] 讀取 default Footprint 失敗："
+            f"{detail.status_code} {detail.text}"
+        )
+        return False
+    try:
+        narrow_detail = detail.json()
+    except ValueError as exc:
+        print(f"  -> [失敗] default Footprint 內容無法解析：{exc}")
+        return False
+    if not isinstance(narrow_detail, dict):
+        print("  -> [失敗] default Footprint 內容不是物件。")
+        return False
+    narrow_detail.setdefault("guid", narrow.get("guid"))
+    narrow_detail.setdefault("url", narrow.get("url"))
+    target_points = narrow_detail.get("footprint_points")
+    if target_points is None:
+        target_points = narrow_detail.get("footprint")
+
+    status = get_mir_status()
+    if footprints_match(status.get("footprint"), target_points):
+        print("  -> 目前已經是窄外形 default。")
+        return True
+
+    for candidate in _footprint_put_candidates(narrow_detail):
+        response = requests.put(
+            f"{API_URL}/status",
+            json={"footprint": candidate},
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+        )
         if response.status_code != 200:
             print(
-                f"  -> [失敗] Top Lift port {cmd['port']} 設定失敗："
-                f"{response.status_code} {response.text}"
+                f"  -> Footprint 設定未接受：{response.status_code} {response.text}"
             )
+            continue
+        updated = get_mir_status()
+        if status_is_protective_stop(updated):
+            print("  -> [失敗] 改成窄外形時出現保護性停止，停止 Reset。")
             return False
-        print(f"  -> Top Lift port {cmd['port']} 設為 {cmd['on']}")
-        time.sleep(0.2)
-    return True
+        if footprints_match(updated.get("footprint"), target_points):
+            print(f"  -> Footprint 已改回窄外形 default（{narrow_detail.get('guid')}）。")
+            return True
+        print("  -> /status 接受了設定，但讀回的外形還沒變成 default。")
+
+    print("  -> [失敗] 無法在降下頂升柱前把 Footprint 改回窄外形。")
+    return False
 
 
 def dispatch_charge_mission():
@@ -581,52 +1061,36 @@ def reset_mir_complete():
         time.sleep(0.5)
 
         # -------------------------------------------------------------------
-        # 步驟 2: 清空內部所有任務佇列 (Delete Mission Queue) DELETE /mission_queue（不帶任何 ID）
-        # 若是清除某一個任務佇列 DELETE /mission_queue/{id}（帶有具體 ID）
+        # 步驟 2: 先把頂升時的寬 footprint 改回 default 窄外形。
+        # 沒改成功就不要降柱，否則架子還在寬外形裡會保護性停止。
         # -------------------------------------------------------------------
-        print("[步驟 2] 清空內部執行中與等待中的任務佇列...")
-        del_res = requests.delete(
-            f"{API_URL}/mission_queue", headers=HEADERS, timeout=REQUEST_TIMEOUT
-        )
-        if del_res.status_code == 204:
-            print("  -> 任務佇列已順利清空。")
-        else:
-            print(
-                f"  -> [失敗] 清除任務佇列未成功 (Status: {del_res.status_code}): {del_res.text}"
-            )
+        if not apply_narrow_footprint():
+            pause_robot("Footprint 未能改回窄外形，停止 Reset")
+            return False
+
+        # -------------------------------------------------------------------
+        # 步驟 3: 窄外形就位後才降下頂升柱。載運任務還在時先不要清佇列。
+        # -------------------------------------------------------------------
+        print("[步驟 3] 降下 Shelf Carrier 頂升柱，並等到降到底...")
+        if not lower_top_lift_fully():
+            pause_robot("Top Lift 未能降到底，停止 Reset")
+            return False
+
+        # -------------------------------------------------------------------
+        # 步驟 4-5: 架子坐回架腳後才清佇列，然後倒車離開貨架。
+        # 離開之前不派回充。
+        # -------------------------------------------------------------------
+        if not clear_mission_queue():
             pause_robot("任務佇列清除失敗，停止 Reset")
             return False
-
-        # -------------------------------------------------------------------
-        # 步驟 3: Shelf Carrier 沒有 hook_status。直接降下頂升柱：
-        # 先關上升腳位 3，再開下降腳位 2。
-        # -------------------------------------------------------------------
-        print("[步驟 3] 降下 Shelf Carrier 頂升柱（先關腳位 3，再開腳位 2）...")
-        if not lower_top_lift():
-            pause_robot("Top Lift 降下失敗，停止 Reset")
+        if not back_out_from_shelf():
+            pause_robot("未能離開貨架，停止 Reset")
             return False
-        print("  -> Top Lift 已送出降下指令。")
 
         # -------------------------------------------------------------------
-        # 步驟 4: 重置 Footprint 為 default
+        # 步驟 6: 確認 GetStatus 有提供有效的位置座標
         # -------------------------------------------------------------------
-        print("[步驟 4] 重置 Footprint 為預設值 (default)...")
-        fp_res = requests.put(
-            f"{API_URL}/status",
-            json={"footprint_code": "default"},
-            headers=HEADERS,
-            timeout=REQUEST_TIMEOUT,
-        )
-        if fp_res.status_code != 200:
-            print(f"  -> [失敗] Footprint 還原失敗：{fp_res.status_code} {fp_res.text}")
-            pause_robot("Footprint 還原失敗，停止 Reset")
-            return False
-        print("  -> Footprint 已還原為 default。")
-
-        # -------------------------------------------------------------------
-        # 步驟 5: 確認 GetStatus 有提供有效的位置座標
-        # -------------------------------------------------------------------
-        print("[步驟 5] 檢查地圖座標 (GetStatus position)...")
+        print("[步驟 6] 檢查地圖座標 (GetStatus position)...")
         status = get_mir_status()
         pos = status.get("position", {})
         try:
@@ -648,7 +1112,7 @@ def reset_mir_complete():
         # -------------------------------------------------------------------
         # 步驟 6: 切換至 Ready 狀態等待新命令
         # -------------------------------------------------------------------
-        print(f"[步驟 6] 將狀態切換至 Ready (State ID: {STATE_ID_READY})...")
+        print(f"將狀態切換至 Ready (State ID: {STATE_ID_READY})...")
         ready_res = requests.put(
             f"{API_URL}/status", json={"state_id": STATE_ID_READY}, headers=HEADERS,
             timeout=REQUEST_TIMEOUT,

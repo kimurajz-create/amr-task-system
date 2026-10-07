@@ -14,6 +14,9 @@ class TaskThread(QThread):
         self.is_running = True
         self.is_no_mission = False
         self._mir_connection_lost = False
+        # Reset 會暫時關掉這兩個旗標，避免車子還在貨架底下就被派去充電。
+        self.return_to_charge_on_stop = True
+        self.skip_idle_charge_once = False
 
         self.functions = self.main_window.functions
         self.db_manager = self.main_window.task_db_manager
@@ -176,8 +179,14 @@ class TaskThread(QThread):
 
             if not priority_tasks:
                 self.is_no_mission = True
-                self.log_message.emit("No pending tasks. Sending MiR back to charge station.")
-                self._send_robot_to_charge_station()
+                if self.skip_idle_charge_once:
+                    self.skip_idle_charge_once = False
+                    self.log_message.emit(
+                        "Reset is handling the return to charger. Skipping the idle charge move."
+                    )
+                else:
+                    self.log_message.emit("No pending tasks. Sending MiR back to charge station.")
+                    self._send_robot_to_charge_station()
 
                 while self.is_no_mission and self.is_running:
                     time.sleep(1)
@@ -281,7 +290,8 @@ class TaskThread(QThread):
             time.sleep(0.1)
 
         self.log_message.emit("Task scheduler stopped.")
-        self._send_robot_to_charge_station()
+        if self.return_to_charge_on_stop:
+            self._send_robot_to_charge_station()
 
     def stop(self):
         """Request a graceful stop after the current mission finishes."""
