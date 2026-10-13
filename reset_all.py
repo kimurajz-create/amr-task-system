@@ -47,7 +47,14 @@ SHELF_EXIT_DISTANCE_M = 0.7
 SHELF_EXIT_CLEAR_M = 0.5
 SHELF_EXIT_TIMEOUT_SECONDS = 40
 MOVE_TO_TARGET_MISSION_NAME = "MoveToTarget_Critical"
-NARROW_FOOTPRINT_NAME = "default"
+# 空車時 GET /status 的長方形對得上 MiR250 Dynamic，不是 shelf carrier base。
+NARROW_FOOTPRINT_NAME = "MiR250 Dynamic"
+# 載貨架時的八邊形最接近這筆。Shelf_Army_Hospital 是另一個小長方形。
+WIDE_FOOTPRINT_NAME = "MIR250 MK2 shelf carrier base 0703"
+CART_TRANSPORT_MISSION_NAME = "Taichung Military Hospital Cart Transport"
+FOOTPRINT_SWITCH_TIMEOUT_SECONDS = 20
+SET_FOOTPRINT_ACTION_TYPE = "set_footprint"
+SET_FOOTPRINT_PARAMETER_ID = "footprint"
 CHARGE_MISSION_NAME = "Charge"
 
 
@@ -619,22 +626,62 @@ def read_lift_up_input(announce=True):
         return None
 
 
+def clear_robot_error():
+    response = requests.put(
+        f"{API_URL}/status",
+        json={"clear_error": True},
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code != 200:
+        print(
+            f"  -> [失敗] clear_error 失敗："
+            f"{response.status_code} {response.text}"
+        )
+        return False
+    return True
+
+
+def delete_mission_queue():
+    response = requests.delete(
+        f"{API_URL}/mission_queue", headers=HEADERS, timeout=REQUEST_TIMEOUT
+    )
+    if response.status_code == 204:
+        return True
+    print(
+        f"  -> [失敗] 清除任務佇列未成功 (Status: {response.status_code}): {response.text}"
+    )
+    return False
+
+
 def lower_top_lift_fully():
-    """降下頂升柱並等到坐穩。仍在上升、或出現保護性停止時回傳 False。"""
+    """降下頂升柱並等到坐穩。保護性停止時先清掉載運任務，再清除錯誤並繼續降。"""
     started = time.monotonic()
     deadline = started + LIFT_DOWN_TIMEOUT_SECONDS
     sensor_seen = False
     released_up_input = False
     announced = False
     announced_sensor_error = False
+    cleared_queue_after_stop = False
     while time.monotonic() < deadline:
         if not command_lift_down(announce=not announced):
             return False
         announced = True
         status = get_mir_status()
         if status_is_protective_stop(status):
-            print("  -> [失敗] 降下過程出現保護性停止或錯誤，停止 Reset。")
-            return False
+            if not cleared_queue_after_stop:
+                print(
+                    "  -> 降下時出現保護性停止。"
+                    "先清空任務佇列，避免載運繼續開往目的地。"
+                )
+                if not delete_mission_queue():
+                    return False
+                print("  -> 已清空任務佇列，清除錯誤後繼續降下頂升柱。")
+                cleared_queue_after_stop = True
+            if not clear_robot_error():
+                return False
+            time.sleep(LIFT_POLL_SECONDS)
+            continue
         up_input = read_lift_up_input(announce=not announced_sensor_error)
         announced_sensor_error = True
         if up_input is not None:
@@ -694,29 +741,89 @@ def footprints_match(current, candidate):
     return current_points == candidate_points
 
 
-def choose_narrow_footprint(footprints):
-    """窄外形是清單裡名稱為 default 的那一個。"""
+def choose_footprint_by_name(footprints, footprint_name):
     if not isinstance(footprints, list):
         return None
+    target_name = str(footprint_name or "").strip().lower()
     for item in footprints:
         if not isinstance(item, dict):
             continue
-        if str(item.get("name") or "").strip().lower() == NARROW_FOOTPRINT_NAME:
+        if str(item.get("name") or "").strip().lower() == target_name:
             return item
     return None
 
 
+def choose_narrow_footprint(footprints):
+    """窄外形是空車時 status 上的長方形，名稱是 MiR250 Dynamic。"""
+    return choose_footprint_by_name(footprints, NARROW_FOOTPRINT_NAME)
+
+
+def parse_action_parameters(action):
+    if not isinstance(action, dict):
+        return []
+    parameters = action.get("parameters")
+    if isinstance(parameters, str):
+        try:
+            parameters = json.loads(parameters)
+        except ValueError:
+            return []
+    if not isinstance(parameters, list):
+        return []
+    return [item for item in parameters if isinstance(item, dict)]
+
+
+def choose_set_footprint_action(actions):
+    """從任務動作裡找出 Set footprint。這台車只能靠這個動作切換目前外形。"""
+    if not isinstance(actions, list):
+        return None
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        if "footprint" in str(action.get("action_type") or "").lower():
+            return action
+    return None
+
+
+def footprint_parameter_id(action):
+    for item in parse_action_parameters(action):
+        parameter_id = str(item.get("id") or "")
+        if "footprint" in parameter_id.lower():
+            return parameter_id
+    return SET_FOOTPRINT_PARAMETER_ID
+
+
+def footprint_action_value(example_action, footprint):
+    """沿用載運任務參數的寫法。對方用網址就送網址，否則送 guid。"""
+    guid = str((footprint or {}).get("guid") or "")
+    url = str((footprint or {}).get("url") or "")
+    if guid and not url:
+        url = f"/v2.0.0/footprints/{guid}"
+    if not isinstance(example_action, dict):
+        return guid or url
+    for item in parse_action_parameters(example_action):
+        if "footprint" not in str(item.get("id") or "").lower():
+            continue
+        example_value = str(item.get("value") or "")
+        if example_value.startswith("/"):
+            return url or guid
+        return guid or url
+    return guid or url
+
+
+def build_set_footprint_action(action_type, parameter_id, footprint_value, mission_id):
+    return {
+        "action_type": action_type,
+        "mission_id": mission_id,
+        "parameters": [{"id": parameter_id, "value": footprint_value}],
+        "priority": 1,
+    }
+
+
 def clear_mission_queue():
-    print("[步驟 4] 架子已坐下，清空任務佇列...")
-    del_res = requests.delete(
-        f"{API_URL}/mission_queue", headers=HEADERS, timeout=REQUEST_TIMEOUT
-    )
-    if del_res.status_code == 204:
+    print("清空任務佇列...")
+    if delete_mission_queue():
         print("  -> 任務佇列已順利清空。")
         return True
-    print(
-        f"  -> [失敗] 清除任務佇列未成功 (Status: {del_res.status_code}): {del_res.text}"
-    )
     return False
 
 
@@ -882,7 +989,7 @@ def wait_until_left_shelf(start_xy):
 
 def back_out_from_shelf():
     """頂升柱降到底之後，倒車離開貨架。離開前不派回充。"""
-    print("[步驟 5] 倒車離開貨架...")
+    print("[步驟 6] 倒車離開貨架...")
     status = get_mir_status()
     position = status.get("position") if isinstance(status, dict) else None
     try:
@@ -905,30 +1012,198 @@ def back_out_from_shelf():
         delete_exit_position(exit_position_guid)
 
 
-def _footprint_put_candidates(footprint):
-    guid = footprint.get("guid")
-    url = footprint.get("url")
-    candidates = []
-    if isinstance(url, str) and url.strip():
-        candidates.append(url.strip())
-    if guid:
-        candidates.append(f"/v2.0.0/footprints/{guid}")
-        candidates.append(guid)
-    points = footprint.get("footprint_points")
-    if isinstance(points, list):
-        candidates.append(json.dumps(points, separators=(",", ":")))
-    elif isinstance(points, str) and points.strip():
-        candidates.append(points.strip())
-    unique = []
-    for candidate in candidates:
-        if candidate not in unique:
-            unique.append(candidate)
-    return unique
+def load_cart_transport_footprint_example():
+    """讀載運任務裡的 Set footprint，沿用它的 action_type 與參數寫法。"""
+    mission_id = get_mission_guid_by_name(CART_TRANSPORT_MISSION_NAME)
+    if not mission_id:
+        return None, None
+    try:
+        detail = requests.get(
+            f"{API_URL}/missions/{mission_id}",
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+        )
+        actions = requests.get(
+            f"{API_URL}/missions/{mission_id}/actions",
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        print(f"  -> 讀取載運任務失敗，改用 set_footprint：{exc}")
+        return None, None
+    group_id = None
+    if detail.status_code == 200:
+        try:
+            group_id = detail.json().get("group_id")
+        except ValueError:
+            group_id = None
+    example = None
+    if actions.status_code == 200:
+        try:
+            example = choose_set_footprint_action(actions.json())
+        except ValueError:
+            example = None
+    if isinstance(example, dict):
+        print(f"  -> 沿用載運任務的外形動作：{example.get('action_type')}")
+    else:
+        print("  -> 載運任務裡沒有 Set footprint 動作，改用 set_footprint。")
+    return group_id, example if isinstance(example, dict) else None
 
 
-def apply_narrow_footprint():
-    """降下頂升柱前，把目前的寬外形改回名稱為 default 的窄外形。"""
-    print("[步驟 2] 將 Footprint 改回窄外形 (default)，再降下頂升柱...")
+def lookup_mission_group_id(preferred_group_id):
+    if preferred_group_id:
+        return preferred_group_id
+    try:
+        response = requests.get(
+            f"{API_URL}/mission_groups",
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        print(f"  -> [失敗] 讀取任務群組失敗：{exc}")
+        return None
+    if response.status_code != 200:
+        print(f"  -> [失敗] 讀取任務群組失敗：{response.status_code} {response.text}")
+        return None
+    try:
+        groups = response.json()
+    except ValueError as exc:
+        print(f"  -> [失敗] 任務群組無法解析：{exc}")
+        return None
+    if isinstance(groups, list):
+        for group in groups:
+            if isinstance(group, dict) and group.get("guid"):
+                return group.get("guid")
+    print("  -> [失敗] 沒有可用的任務群組，無法建立 Set footprint 任務。")
+    return None
+
+
+def ensure_robot_can_run_mission():
+    """切換外形前，車子要能執行任務。保護性停止時不強制改狀態。"""
+    status = get_mir_status()
+    if status_is_protective_stop(status):
+        print("  -> [失敗] 車子處於保護性停止或錯誤，無法執行切換外形任務。")
+        return False
+    if status.get("state_id") in (STATE_ID_READY, STATE_ID_EXECUTING):
+        return True
+    response = requests.put(
+        f"{API_URL}/status",
+        json={"state_id": STATE_ID_READY},
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code != 200:
+        print(
+            "  -> [失敗] 無法切到 Ready 來執行切換外形任務："
+            f"{response.status_code} {response.text}"
+        )
+        return False
+    print("  -> 已切到 Ready，準備執行切換外形任務。")
+    return True
+
+
+def create_set_footprint_mission(
+    footprint_name, footprint_value, group_id, action_type, parameter_id
+):
+    suffix = "wide" if footprint_name == WIDE_FOOTPRINT_NAME else "narrow"
+    created = requests.post(
+        f"{API_URL}/missions",
+        json={
+            "name": f"reset_set_footprint_{suffix}_{int(time.time() * 1000)}",
+            "group_id": group_id,
+            "hidden": True,
+            "description": f"Reset Set footprint: {footprint_name}",
+        },
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if created.status_code not in (200, 201):
+        print(f"  -> [失敗] 建立切換外形任務失敗：{created.status_code} {created.text}")
+        return None
+    try:
+        mission_guid = created.json().get("guid")
+    except ValueError:
+        mission_guid = None
+    if not mission_guid:
+        print("  -> [失敗] 切換外形任務沒有 guid。")
+        return None
+    action = build_set_footprint_action(
+        action_type, parameter_id, footprint_value, mission_guid
+    )
+    posted = requests.post(
+        f"{API_URL}/missions/{mission_guid}/actions",
+        json=action,
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if posted.status_code not in (200, 201):
+        print(f"  -> [失敗] 加入 Set footprint 動作失敗：{posted.status_code} {posted.text}")
+        delete_temporary_mission(mission_guid)
+        return None
+    return mission_guid
+
+
+def delete_temporary_mission(mission_guid):
+    if not mission_guid:
+        return
+    try:
+        response = requests.delete(
+            f"{API_URL}/missions/{mission_guid}",
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        print(f"  -> 刪除暫時外形任務失敗：{exc}")
+        return
+    if response.status_code not in (200, 204):
+        print(f"  -> 刪除暫時外形任務失敗：{response.status_code} {response.text}")
+
+
+def wait_for_footprint_mission(queue_id, target_points, footprint_name):
+    """等到任務做完，而且 status 外形與目標多邊形相同。"""
+    deadline = time.monotonic() + FOOTPRINT_SWITCH_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        try:
+            status = get_mir_status()
+        except requests.RequestException as exc:
+            print(f"  -> 讀取外形狀態失敗：{exc}")
+            time.sleep(LIFT_POLL_SECONDS)
+            continue
+        if status_is_protective_stop(status):
+            print(f"  -> [失敗] 套用 {footprint_name} 時出現保護性停止。")
+            return False
+        matched = footprints_match(status.get("footprint"), target_points)
+        state = ""
+        if queue_id is not None:
+            try:
+                entry = get_mission_queue_entry(queue_id, None)
+                state = str((entry or {}).get("state") or "")
+            except requests.RequestException as exc:
+                print(f"  -> 讀取外形任務狀態失敗：{exc}")
+        if state.lower() in ("aborted", "abort", "error", "failed"):
+            print(f"  -> [失敗] 外形任務結束狀態為 {state}。")
+            return False
+        if matched and state in ("", "Done"):
+            print(f"  -> 已套用 {footprint_name}。")
+            return True
+        time.sleep(LIFT_POLL_SECONDS)
+    try:
+        status = get_mir_status()
+    except requests.RequestException as exc:
+        print(f"  -> 讀取外形狀態失敗：{exc}")
+        status = {}
+    if footprints_match(status.get("footprint"), target_points):
+        print(f"  -> 已套用 {footprint_name}。")
+        return True
+    print(
+        f"  -> [失敗] {FOOTPRINT_SWITCH_TIMEOUT_SECONDS} 秒內外形沒有變成 "
+        f"{footprint_name}。"
+    )
+    return False
+
+
+def apply_named_footprint(footprint_name):
+    """派一筆只有 Set footprint 的任務來切換目前外形。已經是該外形則直接成功。"""
     listed = requests.get(
         f"{API_URL}/footprints", headers=HEADERS, timeout=REQUEST_TIMEOUT
     )
@@ -941,64 +1216,94 @@ def apply_narrow_footprint():
         print(f"  -> [失敗] Footprint 清單無法解析：{exc}")
         return False
 
-    narrow = choose_narrow_footprint(footprints)
-    if not isinstance(narrow, dict) or not narrow.get("guid"):
-        print("  -> [失敗] Footprint 清單沒有名稱為 default 的窄外形。")
+    selected = choose_footprint_by_name(footprints, footprint_name)
+    if not isinstance(selected, dict) or not selected.get("guid"):
+        print(f"  -> [失敗] Footprint 清單沒有名稱為 {footprint_name} 的外形。")
         return False
 
     detail = requests.get(
-        f"{API_URL}/footprints/{narrow['guid']}",
+        f"{API_URL}/footprints/{selected['guid']}",
         headers=HEADERS,
         timeout=REQUEST_TIMEOUT,
     )
     if detail.status_code != 200:
         print(
-            f"  -> [失敗] 讀取 default Footprint 失敗："
+            f"  -> [失敗] 讀取 Footprint 失敗："
             f"{detail.status_code} {detail.text}"
         )
         return False
     try:
-        narrow_detail = detail.json()
+        footprint_detail = detail.json()
     except ValueError as exc:
-        print(f"  -> [失敗] default Footprint 內容無法解析：{exc}")
+        print(f"  -> [失敗] Footprint 內容無法解析：{exc}")
         return False
-    if not isinstance(narrow_detail, dict):
-        print("  -> [失敗] default Footprint 內容不是物件。")
+    if not isinstance(footprint_detail, dict):
+        print("  -> [失敗] Footprint 內容不是物件。")
         return False
-    narrow_detail.setdefault("guid", narrow.get("guid"))
-    narrow_detail.setdefault("url", narrow.get("url"))
-    target_points = narrow_detail.get("footprint_points")
+    footprint_detail.setdefault("guid", selected.get("guid"))
+    footprint_detail.setdefault("url", selected.get("url"))
+    target_points = footprint_detail.get("footprint_points")
     if target_points is None:
-        target_points = narrow_detail.get("footprint")
+        target_points = footprint_detail.get("footprint")
 
     status = get_mir_status()
     if footprints_match(status.get("footprint"), target_points):
-        print("  -> 目前已經是窄外形 default。")
+        print(f"  -> 目前已經是 {footprint_name}。")
         return True
+    if not ensure_robot_can_run_mission():
+        return False
 
-    for candidate in _footprint_put_candidates(narrow_detail):
-        response = requests.put(
-            f"{API_URL}/status",
-            json={"footprint": candidate},
+    group_id, example = load_cart_transport_footprint_example()
+    group_id = lookup_mission_group_id(group_id)
+    if not group_id:
+        return False
+    action_type = SET_FOOTPRINT_ACTION_TYPE
+    parameter_id = SET_FOOTPRINT_PARAMETER_ID
+    if isinstance(example, dict) and example.get("action_type"):
+        action_type = example.get("action_type")
+        parameter_id = footprint_parameter_id(example)
+    footprint_value = footprint_action_value(example, footprint_detail)
+    mission_guid = create_set_footprint_mission(
+        footprint_name, footprint_value, group_id, action_type, parameter_id
+    )
+    if not mission_guid:
+        return False
+
+    queue_id = None
+    succeeded = False
+    try:
+        queued = requests.post(
+            f"{API_URL}/mission_queue",
+            json={"mission_id": mission_guid},
             headers=HEADERS,
             timeout=REQUEST_TIMEOUT,
         )
-        if response.status_code != 200:
-            print(
-                f"  -> Footprint 設定未接受：{response.status_code} {response.text}"
-            )
-            continue
-        updated = get_mir_status()
-        if status_is_protective_stop(updated):
-            print("  -> [失敗] 改成窄外形時出現保護性停止，停止 Reset。")
+        if queued.status_code != 201:
+            print(f"  -> [失敗] 派送切換外形任務失敗：{queued.status_code} {queued.text}")
             return False
-        if footprints_match(updated.get("footprint"), target_points):
-            print(f"  -> Footprint 已改回窄外形 default（{narrow_detail.get('guid')}）。")
-            return True
-        print("  -> /status 接受了設定，但讀回的外形還沒變成 default。")
+        try:
+            queue_id = queued.json().get("id")
+        except ValueError:
+            queue_id = None
+        print(f"  -> 已派送 Set footprint 任務 ({footprint_name})，queue_id={queue_id}")
+        succeeded = wait_for_footprint_mission(queue_id, target_points, footprint_name)
+        return succeeded
+    finally:
+        if not succeeded:
+            delete_mission_queue()
+        delete_temporary_mission(mission_guid)
 
-    print("  -> [失敗] 無法在降下頂升柱前把 Footprint 改回窄外形。")
-    return False
+
+def apply_wide_footprint():
+    """貨架還頂在車上時，先用任務套上寬外形，再降下頂升柱。"""
+    print(f"[步驟 3] 以 Set footprint 任務套用寬外形 ({WIDE_FOOTPRINT_NAME})...")
+    return apply_named_footprint(WIDE_FOOTPRINT_NAME)
+
+
+def apply_narrow_footprint():
+    """頂升柱降到底、貨架坐回架腳後，用任務改回空車窄外形。"""
+    print(f"[步驟 5] 以 Set footprint 任務改回窄外形 ({NARROW_FOOTPRINT_NAME})...")
+    return apply_named_footprint(NARROW_FOOTPRINT_NAME)
 
 
 def dispatch_charge_mission():
@@ -1044,53 +1349,53 @@ def reset_mir_complete():
         # 這裡不把 MiR Status 設成 Pause，否則無法執行後續降柱與回充。
         # -------------------------------------------------------------------
         print("[步驟 1] 清除錯誤 (clear_error)，不變更 MiR Status 為 Pause...")
-        clear_res = requests.put(
-            f"{API_URL}/status",
-            json={"clear_error": True},
-            headers=HEADERS,
-            timeout=REQUEST_TIMEOUT,
-        )
-        if clear_res.status_code != 200:
-            print(
-                f"  -> [失敗] clear_error 失敗："
-                f"{clear_res.status_code} {clear_res.text}"
-            )
+        if not clear_robot_error():
             pause_robot("clear_error 失敗，停止 Reset")
             return False
         print("  -> 已送出 clear_error。")
         time.sleep(0.5)
 
         # -------------------------------------------------------------------
-        # 步驟 2: 先把頂升時的寬 footprint 改回 default 窄外形。
-        # 沒改成功就不要降柱，否則架子還在寬外形裡會保護性停止。
+        # 步驟 2: 先清掉載運任務。否則降柱或切外形期間，它會繼續開往目的地。
         # -------------------------------------------------------------------
-        if not apply_narrow_footprint():
-            pause_robot("Footprint 未能改回窄外形，停止 Reset")
+        print("[步驟 2] 清空載運任務，避免繼續開往目的地...")
+        if not delete_mission_queue():
+            pause_robot("任務佇列清除失敗，停止 Reset")
+            return False
+        print("  -> 任務佇列已清空，載運不會再開往目的地。")
+
+        # -------------------------------------------------------------------
+        # 步驟 3: 用 Set footprint 任務套上寬外形。
+        # PUT /status 的 footprint 這台車不接受。外形沒變成就不降柱。
+        # -------------------------------------------------------------------
+        if not apply_wide_footprint():
+            pause_robot("無法以任務套用寬外形，停止 Reset")
             return False
 
         # -------------------------------------------------------------------
-        # 步驟 3: 窄外形就位後才降下頂升柱。載運任務還在時先不要清佇列。
+        # 步驟 4: 寬外形就位後才降下頂升柱。
         # -------------------------------------------------------------------
-        print("[步驟 3] 降下 Shelf Carrier 頂升柱，並等到降到底...")
+        print("[步驟 4] 寬外形已套用，降下 Shelf Carrier 頂升柱...")
         if not lower_top_lift_fully():
-            pause_robot("Top Lift 未能降到底，停止 Reset")
+            clear_mission_queue()
+            pause_robot("Top Lift 未能降到底，已嘗試清空任務佇列，停止 Reset")
             return False
 
         # -------------------------------------------------------------------
-        # 步驟 4-5: 架子坐回架腳後才清佇列，然後倒車離開貨架。
+        # 步驟 5-6: 貨架坐回架腳後，用任務改回窄外形，再倒車離開。
         # 離開之前不派回充。
         # -------------------------------------------------------------------
-        if not clear_mission_queue():
-            pause_robot("任務佇列清除失敗，停止 Reset")
+        if not apply_narrow_footprint():
+            pause_robot("無法以任務改回窄外形，停止 Reset")
             return False
         if not back_out_from_shelf():
             pause_robot("未能離開貨架，停止 Reset")
             return False
 
         # -------------------------------------------------------------------
-        # 步驟 6: 確認 GetStatus 有提供有效的位置座標
+        # 確認 GetStatus 有提供有效的位置座標
         # -------------------------------------------------------------------
-        print("[步驟 6] 檢查地圖座標 (GetStatus position)...")
+        print("檢查地圖座標 (GetStatus position)...")
         status = get_mir_status()
         pos = status.get("position", {})
         try:
