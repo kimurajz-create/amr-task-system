@@ -109,6 +109,51 @@
   "_comment_markers": "markers 定義主地圖 marker 的幾何資訊，locations[*].marker_id 只負責引用這些 marker_id。",
   "markers": [
     {
+      "marker_id": "[Erick_test]charge_station_lobby",
+      "x_px": 920,
+      "y_px": 650,
+      "world_x": 2.0466268062591553,
+      "world_y": 27.911836624145508,
+      "width_px": 54,
+      "height_px": 54
+    },
+    {
+      "marker_id": "[Erick_test]UL",
+      "x_px": 851,
+      "y_px": 733,
+      "world_x": -3.5,
+      "world_y": 26.154,
+      "width_px": 50,
+      "height_px": 50
+    },
+    {
+      "marker_id": "[Erick_test]UR",
+      "x_px": 851,
+      "y_px": 733,
+      "world_x": -1.5,
+      "world_y": 26.154,
+      "width_px": 50,
+      "height_px": 50
+    },
+    {
+      "marker_id": "[Erick_test]DL",
+      "x_px": 851,
+      "y_px": 733,
+      "world_x": -3.5,
+      "world_y": 22.154,
+      "width_px": 50,
+      "height_px": 50
+    },
+        {
+      "marker_id": "[Erick_test]DR",
+      "x_px": 851,
+      "y_px": 733,
+      "world_x": -1.5,
+      "world_y": 22.154,
+      "width_px": 50,
+      "height_px": 50
+    },
+    {
       "marker_id": "label_rp_1",
       "x_px": 851,
       "y_px": 733,
@@ -170,6 +215,15 @@
       "world_y": 16.955,
       "width_px": 78,
       "height_px": 54
+    },
+    {
+      "marker_id": "[Erick_test]Elv_Bridge_lobby",
+      "x_px": 2610,
+      "y_px": 960,
+      "world_x": 37.0,
+      "world_y": 6.0,
+      "width_px": 50,
+      "height_px": 50
     }
   ],
   "_comment_locations": "locations 是場域的核心資料表。每筆 location 同時描述 MiR 名稱、UI 顯示名稱、marker、room_id，以及是否為充電站。",
@@ -226,14 +280,14 @@
     {
       "mir_name": "LbV2_MiR Charge 48V V2",
       "display_name": "充電樁",
-      "marker_id": null,
+      "marker_id": "[Erick_test]charge_station_lobby",
       "room_id": "OR09",
       "is_charging_station": true
     },
     {
       "mir_name": "LbV2_Robot position Elv  Bridge Map",
       "display_name": "電梯橋",
-      "marker_id": null,
+      "marker_id": "[Erick_test]Elv_Bridge_lobby",
       "room_id": "OR10",
       "is_charging_station": false
     },
@@ -290,15 +344,30 @@
       "_comment": "測試場車架點：MiR 地圖上的 UL/UR，補進對照後 combobox 才會顯示中文並可派送。",
       "mir_name": "LbV2_Shelf position_UL",
       "display_name": "車等候位置(測試場_UL)",
-      "marker_id": null,
+      "marker_id": "[Erick_test]UL",
       "room_id": "TS_UL",
       "is_charging_station": false
     },
     {
       "mir_name": "LbV2_Shelf position_UR",
       "display_name": "車等候位置(測試場_UR)",
-      "marker_id": null,
+      "marker_id": "[Erick_test]UR",
       "room_id": "TS_UR",
+      "is_charging_station": false
+    },
+    {
+      "_comment": "測試場車架點：MiR 地圖上的 UL/UR，補進對照後 combobox 才會顯示中文並可派送。",
+      "mir_name": "LbV2_Shelf position_DL",
+      "display_name": "車等候位置(測試場_DL)",
+      "marker_id": "[Erick_test]DL",
+      "room_id": "TS_DL",
+      "is_charging_station": false
+    },
+    {
+      "mir_name": "LbV2_Shelf position_DR",
+      "display_name": "車等候位置(測試場_DR)",
+      "marker_id": "[Erick_test]DR",
+      "room_id": "TS_DR",
       "is_charging_station": false
     }
   ],
