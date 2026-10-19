@@ -1527,6 +1527,7 @@ def reset_mir_complete():
             pause_robot("任務佇列清除失敗，停止 Reset")
             return False
         print("  -> 任務佇列已清空。")
+        time.sleep(0.5)
 
         print(
             "[步驟 3] 派送重置任務 "
