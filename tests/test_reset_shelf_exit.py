@@ -25,6 +25,13 @@ class ResetShelfExitTests(unittest.TestCase):
         }
         self.assertIs(False, reset_all.lift_input_is_on(payload, 3))
         self.assertIsNone(reset_all.lift_input_is_on(payload, 9))
+        self.assertIs(True, reset_all.lift_output_is_on(payload, 3))
+        self.assertIsNone(reset_all.lift_output_is_on(payload, 2))
+        self.assertIs(True, reset_all.shelf_lift_is_up(payload))
+        self.assertIs(
+            False,
+            reset_all.shelf_lift_is_up({"outputs": [{"id": 3, "value": False}]}),
+        )
 
     def test_choose_narrow_footprint_uses_mir250_dynamic(self):
         chosen = reset_all.choose_narrow_footprint(

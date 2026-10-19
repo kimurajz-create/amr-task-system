@@ -42,9 +42,9 @@ TOP_LIFT_UP_INPUT = 3
 LIFT_DOWN_MIN_SECONDS = 8
 LIFT_DOWN_TIMEOUT_SECONDS = 25
 LIFT_POLL_SECONDS = 0.5
-# 載運任務離開貨架時會先倒退約 0.66 公尺。這裡多留一點，確認架子坐穩後再退出。
-SHELF_EXIT_DISTANCE_M = 0.7
-SHELF_EXIT_CLEAR_M = 0.5
+# 0.7 公尺還停在貨架內。倒車加倍，並等實際位移接近這段距離才算離開。
+SHELF_EXIT_DISTANCE_M = 1.4
+SHELF_EXIT_CLEAR_M = 1.2
 SHELF_EXIT_TIMEOUT_SECONDS = 40
 MOVE_TO_TARGET_MISSION_NAME = "MoveToTarget_Critical"
 # 空車時 GET /status 的長方形對得上 MiR250 Dynamic，不是 shelf carrier base。
@@ -56,6 +56,10 @@ FOOTPRINT_SWITCH_TIMEOUT_SECONDS = 20
 SET_FOOTPRINT_ACTION_TYPE = "set_footprint"
 SET_FOOTPRINT_PARAMETER_ID = "footprint"
 CHARGE_MISSION_NAME = "Charge"
+# 公司這台車的驗證任務：Place 放下貨架並倒車，接著開回公司充電樁。
+COMPANY_PLACE_AND_CHARGE_MISSION_NAME = "James_Reset_All"
+COMPANY_CHARGE_POSITION_NAME = "LbV2_MiR Charge 48V V2"
+DOCK_TO_TARGET_MISSION_NAME = "DockToTarget_Critical"
 
 
 def pause_robot(reason):
@@ -523,6 +527,16 @@ def shelf_exit_pose(x, y, orientation_deg, distance_m):
     )
 
 
+def lift_output_is_on(payload, port):
+    """從 io_modules 回傳裡讀指定 output。找不到回傳 None。"""
+    points = []
+    if isinstance(payload, dict):
+        outputs = payload.get("outputs")
+        if isinstance(outputs, list):
+            points.extend(outputs)
+    return _lift_point_is_on(points, port)
+
+
 def lift_input_is_on(payload, port):
     """從 io_modules 回傳裡讀指定 input。找不到回傳 None。"""
     points = []
@@ -532,6 +546,10 @@ def lift_input_is_on(payload, port):
             points.extend(inputs)
     elif isinstance(payload, list):
         points.extend(payload)
+    return _lift_point_is_on(points, port)
+
+
+def _lift_point_is_on(points, port):
 
     for item in points:
         if not isinstance(item, dict):
@@ -1339,15 +1357,164 @@ def dispatch_charge_mission():
     return True
 
 
+def read_lift_io_payload():
+    """讀頂升柱 I/O。先讀即時 status，讀不到再讀模組本體。"""
+    for path in (
+        f"{API_URL}/io_modules/{TOP_LIFT_IO_GUID}/status",
+        f"{API_URL}/io_modules/{TOP_LIFT_IO_GUID}",
+    ):
+        try:
+            response = requests.get(path, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+        except requests.RequestException as exc:
+            print(f"  -> 讀取頂升柱 I/O 失敗：{exc}")
+            continue
+        if response.status_code != 200:
+            continue
+        try:
+            payload = response.json()
+        except ValueError:
+            continue
+        if isinstance(payload, dict):
+            return payload
+    print("  -> [失敗] 讀不到頂升柱 I/O。")
+    return None
+
+
+def shelf_lift_is_up(payload):
+    """Output 3 表示上升命令還開著。讀不到 output 時才看上升到位的 input 3。"""
+    output_on = lift_output_is_on(payload, TOP_LIFT_UP_PORT)
+    if output_on is not None:
+        return output_on
+    return lift_input_is_on(payload, TOP_LIFT_UP_INPUT)
+
+
+def post_mission_queue(mission_id, parameters=None):
+    payload = {"mission_id": mission_id}
+    if parameters:
+        payload["parameters"] = parameters
+    response = requests.post(
+        f"{API_URL}/mission_queue",
+        json=payload,
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if response.status_code != 201:
+        print(f"  -> [失敗] 派送任務失敗：{response.status_code} {response.text}")
+        return None
+    try:
+        return response.json().get("id")
+    except ValueError:
+        return None
+
+
+def wait_for_queued_mission(queue_id, mission_label):
+    """等到這筆任務 Done。急停、錯誤或 Aborted 就停止，不改派別的任務。"""
+    deadline = time.monotonic() + SHELF_UNLOAD_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        try:
+            status = get_mir_status()
+        except requests.RequestException as exc:
+            print(f"  -> 讀取任務狀態失敗：{exc}")
+            time.sleep(LIFT_POLL_SECONDS)
+            continue
+        if status_is_protective_stop(status):
+            print(f"  -> [失敗] {mission_label} 執行中出現急停、保護性停止或錯誤。")
+            return False
+        state = ""
+        if queue_id is not None:
+            try:
+                entry = get_mission_queue_entry(queue_id, None)
+                state = str((entry or {}).get("state") or "")
+            except requests.RequestException as exc:
+                print(f"  -> 讀取任務佇列狀態失敗：{exc}")
+        if state.lower() in ("aborted", "abort", "error", "failed"):
+            print(f"  -> [失敗] {mission_label} 結束狀態為 {state}。")
+            return False
+        if state == "Done":
+            print(f"  -> {mission_label} 已完成。")
+            return True
+        time.sleep(LIFT_POLL_SECONDS)
+    print(
+        f"  -> [失敗] {SHELF_UNLOAD_TIMEOUT_SECONDS} 秒內 "
+        f"{mission_label} 沒有完成。"
+    )
+    return False
+
+
+def run_named_mission(mission_name):
+    mission_id = get_mission_guid_by_name(mission_name)
+    if not mission_id:
+        pause_robot("找不到重置任務，停止 Reset")
+        return False
+    if not ensure_robot_can_run_mission():
+        pause_robot("車子無法執行重置任務，停止 Reset")
+        return False
+    queue_id = post_mission_queue(mission_id)
+    if queue_id is None and queue_id != 0:
+        pause_robot("派送重置任務失敗，停止 Reset")
+        return False
+    print(f"  -> 已派送 {mission_name}，queue_id={queue_id}")
+    if not wait_for_queued_mission(queue_id, mission_name):
+        pause_robot("重置任務未完成，停止 Reset")
+        return False
+    print("=== [成功] AMR 已完成 Reset ===")
+    return True
+
+
+def find_position_guid_by_name(position_name):
+    response = requests.get(
+        f"{API_URL}/positions", headers=HEADERS, timeout=REQUEST_TIMEOUT
+    )
+    if response.status_code != 200:
+        print(f"  -> [失敗] 讀取位置清單失敗：{response.status_code} {response.text}")
+        return None
+    try:
+        positions = response.json()
+    except ValueError as exc:
+        print(f"  -> [失敗] 位置清單無法解析：{exc}")
+        return None
+    if not isinstance(positions, list):
+        print("  -> [失敗] 位置清單不是陣列。")
+        return None
+    for position in positions:
+        if isinstance(position, dict) and position.get("name") == position_name:
+            print(f"[找到] 位置名稱: {position_name} -> GUID: {position.get('guid')}")
+            return position.get("guid")
+    print(f"[失敗] 找不到名稱為 '{position_name}' 的位置")
+    return None
+
+
+def run_company_charge_move():
+    """空車時不要 Place，只開回公司充電樁。"""
+    position_guid = find_position_guid_by_name(COMPANY_CHARGE_POSITION_NAME)
+    mission_id = get_mission_guid_by_name(DOCK_TO_TARGET_MISSION_NAME)
+    if not position_guid or not mission_id:
+        pause_robot("無法派送回充電樁，停止 Reset")
+        return False
+    if not ensure_robot_can_run_mission():
+        pause_robot("車子無法執行回充移動，停止 Reset")
+        return False
+    queue_id = post_mission_queue(
+        mission_id, [{"id": "target", "value": position_guid}]
+    )
+    if queue_id is None and queue_id != 0:
+        pause_robot("派送回充電樁失敗，停止 Reset")
+        return False
+    print(
+        f"  -> 已派送回充電樁 {COMPANY_CHARGE_POSITION_NAME}，queue_id={queue_id}"
+    )
+    if not wait_for_queued_mission(queue_id, COMPANY_CHARGE_POSITION_NAME):
+        pause_robot("回充電樁未完成，停止 Reset")
+        return False
+    print("=== [成功] AMR 已完成 Reset，並已派送回充電樁 ===")
+    return True
+
+
 def reset_mir_complete():
-    """【一鍵 Reset】執行完整的 MiR Reset 流程"""
+    """公司這台車的 Reset：清空佇列後派送 James_Reset_All。"""
     print("=== 開始執行 MiR AMR Reset 完整流程 ===")
 
     try:
-        # -------------------------------------------------------------------
-        # 步驟 1: 清除錯誤。待執行清單的 stop/play 由主畫面按鈕處理，
-        # 這裡不把 MiR Status 設成 Pause，否則無法執行後續降柱與回充。
-        # -------------------------------------------------------------------
         print("[步驟 1] 清除錯誤 (clear_error)，不變更 MiR Status 為 Pause...")
         if not clear_robot_error():
             pause_robot("clear_error 失敗，停止 Reset")
@@ -1355,104 +1522,17 @@ def reset_mir_complete():
         print("  -> 已送出 clear_error。")
         time.sleep(0.5)
 
-        # -------------------------------------------------------------------
-        # 步驟 2: 先清掉載運任務。否則降柱或切外形期間，它會繼續開往目的地。
-        # -------------------------------------------------------------------
-        print("[步驟 2] 清空載運任務，避免繼續開往目的地...")
+        print("[步驟 2] 清空任務佇列，避免原本的任務繼續開往目的地...")
         if not delete_mission_queue():
             pause_robot("任務佇列清除失敗，停止 Reset")
             return False
-        print("  -> 任務佇列已清空，載運不會再開往目的地。")
-
-        # -------------------------------------------------------------------
-        # 步驟 3: 用 Set footprint 任務套上寬外形。
-        # PUT /status 的 footprint 這台車不接受。外形沒變成就不降柱。
-        # -------------------------------------------------------------------
-        if not apply_wide_footprint():
-            pause_robot("無法以任務套用寬外形，停止 Reset")
-            return False
-
-        # -------------------------------------------------------------------
-        # 步驟 4: 寬外形就位後才降下頂升柱。
-        # -------------------------------------------------------------------
-        print("[步驟 4] 寬外形已套用，降下 Shelf Carrier 頂升柱...")
-        if not lower_top_lift_fully():
-            clear_mission_queue()
-            pause_robot("Top Lift 未能降到底，已嘗試清空任務佇列，停止 Reset")
-            return False
-
-        # -------------------------------------------------------------------
-        # 步驟 5-6: 貨架坐回架腳後，用任務改回窄外形，再倒車離開。
-        # 離開之前不派回充。
-        # -------------------------------------------------------------------
-        if not apply_narrow_footprint():
-            pause_robot("無法以任務改回窄外形，停止 Reset")
-            return False
-        if not back_out_from_shelf():
-            pause_robot("未能離開貨架，停止 Reset")
-            return False
-
-        # -------------------------------------------------------------------
-        # 確認 GetStatus 有提供有效的位置座標
-        # -------------------------------------------------------------------
-        print("檢查地圖座標 (GetStatus position)...")
-        status = get_mir_status()
-        pos = status.get("position", {})
-        try:
-            coordinates = [float(pos[key]) for key in ("x", "y", "orientation")]
-            coordinates_valid = all(math.isfinite(value) for value in coordinates)
-        except (KeyError, TypeError, ValueError):
-            coordinates_valid = False
-
-        if not isinstance(pos, dict) or not coordinates_valid:
-            print("  -> [失敗] GetStatus 未提供有效的 x/y/orientation，停止 Reset。")
-            pause_robot("座標無效，停止 Reset")
-            return False
+        print("  -> 任務佇列已清空。")
 
         print(
-            f"  -> 當前座標: X={coordinates[0]:.2f}, Y={coordinates[1]:.2f}, Orientation={coordinates[2]:.2f}"
+            "[步驟 3] 派送重置任務 "
+            f"({COMPANY_PLACE_AND_CHARGE_MISSION_NAME})..."
         )
-        print("  -> API 欄位未提供定位信心度，此處只確認座標有效，不代表信心度已驗證。")
-
-        # -------------------------------------------------------------------
-        # 步驟 6: 切換至 Ready 狀態等待新命令
-        # -------------------------------------------------------------------
-        print(f"將狀態切換至 Ready (State ID: {STATE_ID_READY})...")
-        ready_res = requests.put(
-            f"{API_URL}/status", json={"state_id": STATE_ID_READY}, headers=HEADERS,
-            timeout=REQUEST_TIMEOUT,
-        )
-
-        if ready_res.status_code != 200:
-            print(
-                f"  -> [失敗] 切換至 Ready 狀態失敗: "
-                f"{ready_res.status_code} {ready_res.text}"
-            )
-            pause_robot("切換 Ready 失敗，停止 Reset")
-            return False
-
-        # Ready + default Footprint 後，等待安全 PLC 結束特殊模式；只讀回報欄位，
-        # 不直接 PUT safety_system_muted。欄位缺失或仍為 True 都不視為成功。
-        print("  -> 等待安全系統退出 Muted 狀態並確認 enabled...")
-        safety_deadline = time.monotonic() + 10
-        last_safety_status = None
-        while time.monotonic() < safety_deadline:
-            try:
-                last_safety_status = get_mir_status().get("safety_system_muted")
-                if last_safety_status is False:
-                    print("  -> 已確認 safety_system_muted=False (enabled)。")
-                    if not dispatch_charge_mission():
-                        return False
-                    print("=== [成功] AMR 已完成 Reset，空車 Ready，並已派送回充任務 ===")
-                    return True
-            except requests.RequestException as exc:
-                last_safety_status = f"讀取失敗：{exc}"
-            time.sleep(1)
-
-        print(f"  -> [失敗] 未能確認安全系統已 enabled；最後讀取值：{last_safety_status!r}。")
-        pause_robot("安全系統仍為 Muted 或狀態無法確認")
-        print("  -> 請確認現場狀況及 MiR 安全系統，確認恢復後再重新執行 Reset。")
-        return False
+        return run_named_mission(COMPANY_PLACE_AND_CHARGE_MISSION_NAME)
 
     except requests.Timeout as e:
         print(f"\n[逾時] MiR API 超過 {REQUEST_TIMEOUT} 秒未回應：{e}")
