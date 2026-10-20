@@ -1511,7 +1511,7 @@ def run_company_charge_move():
 
 
 def reset_mir_complete():
-    """公司這台車的 Reset：清空佇列後派送 James_Reset_All。"""
+    """公司這台車的 Reset：清空佇列、降下頂升柱後派送 James_Reset_All。"""
     print("=== 開始執行 MiR AMR Reset 完整流程 ===")
 
     try:
@@ -1530,7 +1530,17 @@ def reset_mir_complete():
         time.sleep(0.5)
 
         print(
-            "[步驟 3] 派送重置任務 "
+            "[步驟 3] 以 I/O module REST 降下頂升柱 "
+            f"(port {TOP_LIFT_UP_PORT} off → port {TOP_LIFT_DOWN_PORT} on)..."
+        )
+        if not command_lift_down():
+            pause_robot("降下頂升柱失敗，停止 Reset")
+            return False
+        print("  -> 已送出降下頂升柱指令。")
+        time.sleep(0.5)
+
+        print(
+            "[步驟 4] 派送重置任務 "
             f"({COMPANY_PLACE_AND_CHARGE_MISSION_NAME})..."
         )
         return run_named_mission(COMPANY_PLACE_AND_CHARGE_MISSION_NAME)
