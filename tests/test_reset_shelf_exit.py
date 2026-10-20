@@ -103,6 +103,14 @@ class ResetShelfExitTests(unittest.TestCase):
                 {"state_id": 5, "mission_text": "Waiting for input '3'"}
             )
         )
+        self.assertFalse(
+            reset_all.status_is_protective_stop(
+                {
+                    "state_id": 5,
+                    "mission_text": "ReduceProtectiveFieldAction: Started!",
+                }
+            )
+        )
 
 
 if __name__ == "__main__":

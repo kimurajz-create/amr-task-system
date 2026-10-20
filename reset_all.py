@@ -23,6 +23,8 @@ HEADERS = {
 REQUEST_TIMEOUT = 5
 MONITOR_INTERVAL_SECONDS = 2
 SHELF_UNLOAD_TIMEOUT_SECONDS = 300
+# 步驟 5 前回充：急停解除後才派送，最多等這麼久。
+ESTOP_CLEAR_WAIT_SECONDS = 120
 TASK_METRICS_FILE = Path(__file__).with_name("mir_task_metrics.csv")
 
 # 依 MiR API 文件：PUT /status 可設 Ready=3、Pause=4、Manual control=11；
@@ -59,6 +61,12 @@ CHARGE_MISSION_NAME = "Charge"
 # 公司這台車的驗證任務：Place 放下貨架並倒車，接著開回公司充電樁。
 COMPANY_PLACE_AND_CHARGE_MISSION_NAME = "James_Reset_All"
 COMPANY_CHARGE_POSITION_NAME = "LbV2_MiR Charge 48V V2"
+HOSPITAL_CHARGE_POSITION_NAME = "MH_MiR Charge 48V 35A OA"
+# 對應「立即返回充電」：優先用已知充電樁名稱，否則找名稱含 Charge 的位置。
+CHARGE_POSITION_NAME_CANDIDATES = (
+    COMPANY_CHARGE_POSITION_NAME,
+    HOSPITAL_CHARGE_POSITION_NAME,
+)
 DOCK_TO_TARGET_MISSION_NAME = "DockToTarget_Critical"
 
 
@@ -572,7 +580,10 @@ def _lift_point_is_on(points, port):
 
 
 def status_is_protective_stop(status_data):
-    """急停、錯誤，或文字裡出現 protective stop。"""
+    """急停、錯誤，或文字裡出現 protective stop。
+
+    不用單獨比對 protective，避免 ReduceProtectiveFieldAction 被誤判。
+    """
     if not isinstance(status_data, dict):
         return False
     if status_data.get("state_id") in (STATE_ID_EMERGENCY_STOP, STATE_ID_ERROR):
@@ -588,7 +599,52 @@ def status_is_protective_stop(status_data):
                 texts.append(error.get("description"))
                 texts.append(error.get("error_human"))
     combined = " ".join(str(text) for text in texts if text).lower()
-    return "protective" in combined
+    return "protective stop" in combined
+
+
+def wait_until_robot_can_run_mission(timeout_seconds=ESTOP_CLEAR_WAIT_SECONDS):
+    """等急停/錯誤解除；等待期間會重送 clear_error。"""
+    deadline = time.monotonic() + timeout_seconds
+    last_clear_at = 0.0
+    announced = False
+    while time.monotonic() < deadline:
+        try:
+            status = get_mir_status()
+        except requests.RequestException as exc:
+            print(f"  -> 等待可執行狀態時讀取失敗：{exc}")
+            time.sleep(LIFT_POLL_SECONDS)
+            continue
+
+        if not status_is_protective_stop(status):
+            if status.get("state_id") in (STATE_ID_READY, STATE_ID_EXECUTING):
+                if announced:
+                    print("  -> 急停/錯誤已解除，可繼續派送任務。")
+                return True
+            response = requests.put(
+                f"{API_URL}/status",
+                json={"state_id": STATE_ID_READY},
+                headers=HEADERS,
+                timeout=REQUEST_TIMEOUT,
+            )
+            if response.status_code == 200:
+                if announced:
+                    print("  -> 急停/錯誤已解除，已切到 Ready。")
+                return True
+
+        now = time.monotonic()
+        if now - last_clear_at >= 2.0:
+            if not announced:
+                print(
+                    f"  -> 偵測到急停或錯誤，最多等待 {timeout_seconds} 秒；"
+                    "請解除急停，期間會重送 clear_error..."
+                )
+                announced = True
+            clear_robot_error()
+            last_clear_at = now
+        time.sleep(LIFT_POLL_SECONDS)
+
+    print(f"  -> [失敗] {timeout_seconds} 秒內急停或錯誤沒有解除。")
+    return False
 
 
 def _set_lift_output(port, on, announce=True):
@@ -1407,9 +1463,15 @@ def post_mission_queue(mission_id, parameters=None):
         return None
 
 
-def wait_for_queued_mission(queue_id, mission_label):
-    """等到這筆任務 Done。急停、錯誤或 Aborted 就停止，不改派別的任務。"""
+def wait_for_queued_mission(queue_id, mission_label, wait_through_estop=False):
+    """等到這筆任務 Done。
+
+    wait_through_estop=True 時：急停不立刻失敗，任務可留在 Pending，
+    解除後繼續等 Done（與 Dashboard 行為一致）。
+    """
     deadline = time.monotonic() + SHELF_UNLOAD_TIMEOUT_SECONDS
+    announced_estop = False
+    last_clear_at = 0.0
     while time.monotonic() < deadline:
         try:
             status = get_mir_status()
@@ -1417,9 +1479,27 @@ def wait_for_queued_mission(queue_id, mission_label):
             print(f"  -> 讀取任務狀態失敗：{exc}")
             time.sleep(LIFT_POLL_SECONDS)
             continue
+
         if status_is_protective_stop(status):
-            print(f"  -> [失敗] {mission_label} 執行中出現急停、保護性停止或錯誤。")
-            return False
+            if not wait_through_estop:
+                print(
+                    f"  -> [失敗] {mission_label} 執行中出現急停、保護性停止或錯誤。"
+                )
+                return False
+            if not announced_estop:
+                print(
+                    f"  -> {mission_label} 已在佇列；目前急停/錯誤，"
+                    "等待解除後繼續執行（期間會重送 clear_error）..."
+                )
+                announced_estop = True
+            now = time.monotonic()
+            if now - last_clear_at >= 2.0:
+                clear_robot_error()
+                last_clear_at = now
+        elif announced_estop:
+            print(f"  -> 急停/錯誤已解除，繼續等待 {mission_label} 完成。")
+            announced_estop = False
+
         state = ""
         if queue_id is not None:
             try:
@@ -1441,23 +1521,49 @@ def wait_for_queued_mission(queue_id, mission_label):
     return False
 
 
-def run_named_mission(mission_name):
+def run_named_mission(
+    mission_name, announce_success=True, queue_while_stopped=False
+):
+    """派送具名任務並等待完成。
+
+    queue_while_stopped=True：急停時仍 POST 進佇列（Pending），
+    再等解除後執行到 Done。
+    """
     mission_id = get_mission_guid_by_name(mission_name)
     if not mission_id:
         pause_robot("找不到重置任務，停止 Reset")
         return False
-    if not ensure_robot_can_run_mission():
+
+    if queue_while_stopped:
+        try:
+            status = get_mir_status()
+        except requests.RequestException as exc:
+            print(f"  -> 讀取狀態失敗，仍嘗試派送任務：{exc}")
+            status = {}
+        if status_is_protective_stop(status):
+            print(
+                "  -> 目前急停或錯誤，仍先派送任務進佇列（Pending），"
+                "解除後會自動執行。"
+            )
+        elif not ensure_robot_can_run_mission():
+            pause_robot("車子無法執行重置任務，停止 Reset")
+            return False
+    elif not ensure_robot_can_run_mission():
         pause_robot("車子無法執行重置任務，停止 Reset")
         return False
+
     queue_id = post_mission_queue(mission_id)
     if queue_id is None and queue_id != 0:
         pause_robot("派送重置任務失敗，停止 Reset")
         return False
     print(f"  -> 已派送 {mission_name}，queue_id={queue_id}")
-    if not wait_for_queued_mission(queue_id, mission_name):
+    if not wait_for_queued_mission(
+        queue_id, mission_name, wait_through_estop=queue_while_stopped
+    ):
         pause_robot("重置任務未完成，停止 Reset")
         return False
-    print("=== [成功] AMR 已完成 Reset ===")
+    if announce_success:
+        print("=== [成功] AMR 已完成 Reset ===")
     return True
 
 
@@ -1484,26 +1590,69 @@ def find_position_guid_by_name(position_name):
     return None
 
 
+def find_charge_position_name():
+    """同「立即返回充電」：用 functions 取第一筆同名充電樁。"""
+    import functions
+
+    for name in CHARGE_POSITION_NAME_CANDIDATES:
+        try:
+            guid = functions.get_mission_point_uuid(name)
+            print(f"[找到] 充電樁位置: {name} -> GUID: {guid}")
+            return name
+        except Exception:
+            continue
+
+    try:
+        names = functions.get_mission_point_uuid_cmb() or []
+    except Exception as exc:
+        print(f"  -> [失敗] 讀取位置清單失敗：{exc}")
+        names = []
+
+    for name in names:
+        if not name or "Charge" not in name:
+            continue
+        try:
+            guid = functions.get_mission_point_uuid(name)
+            print(f"[找到] 充電樁位置: {name} -> GUID: {guid}")
+            return name
+        except Exception:
+            continue
+
+    print("[失敗] 找不到充電樁位置（名稱需含 Charge）。")
+    return None
+
+
 def run_company_charge_move():
-    """空車時不要 Place，只開回公司充電樁。"""
-    position_guid = find_position_guid_by_name(COMPANY_CHARGE_POSITION_NAME)
-    mission_id = get_mission_guid_by_name(DOCK_TO_TARGET_MISSION_NAME)
-    if not position_guid or not mission_id:
+    """同「立即返回充電」：呼叫 functions.run_combo_location。"""
+    import functions
+
+    position_name = find_charge_position_name()
+    if not position_name:
         pause_robot("無法派送回充電樁，停止 Reset")
         return False
     if not ensure_robot_can_run_mission():
         pause_robot("車子無法執行回充移動，停止 Reset")
         return False
-    queue_id = post_mission_queue(
-        mission_id, [{"id": "target", "value": position_guid}]
-    )
-    if queue_id is None and queue_id != 0:
+
+    before_max_id = functions.get_mission_queue_max_id()
+    functions.run_combo_location(position_name)
+    print(f"✅ 已送出任務到充電站代碼: {position_name}")
+
+    queue_id = None
+    for _ in range(10):
+        time.sleep(0.3)
+        after_max_id = functions.get_mission_queue_max_id()
+        if after_max_id is None:
+            continue
+        if before_max_id is None or after_max_id > before_max_id:
+            queue_id = after_max_id
+            break
+
+    if queue_id is None:
         pause_robot("派送回充電樁失敗，停止 Reset")
         return False
-    print(
-        f"  -> 已派送回充電樁 {COMPANY_CHARGE_POSITION_NAME}，queue_id={queue_id}"
-    )
-    if not wait_for_queued_mission(queue_id, COMPANY_CHARGE_POSITION_NAME):
+    print(f"  -> 已派送回充電樁 {position_name}，queue_id={queue_id}")
+    if not wait_for_queued_mission(queue_id, position_name):
         pause_robot("回充電樁未完成，停止 Reset")
         return False
     print("=== [成功] AMR 已完成 Reset，並已派送回充電樁 ===")
@@ -1511,7 +1660,7 @@ def run_company_charge_move():
 
 
 def reset_mir_complete():
-    """公司這台車的 Reset：清空佇列後派送 James_Reset_All。"""
+    """清空佇列、降下頂升柱後派送 James_Reset_All（任務內含回充電樁）。"""
     print("=== 開始執行 MiR AMR Reset 完整流程 ===")
 
     try:
@@ -1530,10 +1679,24 @@ def reset_mir_complete():
         time.sleep(0.5)
 
         print(
-            "[步驟 3] 派送重置任務 "
+            "[步驟 3] 以 I/O module REST 降下頂升柱 "
+            f"(port {TOP_LIFT_UP_PORT} off → port {TOP_LIFT_DOWN_PORT} on)..."
+        )
+        if not command_lift_down():
+            pause_robot("降下頂升柱失敗，停止 Reset")
+            return False
+        print("  -> 已送出降下頂升柱指令。")
+        time.sleep(0.5)
+
+        print(
+            "[步驟 4] 派送重置任務 "
             f"({COMPANY_PLACE_AND_CHARGE_MISSION_NAME})..."
         )
-        return run_named_mission(COMPANY_PLACE_AND_CHARGE_MISSION_NAME)
+        return run_named_mission(
+            COMPANY_PLACE_AND_CHARGE_MISSION_NAME,
+            announce_success=True,
+            queue_while_stopped=True,
+        )
 
     except requests.Timeout as e:
         print(f"\n[逾時] MiR API 超過 {REQUEST_TIMEOUT} 秒未回應：{e}")
