@@ -2123,10 +2123,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     # ====== 每 n 秒查一次 API 狀態記錄下來給手術室桌機軟體確認用======
-    def get_performance_dashboard_snapshot(self):
+    def get_performance_dashboard_snapshot(self, start_at=None, end_at=None):
         try:
             return build_performance_dashboard_snapshot_from_db(
-                self.task_db_manager
+                self.task_db_manager,
+                start_at=start_at,
+                end_at=end_at,
             )
         except Exception as exc:
             return build_performance_dashboard_snapshot(

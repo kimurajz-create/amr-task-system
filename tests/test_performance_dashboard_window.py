@@ -1,5 +1,7 @@
 import os
+import tempfile
 import unittest
+from zipfile import ZipFile
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -8,8 +10,12 @@ from PySide6.QtWidgets import QApplication
 from performance_dashboard import (
     PerformanceDashboardController,
     PerformanceDashboardWindow,
+    build_dashboard_export_blocks,
     build_performance_dashboard_snapshot,
     build_performance_dashboard_snapshot_from_db,
+    render_performance_report_html,
+    render_start_point_pie_image,
+    write_performance_xlsx,
 )
 
 
@@ -198,6 +204,7 @@ class PerformanceDashboardWindowTests(unittest.TestCase):
                 ("summary", None),
                 ("mission", None),
                 ("start", 3),
+                ("start", 100),
                 ("target", 3),
                 ("route", 3),
             ],
@@ -205,8 +212,160 @@ class PerformanceDashboardWindowTests(unittest.TestCase):
         )
         self.assertEqual(
             {"label": "Lobby", "value": "5"},
+            snapshot["start_point_pie"][0],
+        )
+        self.assertEqual(
+            {"label": "Lobby", "value": "5"},
             snapshot["sections"][1]["rows"][0],
         )
+
+    def test_snapshot_builder_from_db_passes_monitoring_range(self):
+        class RangeAwareManager(FakeTaskStatisticsManager):
+            def get_task_status_summary(self, start_at=None, end_at=None):
+                self.calls.append(("summary", start_at, end_at))
+                return super().get_task_status_summary()
+
+            def get_task_volume_by_mission(self, start_at=None, end_at=None):
+                self.calls.append(("mission", start_at, end_at))
+                return super().get_task_volume_by_mission()
+
+            def get_task_start_hotspots(self, limit=10, start_at=None, end_at=None):
+                self.calls.append(("start", limit, start_at, end_at))
+                return super().get_task_start_hotspots(limit=limit)
+
+            def get_task_target_hotspots(self, limit=10, start_at=None, end_at=None):
+                self.calls.append(("target", limit, start_at, end_at))
+                return super().get_task_target_hotspots(limit=limit)
+
+            def get_task_route_hotspots(self, limit=10, start_at=None, end_at=None):
+                self.calls.append(("route", limit, start_at, end_at))
+                return super().get_task_route_hotspots(limit=limit)
+
+        manager = RangeAwareManager()
+        snapshot = build_performance_dashboard_snapshot_from_db(
+            manager,
+            hotspot_limit=3,
+            start_at="2026-10-01 00:00:00",
+            end_at="2026-10-01 13:00:00",
+        )
+
+        self.assertEqual("ready", snapshot["status_level"])
+        self.assertIn(
+            ("summary", "2026-10-01 00:00:00", "2026-10-01 13:00:00"),
+            manager.calls,
+        )
+        self.assertIn(
+            ("route", 3, "2026-10-01 00:00:00", "2026-10-01 13:00:00"),
+            manager.calls,
+        )
+
+    def test_window_can_filter_range_and_render_pdf_html(self):
+        received = {}
+
+        def snapshot_provider(start_at=None, end_at=None):
+            received["start_at"] = start_at
+            received["end_at"] = end_at
+            return build_performance_dashboard_snapshot(
+                task_status_summary={"pending_count": 4, "total_count": 4},
+                task_volume_by_mission=[
+                    {"mission_content": "載運", "task_count": 4},
+                ],
+                start_point_pie=[
+                    {"label": "OR1", "value": 7},
+                    {"label": "OR2", "value": 3},
+                ],
+            )
+
+        window = PerformanceDashboardWindow(
+            snapshot_provider=snapshot_provider,
+            refresh_interval_ms=60_000,
+        )
+        self.addCleanup(window.deleteLater)
+        window.refresh_timer.stop()
+
+        self.assertIsNone(received["start_at"])
+        self.assertEqual("監控區間：全部累積資料", window.range_status_label.text())
+        self.assertEqual("匯出", window.export_pdf_button.text())
+
+        window.range_checkbox.setChecked(True)
+        self.assertIsNotNone(received["start_at"])
+        self.assertIn("~", window.range_status_label.text())
+
+        html = render_performance_report_html(
+            window.latest_snapshot,
+            "2026-10-01 00:00 ~ 2026-10-01 13:00",
+        )
+        self.assertIn("載運", html)
+        self.assertIn("2026-10-01 00:00 ~ 2026-10-01 13:00", html)
+        self.assertIn("起始點使用比例", html)
+        self.assertIn("最常使用：OR1", html)
+        self.assertIn("70.0%", html)
+        self.assertIn("start-point-pie.png", html)
+        self.assertEqual("最常使用：OR1（7 次，70.0%）", window.start_point_caption.text())
+
+        image = render_start_point_pie_image(window.latest_snapshot["start_point_pie"])
+        self.assertFalse(image.isNull())
+        self.assertGreater(image.width(), 0)
+
+        export_image = window.render_export_image()
+        self.assertFalse(export_image.isNull())
+        self.assertGreater(export_image.width(), 800)
+        self.assertGreater(export_image.height(), 700)
+        self.assertEqual(export_image.pixelColor(4, 4).name(), "#ffffff")
+
+    def test_start_point_pie_skips_closed_cart_storage(self):
+        snapshot = build_performance_dashboard_snapshot(
+            task_status_summary={"total_count": 30},
+            start_point_pie=[
+                {"label": "封閉式架子放置處", "value": 20},
+                {"label": "手術室1", "value": 8},
+                {"label": "手術室2", "value": 2},
+            ],
+        )
+        self.assertEqual(
+            ["手術室1", "手術室2"],
+            [row["label"] for row in snapshot["start_point_pie"]],
+        )
+
+    def test_export_blocks_keep_chart_rows_on_one_page(self):
+        snapshot = build_performance_dashboard_snapshot(
+            task_status_summary={"total_count": 8},
+            task_volume_by_mission=[
+                {"mission_content": f"任務{index}", "task_count": index + 1}
+                for index in range(8)
+            ],
+            start_point_pie=[{"label": "手術室1", "value": 3}],
+        )
+        blocks = build_dashboard_export_blocks(
+            snapshot,
+            "全部累積資料",
+            width=800,
+            max_block_height=360,
+        )
+        self.assertTrue(blocks)
+        self.assertTrue(all(block.height() <= 360 for block in blocks))
+        self.assertGreater(len(blocks), 4)
+
+    def test_excel_export_is_text_only(self):
+        snapshot = build_performance_dashboard_snapshot(
+            task_status_summary={"pending_count": 4, "total_count": 4},
+            task_volume_by_mission=[{"mission_content": "載運", "task_count": 4}],
+            start_point_pie=[
+                {"label": "手術室1", "value": 7},
+                {"label": "手術室2", "value": 3},
+            ],
+        )
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "report.xlsx")
+            write_performance_xlsx(path, snapshot, "全部累積資料")
+            with ZipFile(path) as workbook:
+                sheet = workbook.read("xl/worksheets/sheet1.xml").decode("utf-8")
+        self.assertIn("任務摘要", sheet)
+        self.assertIn("載運", sheet)
+        self.assertIn("起始點使用比例", sheet)
+        self.assertIn("最常使用：手術室1", sheet)
+        self.assertIn("70.0%", sheet)
+        self.assertNotIn("png", sheet)
 
 
 class PerformanceDashboardControllerTests(unittest.TestCase):

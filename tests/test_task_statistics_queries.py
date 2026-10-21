@@ -105,6 +105,25 @@ class TaskStatisticsQueryTests(unittest.TestCase):
         self.assertEqual((10,), manager.calls[1]["params"])
         self.assertEqual((10,), manager.calls[2]["params"])
 
+    def test_statistics_queries_filter_created_at_range(self):
+        manager = RecordingTaskDBManager([[], [], [], [], []])
+        start_at = "2026-10-01 00:00:00"
+        end_at = "2026-10-01 13:00:00"
+
+        manager.get_task_status_summary(start_at=start_at, end_at=end_at)
+        manager.get_task_volume_by_mission(limit=5, start_at=start_at, end_at=end_at)
+        manager.get_task_start_hotspots(start_at=start_at, end_at=end_at)
+        manager.get_task_target_hotspots(start_at=start_at, end_at=end_at)
+        manager.get_task_route_hotspots(start_at=start_at, end_at=end_at)
+
+        for call in manager.calls:
+            self.assertIn("created_at >= %s", call["query"])
+            self.assertIn("created_at <= %s", call["query"])
+            self.assertEqual(start_at, call["params"][0])
+            self.assertEqual(end_at, call["params"][1])
+        self.assertEqual((start_at, end_at, 5), manager.calls[1]["params"])
+        self.assertEqual((start_at, end_at, 10), manager.calls[2]["params"])
+
     def test_invalid_top_n_limit_raises_value_error(self):
         manager = RecordingTaskDBManager([[]])
 
