@@ -2279,20 +2279,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.horizontalLayoutWidget_5.setGeometry(QRect(1220, 60, 661, 86))
 
         # Push the controls below the status area downward to avoid overlap.
-        self.horizontalLayoutWidget_4.setGeometry(QRect(1220, 155, 561, 51))
-        self.btn_SelectStart.setGeometry(QRect(1790, 165, 91, 30))
+        # Taller rows (66) for enlarged start/destination/mission fields.
+        self.horizontalLayoutWidget_4.setGeometry(QRect(1220, 155, 561, 66))
+        self.btn_SelectStart.setGeometry(QRect(1790, 173, 91, 30))
 
-        self.horizontalLayoutWidget_2.setGeometry(QRect(1220, 215, 559, 51))
-        self.btn_SelectDestination.setGeometry(QRect(1790, 225, 91, 30))
+        self.horizontalLayoutWidget_2.setGeometry(QRect(1220, 232, 559, 66))
+        self.btn_SelectDestination.setGeometry(QRect(1790, 250, 91, 30))
 
-        self.horizontalLayoutWidget.setGeometry(QRect(1220, 275, 561, 51))
+        self.horizontalLayoutWidget.setGeometry(QRect(1220, 309, 561, 66))
 
-        self.btn_Emergency_Cut_Line.setGeometry(QRect(1220, 405, 316, 48))
-        self.btn_Add_New_Mission.setGeometry(QRect(1560, 405, 316, 48))
-        self.btn_StartMission.setGeometry(QRect(1740, 490, 31, 30))
-        self.btn_StopMission1.setGeometry(QRect(1780, 490, 31, 30))
-        self.lineEdit_PendingMission.setGeometry(QRect(1220, 475, 224, 40))
-        self.frame_pending_mission_list.setGeometry(QRect(1200, 535, 656, 476))
+        self.btn_Emergency_Cut_Line.setGeometry(QRect(1220, 400, 316, 56))
+        self.btn_Add_New_Mission.setGeometry(QRect(1560, 400, 316, 56))
+        self.btn_StartMission.setGeometry(QRect(1740, 500, 31, 30))
+        self.btn_StopMission1.setGeometry(QRect(1780, 500, 31, 30))
+        self.lineEdit_PendingMission.setGeometry(QRect(1220, 480, 224, 40))
+        self.frame_pending_mission_list.setGeometry(QRect(1200, 545, 656, 466))
 
     def _clear_map_marker_widgets(self):
         for marker_id, marker_widget in self.map_marker_widgets.items():

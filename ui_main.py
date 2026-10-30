@@ -94,72 +94,87 @@ class Ui_MainWindow(object):
         self.lineEdit_PendingMission.setReadOnly(True)
         self.horizontalLayoutWidget_2 = QWidget(self.centralwidget)
         self.horizontalLayoutWidget_2.setObjectName(u"horizontalLayoutWidget_2")
-        self.horizontalLayoutWidget_2.setGeometry(QRect(1220, 180, 559, 51))
+        self.horizontalLayoutWidget_2.setGeometry(QRect(1220, 180, 559, 66))
         self.horizontalLayout_2 = QHBoxLayout(self.horizontalLayoutWidget_2)
         self.horizontalLayout_2.setSpacing(8)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
+        font_field_label = QFont()
+        font_field_label.setFamilies([u"Noto Sans TC"])
+        font_field_label.setPointSize(20)
+        font_field_label.setBold(True)
+        font_field_combo = QFont()
+        font_field_combo.setFamilies([u"Noto Sans TC"])
+        font_field_combo.setPointSize(20)
+        font_field_combo.setBold(True)
+        combo_field_stylesheet = (
+            u"QComboBox {\n"
+            "    color: white;\n"
+            "    font-size: 20px;\n"
+            "    font-weight: 700;\n"
+            "    background-color:#393939;\n"
+            "}\n"
+            "\n"
+            "QComboBox QLineEdit {\n"
+            "    color: white;\n"
+            "    font-size: 20px;\n"
+            "    font-weight: 700;\n"
+            "}\n"
+            "\n"
+            "QComboBox QAbstractItemView {\n"
+            "    background-color: #1E70BF;\n"
+            "    color: white;\n"
+            "    font-size: 20px;\n"
+            "    font-weight: 700;\n"
+            "}"
+        )
         self.label = QLabel(self.horizontalLayoutWidget_2)
         self.label.setObjectName(u"label")
-        self.label.setMinimumSize(QSize(200, 24))
-        self.label.setMaximumSize(QSize(200, 24))
-        self.label.setFont(font1)
-        self.label.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
-"font-size: 16px; ")
+        self.label.setMinimumSize(QSize(200, 36))
+        self.label.setMaximumSize(QSize(200, 36))
+        self.label.setFont(font_field_label)
+        self.label.setStyleSheet(u"color: white;\n"
+"font-size: 20px;\n"
+"font-weight: 700;")
         self.label.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
 
         self.horizontalLayout_2.addWidget(self.label)
 
         self.cmb_location = QComboBox(self.horizontalLayoutWidget_2)
         self.cmb_location.setObjectName(u"cmb_location")
-        self.cmb_location.setMinimumSize(QSize(349, 40))
-        self.cmb_location.setMaximumSize(QSize(349, 40))
-        self.cmb_location.setFont(font1)
-        self.cmb_location.setStyleSheet(u"QComboBox {\n"
-"    color: white;                  /* \u767d\u5b57 */\n"
-"    font-size: 16px;               /* \u5b57\u9ad4\u5927\u5c0f */\n"
-"	background-color:#393939;\n"
-"}\n"
-"\n"
-"QComboBox QAbstractItemView {\n"
-"    background-color: #1E70BF;     /* \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 */\n"
-"}")
+        self.cmb_location.setMinimumSize(QSize(349, 54))
+        self.cmb_location.setMaximumSize(QSize(349, 54))
+        self.cmb_location.setFont(font_field_combo)
+        self.cmb_location.setStyleSheet(combo_field_stylesheet)
         self.cmb_location.setEditable(True)
 
         self.horizontalLayout_2.addWidget(self.cmb_location)
 
         self.horizontalLayoutWidget = QWidget(self.centralwidget)
         self.horizontalLayoutWidget.setObjectName(u"horizontalLayoutWidget")
-        self.horizontalLayoutWidget.setGeometry(QRect(1220, 240, 561, 51))
+        self.horizontalLayoutWidget.setGeometry(QRect(1220, 240, 561, 66))
         self.horizontalLayout = QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout.setSpacing(8)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.label_3 = QLabel(self.horizontalLayoutWidget)
         self.label_3.setObjectName(u"label_3")
-        self.label_3.setMinimumSize(QSize(200, 24))
-        self.label_3.setMaximumSize(QSize(200, 24))
-        self.label_3.setFont(font1)
-        self.label_3.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
-"font-size: 16px; ")
+        self.label_3.setMinimumSize(QSize(200, 36))
+        self.label_3.setMaximumSize(QSize(200, 36))
+        self.label_3.setFont(font_field_label)
+        self.label_3.setStyleSheet(u"color: white;\n"
+"font-size: 20px;\n"
+"font-weight: 700;")
         self.label_3.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
 
         self.horizontalLayout.addWidget(self.label_3)
 
         self.cmb_mission = QComboBox(self.horizontalLayoutWidget)
         self.cmb_mission.setObjectName(u"cmb_mission")
-        self.cmb_mission.setMinimumSize(QSize(0, 40))
-        self.cmb_mission.setMaximumSize(QSize(600, 40))
-        self.cmb_mission.setFont(font1)
-        self.cmb_mission.setStyleSheet(u"QComboBox {\n"
-"    color: white;                  /* \u767d\u5b57 */\n"
-"    font-size: 16px;               /* \u5b57\u9ad4\u5927\u5c0f */\n"
-"	background-color:#393939;\n"
-"}\n"
-"\n"
-"QComboBox QAbstractItemView {\n"
-"    background-color: #1E70BF;     /* \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 */\n"
-"}")
+        self.cmb_mission.setMinimumSize(QSize(0, 54))
+        self.cmb_mission.setMaximumSize(QSize(600, 54))
+        self.cmb_mission.setFont(font_field_combo)
+        self.cmb_mission.setStyleSheet(combo_field_stylesheet)
         self.cmb_mission.setEditable(True)
         self.cmb_mission.setInsertPolicy(QComboBox.InsertAtBottom)
 
@@ -167,36 +182,29 @@ class Ui_MainWindow(object):
 
         self.horizontalLayoutWidget_4 = QWidget(self.centralwidget)
         self.horizontalLayoutWidget_4.setObjectName(u"horizontalLayoutWidget_4")
-        self.horizontalLayoutWidget_4.setGeometry(QRect(1220, 120, 561, 51))
+        self.horizontalLayoutWidget_4.setGeometry(QRect(1220, 120, 561, 66))
         self.horizontalLayout_5 = QHBoxLayout(self.horizontalLayoutWidget_4)
         self.horizontalLayout_5.setSpacing(8)
         self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.horizontalLayout_5.setContentsMargins(0, 0, 0, 0)
         self.label_6 = QLabel(self.horizontalLayoutWidget_4)
         self.label_6.setObjectName(u"label_6")
-        self.label_6.setMinimumSize(QSize(200, 24))
-        self.label_6.setMaximumSize(QSize(200, 24))
-        self.label_6.setFont(font1)
-        self.label_6.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
-"font-size: 16px; ")
+        self.label_6.setMinimumSize(QSize(200, 36))
+        self.label_6.setMaximumSize(QSize(200, 36))
+        self.label_6.setFont(font_field_label)
+        self.label_6.setStyleSheet(u"color: white;\n"
+"font-size: 20px;\n"
+"font-weight: 700;")
         self.label_6.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
 
         self.horizontalLayout_5.addWidget(self.label_6)
 
         self.cmb_location2 = QComboBox(self.horizontalLayoutWidget_4)
         self.cmb_location2.setObjectName(u"cmb_location2")
-        self.cmb_location2.setMinimumSize(QSize(349, 40))
-        self.cmb_location2.setMaximumSize(QSize(349, 40))
-        self.cmb_location2.setFont(font1)
-        self.cmb_location2.setStyleSheet(u"QComboBox {\n"
-"    color: white;                  /* \u767d\u5b57 */\n"
-"    font-size: 16px;               /* \u5b57\u9ad4\u5927\u5c0f */\n"
-"	background-color:#393939;\n"
-"}\n"
-"\n"
-"QComboBox QAbstractItemView {\n"
-"    background-color: #1E70BF;     /* \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 */\n"
-"}")
+        self.cmb_location2.setMinimumSize(QSize(349, 54))
+        self.cmb_location2.setMaximumSize(QSize(349, 54))
+        self.cmb_location2.setFont(font_field_combo)
+        self.cmb_location2.setStyleSheet(combo_field_stylesheet)
         self.cmb_location2.setEditable(True)
 
         self.horizontalLayout_5.addWidget(self.cmb_location2)
@@ -263,7 +271,7 @@ class Ui_MainWindow(object):
 
         self.horizontalLayoutWidget_6 = QWidget(self.centralwidget)
         self.horizontalLayoutWidget_6.setObjectName(u"horizontalLayoutWidget_6")
-        self.horizontalLayoutWidget_6.setGeometry(QRect(1220, 0, 491, 51))
+        self.horizontalLayoutWidget_6.setGeometry(QRect(1220, 0, 580, 60))
         self.horizontalLayout_7 = QHBoxLayout(self.horizontalLayoutWidget_6)
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
         self.horizontalLayout_7.setContentsMargins(0, 0, 0, 0)
@@ -271,8 +279,8 @@ class Ui_MainWindow(object):
         self.lineEdit_MiR250_A.setObjectName(u"lineEdit_MiR250_A")
         sizePolicy.setHeightForWidth(self.lineEdit_MiR250_A.sizePolicy().hasHeightForWidth())
         self.lineEdit_MiR250_A.setSizePolicy(sizePolicy)
-        self.lineEdit_MiR250_A.setMinimumSize(QSize(158, 48))
-        self.lineEdit_MiR250_A.setMaximumSize(QSize(158, 48))
+        self.lineEdit_MiR250_A.setMinimumSize(QSize(158, 52))
+        self.lineEdit_MiR250_A.setMaximumSize(QSize(158, 52))
         self.lineEdit_MiR250_A.setFont(font1)
         self.lineEdit_MiR250_A.setStyleSheet(u"color: white;                  /* \u767d\u5b57 */\n"
 "font-size: 32px; ")
@@ -285,18 +293,21 @@ class Ui_MainWindow(object):
         self.progressBar_battery.setObjectName(u"progressBar_battery")
         sizePolicy.setHeightForWidth(self.progressBar_battery.sizePolicy().hasHeightForWidth())
         self.progressBar_battery.setSizePolicy(sizePolicy)
-        self.progressBar_battery.setMinimumSize(QSize(81, 24))
-        self.progressBar_battery.setMaximumSize(QSize(81, 24))
+        self.progressBar_battery.setMinimumSize(QSize(120, 52))
+        self.progressBar_battery.setMaximumSize(QSize(120, 52))
         font2 = QFont()
+        font2.setFamilies([u"Noto Sans TC"])
+        font2.setPointSize(20)
+        font2.setBold(True)
         self.progressBar_battery.setFont(font2)
-        self.progressBar_battery.setStyleSheet(u"QProgressBar {    \n"
-"    color:black;\n"
-"	border: 2px solid grey;\n"
+        self.progressBar_battery.setStyleSheet(u"QProgressBar {\n"
+"    color: black;\n"
+"    border: 2px solid grey;\n"
 "    border-radius: 5px;\n"
 "    text-align: center;\n"
-"    font-size: 16px;\n"
-"    height: 30px;\n"
-"   \n"
+"    font-size: 20px;\n"
+"    font-weight: 700;\n"
+"    height: 52px;\n"
 "}\n"
 "QProgressBar::chunk {\n"
 "    background-color: #085508;\n"
@@ -309,20 +320,25 @@ class Ui_MainWindow(object):
         self.btn_ChargeMission.setObjectName(u"btn_ChargeMission")
         sizePolicy.setHeightForWidth(self.btn_ChargeMission.sizePolicy().hasHeightForWidth())
         self.btn_ChargeMission.setSizePolicy(sizePolicy)
-        self.btn_ChargeMission.setMinimumSize(QSize(109, 32))
-        self.btn_ChargeMission.setMaximumSize(QSize(109, 32))
-        self.btn_ChargeMission.setFont(font1)
+        self.btn_ChargeMission.setMinimumSize(QSize(170, 52))
+        self.btn_ChargeMission.setMaximumSize(QSize(170, 52))
+        font_action_button = QFont()
+        font_action_button.setFamilies([u"Noto Sans TC"])
+        font_action_button.setPointSize(18)
+        font_action_button.setBold(True)
+        self.btn_ChargeMission.setFont(font_action_button)
         self.btn_ChargeMission.setTabletTracking(False)
         self.btn_ChargeMission.setStyleSheet(u"QPushButton {\n"
-"    color: red;                  /* \u767d\u5b57 */\n"
-"    border: 2px solid red;      /* \u908a\u6846\u6a23\u5f0f\uff1a2px \u5bec\uff0c\u5be6\u7dda\uff0c\u7d05\u8272 */\n"
-"    padding: 6px 12px;             /* \u5167\u8ddd */\n"
-"    font-size: 14px;               /* \u5b57\u9ad4\u5927\u5c0f */\n"
-"	border-radius: 5px;         /* \u908a\u89d2\u5713\u5f27\u5ea6 */\n"
+"    color: red;\n"
+"    border: 2px solid red;\n"
+"    padding: 8px 10px;\n"
+"    font-size: 18px;\n"
+"    font-weight: 700;\n"
+"    border-radius: 6px;\n"
 "}\n"
 "\n"
 "QPushButton:hover {\n"
-"    background-color: #1E70BF;     /* \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 */\n"
+"    background-color: #1E70BF;\n"
 "}")
         self.btn_ChargeMission.setCheckable(False)
 
@@ -332,59 +348,66 @@ class Ui_MainWindow(object):
         self.btn_Reset.setObjectName(u"btn_Reset")
         sizePolicy.setHeightForWidth(self.btn_Reset.sizePolicy().hasHeightForWidth())
         self.btn_Reset.setSizePolicy(sizePolicy)
-        self.btn_Reset.setMinimumSize(QSize(109, 32))
-        self.btn_Reset.setMaximumSize(QSize(109, 32))
-        self.btn_Reset.setFont(font1)
+        self.btn_Reset.setMinimumSize(QSize(120, 52))
+        self.btn_Reset.setMaximumSize(QSize(120, 52))
+        self.btn_Reset.setFont(font_action_button)
         self.btn_Reset.setStyleSheet(u"QPushButton {\n"
-"    color: red;                  /* \u767d\u5b57 */\n"
-"    border: 2px solid red;      /* \u908a\u6846\u6a23\u5f0f\uff1a2px \u5bec\uff0c\u5be6\u7dda\uff0c\u7d05\u8272 */\n"
-"    padding: 6px 12px;             /* \u5167\u8ddd */\n"
-"    font-size: 14px;               /* \u5b57\u9ad4\u5927\u5c0f */\n"
-"	border-radius: 5px;         /* \u908a\u89d2\u5713\u5f27\u5ea6 */\n"
+"    color: red;\n"
+"    border: 2px solid red;\n"
+"    padding: 8px 10px;\n"
+"    font-size: 18px;\n"
+"    font-weight: 700;\n"
+"    border-radius: 6px;\n"
 "}\n"
 "\n"
 "QPushButton:hover {\n"
-"    background-color: #1E70BF;     /* \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 */\n"
+"    background-color: #1E70BF;\n"
 "}")
 
         self.horizontalLayout_7.addWidget(self.btn_Reset)
 
+        font_mission_button = QFont()
+        font_mission_button.setFamilies([u"Noto Sans TC"])
+        font_mission_button.setPointSize(22)
+        font_mission_button.setBold(True)
         self.btn_Emergency_Cut_Line = QPushButton(self.centralwidget)
         self.btn_Emergency_Cut_Line.setObjectName(u"btn_Emergency_Cut_Line")
-        self.btn_Emergency_Cut_Line.setGeometry(QRect(1220, 370, 316, 48))
+        self.btn_Emergency_Cut_Line.setGeometry(QRect(1220, 370, 316, 56))
         sizePolicy.setHeightForWidth(self.btn_Emergency_Cut_Line.sizePolicy().hasHeightForWidth())
         self.btn_Emergency_Cut_Line.setSizePolicy(sizePolicy)
-        self.btn_Emergency_Cut_Line.setMinimumSize(QSize(316, 48))
-        self.btn_Emergency_Cut_Line.setMaximumSize(QSize(316, 48))
-        self.btn_Emergency_Cut_Line.setFont(font1)
+        self.btn_Emergency_Cut_Line.setMinimumSize(QSize(316, 56))
+        self.btn_Emergency_Cut_Line.setMaximumSize(QSize(316, 56))
+        self.btn_Emergency_Cut_Line.setFont(font_mission_button)
         self.btn_Emergency_Cut_Line.setStyleSheet(u"QPushButton {\n"
-"    color: white;                  /* \u767d\u5b57 */\n"
-"    padding: 6px 12px;             /* \u5167\u8ddd */\n"
-"    font-size:18px;               /* \u5b57\u9ad4\u5927\u5c0f */\n"
-"	border: 2px solid white;\n"
+"    color: white;\n"
+"    padding: 8px 14px;\n"
+"    font-size: 22px;\n"
+"    font-weight: 700;\n"
+"    border: 2px solid white;\n"
 "}\n"
 "\n"
 " /* \n"
 "QPushButton:hover {\n"
-"    background-color: #1E70BF;     \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 \n"
+"    background-color: #1E70BF;\n"
 "}*/")
         self.btn_Add_New_Mission = QPushButton(self.centralwidget)
         self.btn_Add_New_Mission.setObjectName(u"btn_Add_New_Mission")
-        self.btn_Add_New_Mission.setGeometry(QRect(1560, 370, 316, 48))
+        self.btn_Add_New_Mission.setGeometry(QRect(1560, 370, 316, 56))
         sizePolicy.setHeightForWidth(self.btn_Add_New_Mission.sizePolicy().hasHeightForWidth())
         self.btn_Add_New_Mission.setSizePolicy(sizePolicy)
-        self.btn_Add_New_Mission.setMinimumSize(QSize(316, 48))
-        self.btn_Add_New_Mission.setMaximumSize(QSize(316, 48))
-        self.btn_Add_New_Mission.setFont(font1)
+        self.btn_Add_New_Mission.setMinimumSize(QSize(316, 56))
+        self.btn_Add_New_Mission.setMaximumSize(QSize(316, 56))
+        self.btn_Add_New_Mission.setFont(font_mission_button)
         self.btn_Add_New_Mission.setStyleSheet(u"QPushButton {\n"
-"	background-color:#0678DD;\n"
-"    color: white;                  /* \u767d\u5b57 */\n"
-"    padding: 6px 12px;             /* \u5167\u8ddd */\n"
-"    font-size:18px;               /* \u5b57\u9ad4\u5927\u5c0f */\n"
+"    background-color:#0678DD;\n"
+"    color: white;\n"
+"    padding: 8px 14px;\n"
+"    font-size: 22px;\n"
+"    font-weight: 700;\n"
 "}\n"
 " /* \n"
 "QPushButton:hover {\n"
-"    background-color: #1E70BF;     \u6ed1\u9f20\u79fb\u4e0a\u53bb\u8b8a\u8272 \n"
+"    background-color: #1E70BF;\n"
 "}*/")
         self.frame_map = QFrame(self.centralwidget)
         self.frame_map.setObjectName(u"frame_map")

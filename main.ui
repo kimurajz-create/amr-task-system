@@ -159,7 +159,7 @@ font-size: 32px; </string>
       <x>1220</x>
       <y>180</y>
       <width>559</width>
-      <height>51</height>
+      <height>66</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -171,24 +171,26 @@ font-size: 32px; </string>
        <property name="minimumSize">
         <size>
          <width>200</width>
-         <height>24</height>
+         <height>36</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>200</width>
-         <height>24</height>
+         <height>36</height>
         </size>
        </property>
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>20</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: white;                  /* ?賢? */
-font-size: 16px; </string>
+        <string notr="true">color: white;
+font-size: 20px;
+font-weight: 700;</string>
        </property>
        <property name="text">
         <string>?桃???/string>
@@ -203,30 +205,41 @@ font-size: 16px; </string>
        <property name="minimumSize">
         <size>
          <width>349</width>
-         <height>40</height>
+         <height>54</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>349</width>
-         <height>40</height>
+         <height>54</height>
         </size>
        </property>
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>20</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
         <string notr="true">QComboBox {
-    color: white;                  /* ?賢? */
-    font-size: 16px;               /* 摮?憭批? */
-	background-color:#393939;
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+    background-color:#393939;
+}
+
+QComboBox QLineEdit {
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
 }
 
 QComboBox QAbstractItemView {
-    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
+    background-color: #1E70BF;
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
 }</string>
        </property>
        <property name="editable">
@@ -245,7 +258,7 @@ QComboBox QAbstractItemView {
       <x>1220</x>
       <y>240</y>
       <width>561</width>
-      <height>51</height>
+      <height>66</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout">
@@ -257,24 +270,26 @@ QComboBox QAbstractItemView {
        <property name="minimumSize">
         <size>
          <width>200</width>
-         <height>24</height>
+         <height>36</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>200</width>
-         <height>24</height>
+         <height>36</height>
         </size>
        </property>
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>20</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: white;                  /* ?賢? */
-font-size: 16px; </string>
+        <string notr="true">color: white;
+font-size: 20px;
+font-weight: 700;</string>
        </property>
        <property name="text">
         <string>隞餃??批捆</string>
@@ -289,30 +304,41 @@ font-size: 16px; </string>
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>40</height>
+         <height>54</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>600</width>
-         <height>40</height>
+         <height>54</height>
         </size>
        </property>
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>20</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
         <string notr="true">QComboBox {
-    color: white;                  /* ?賢? */
-    font-size: 16px;               /* 摮?憭批? */
-	background-color:#393939;
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+    background-color:#393939;
+}
+
+QComboBox QLineEdit {
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
 }
 
 QComboBox QAbstractItemView {
-    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
+    background-color: #1E70BF;
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
 }</string>
        </property>
        <property name="editable">
@@ -334,7 +360,7 @@ QComboBox QAbstractItemView {
       <x>1220</x>
       <y>120</y>
       <width>561</width>
-      <height>51</height>
+      <height>66</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -346,24 +372,26 @@ QComboBox QAbstractItemView {
        <property name="minimumSize">
         <size>
          <width>200</width>
-         <height>24</height>
+         <height>36</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>200</width>
-         <height>24</height>
+         <height>36</height>
         </size>
        </property>
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>20</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: white;                  /* ?賢? */
-font-size: 16px; </string>
+        <string notr="true">color: white;
+font-size: 20px;
+font-weight: 700;</string>
        </property>
        <property name="text">
         <string>韏瑕?暺?/string>
@@ -378,30 +406,41 @@ font-size: 16px; </string>
        <property name="minimumSize">
         <size>
          <width>349</width>
-         <height>40</height>
+         <height>54</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>349</width>
-         <height>40</height>
+         <height>54</height>
         </size>
        </property>
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>20</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
         <string notr="true">QComboBox {
-    color: white;                  /* ?賢? */
-    font-size: 16px;               /* 摮?憭批? */
-	background-color:#393939;
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+    background-color:#393939;
+}
+
+QComboBox QLineEdit {
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
 }
 
 QComboBox QAbstractItemView {
-    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
+    background-color: #1E70BF;
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
 }</string>
        </property>
        <property name="editable">
@@ -447,7 +486,8 @@ QComboBox QAbstractItemView {
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>18</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
@@ -498,7 +538,8 @@ font-size: 16px; </string>
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>18</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
@@ -562,8 +603,8 @@ QPushButton:hover {
      <rect>
       <x>1220</x>
       <y>0</y>
-      <width>491</width>
-      <height>51</height>
+      <width>580</width>
+      <height>60</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout_7">
@@ -578,19 +619,20 @@ QPushButton:hover {
        <property name="minimumSize">
         <size>
          <width>158</width>
-         <height>48</height>
+         <height>52</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>158</width>
-         <height>48</height>
+         <height>52</height>
         </size>
        </property>
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>18</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
@@ -618,30 +660,32 @@ font-size: 32px; </string>
        </property>
        <property name="minimumSize">
         <size>
-         <width>81</width>
-         <height>24</height>
+         <width>120</width>
+         <height>52</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>81</width>
-         <height>24</height>
+         <width>120</width>
+         <height>52</height>
         </size>
        </property>
        <property name="font">
         <font>
-         <pointsize>-1</pointsize>
+         <family>Noto Sans TC</family>
+         <pointsize>20</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">QProgressBar {    
-    color:black;
-	border: 2px solid grey;
+        <string notr="true">QProgressBar {
+    color: black;
+    border: 2px solid grey;
     border-radius: 5px;
     text-align: center;
-    font-size: 16px;
-    height: 30px;
-   
+    font-size: 20px;
+    font-weight: 700;
+    height: 52px;
 }
 QProgressBar::chunk {
     background-color: #085508;
@@ -662,20 +706,21 @@ QProgressBar::chunk {
        </property>
        <property name="minimumSize">
         <size>
-         <width>109</width>
-         <height>32</height>
+         <width>170</width>
+         <height>52</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>109</width>
-         <height>32</height>
+         <width>170</width>
+         <height>52</height>
         </size>
        </property>
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>18</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="tabletTracking">
@@ -683,15 +728,16 @@ QProgressBar::chunk {
        </property>
        <property name="styleSheet">
         <string notr="true">QPushButton {
-    color: red;                  /* ?賢? */
-    border: 2px solid red;      /* ??璅??嚗?px 撖穿?撖衣?嚗???*/
-    padding: 6px 12px;             /* ?扯? */
-    font-size: 14px;               /* 摮?憭批? */
-	border-radius: 5px;         /* ???憫摨?*/
+    color: red;
+    border: 2px solid red;
+    padding: 8px 10px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 6px;
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
+    background-color: #1E70BF;
 }</string>
        </property>
        <property name="text">
@@ -712,33 +758,35 @@ QPushButton:hover {
        </property>
        <property name="minimumSize">
         <size>
-         <width>109</width>
-         <height>32</height>
+         <width>120</width>
+         <height>52</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>109</width>
-         <height>32</height>
+         <width>120</width>
+         <height>52</height>
         </size>
        </property>
        <property name="font">
         <font>
          <family>Noto Sans TC</family>
-         <pointsize>-1</pointsize>
+         <pointsize>18</pointsize>
+         <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
         <string notr="true">QPushButton {
-    color: red;                  /* ?賢? */
-    border: 2px solid red;      /* ??璅??嚗?px 撖穿?撖衣?嚗???*/
-    padding: 6px 12px;             /* ?扯? */
-    font-size: 14px;               /* 摮?憭批? */
-	border-radius: 5px;         /* ???憫摨?*/
+    color: red;
+    border: 2px solid red;
+    padding: 8px 10px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 6px;
 }
 
 QPushButton:hover {
-    background-color: #1E70BF;     /* 皛?蝘颱??餉???*/
+    background-color: #1E70BF;
 }</string>
        </property>
        <property name="text">
@@ -754,7 +802,7 @@ QPushButton:hover {
       <x>1220</x>
       <y>370</y>
       <width>316</width>
-      <height>48</height>
+      <height>56</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -766,32 +814,34 @@ QPushButton:hover {
     <property name="minimumSize">
      <size>
       <width>316</width>
-      <height>48</height>
+      <height>56</height>
      </size>
     </property>
     <property name="maximumSize">
      <size>
       <width>316</width>
-      <height>48</height>
+      <height>56</height>
      </size>
     </property>
     <property name="font">
      <font>
       <family>Noto Sans TC</family>
-      <pointsize>-1</pointsize>
-     </font>
+      <pointsize>22</pointsize>
+         <bold>true</bold>
+        </font>
     </property>
     <property name="styleSheet">
      <string notr="true">QPushButton {
-    color: white;                  /* ?賢? */
-    padding: 6px 12px;             /* ?扯? */
-    font-size:18px;               /* 摮?憭批? */
-	border: 2px solid white;
+    color: white;
+    padding: 8px 14px;
+    font-size: 22px;
+    font-weight: 700;
+    border: 2px solid white;
 }
 
- /* 
+ /*
 QPushButton:hover {
-    background-color: #1E70BF;     皛?蝘颱??餉???
+    background-color: #1E70BF;
 }*/</string>
     </property>
     <property name="text">
@@ -804,7 +854,7 @@ QPushButton:hover {
       <x>1560</x>
       <y>370</y>
       <width>316</width>
-      <height>48</height>
+      <height>56</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -816,31 +866,33 @@ QPushButton:hover {
     <property name="minimumSize">
      <size>
       <width>316</width>
-      <height>48</height>
+      <height>56</height>
      </size>
     </property>
     <property name="maximumSize">
      <size>
       <width>316</width>
-      <height>48</height>
+      <height>56</height>
      </size>
     </property>
     <property name="font">
      <font>
       <family>Noto Sans TC</family>
-      <pointsize>-1</pointsize>
-     </font>
+      <pointsize>22</pointsize>
+         <bold>true</bold>
+        </font>
     </property>
     <property name="styleSheet">
      <string notr="true">QPushButton {
-	background-color:#0678DD;
-    color: white;                  /* ?賢? */
-    padding: 6px 12px;             /* ?扯? */
-    font-size:18px;               /* 摮?憭批? */
+    background-color:#0678DD;
+    color: white;
+    padding: 8px 14px;
+    font-size: 22px;
+    font-weight: 700;
 }
- /* 
+ /*
 QPushButton:hover {
-    background-color: #1E70BF;     皛?蝘颱??餉???
+    background-color: #1E70BF;
 }*/</string>
     </property>
     <property name="text">
@@ -938,8 +990,9 @@ QPushButton:hover {
      <property name="font">
       <font>
        <family>Noto Sans TC</family>
-       <pointsize>-1</pointsize>
-      </font>
+       <pointsize>18</pointsize>
+         <bold>true</bold>
+        </font>
      </property>
      <property name="styleSheet">
       <string notr="true">/* ??CheckBox ??璅?? */
@@ -1090,13 +1143,13 @@ background-color:#42BE57</string>
         <property name="minimumSize">
          <size>
           <width>68</width>
-          <height>24</height>
+          <height>32</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
           <width>64</width>
-          <height>24</height>
+          <height>32</height>
          </size>
         </property>
         <property name="font">
@@ -1192,13 +1245,13 @@ background-color:#FF832B
         <property name="minimumSize">
          <size>
           <width>68</width>
-          <height>24</height>
+          <height>32</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
           <width>68</width>
-          <height>24</height>
+          <height>32</height>
          </size>
         </property>
         <property name="font">
@@ -1264,7 +1317,7 @@ font-size: 16px; </string>
        <x>20</x>
        <y>690</y>
        <width>76</width>
-       <height>24</height>
+       <height>32</height>
       </rect>
      </property>
      <property name="sizePolicy">
@@ -1282,7 +1335,7 @@ font-size: 16px; </string>
      <property name="maximumSize">
       <size>
        <width>76</width>
-       <height>24</height>
+       <height>32</height>
       </size>
      </property>
      <property name="font">
