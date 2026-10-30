@@ -3,6 +3,9 @@ import time
 import debugpy
 from PySide6.QtCore import QThread, Signal
 
+# config.json 缺值或無效時的後備秒數。
+DEFAULT_IDLE_CHARGE_TIMEOUT_SECONDS = 120
+
 
 class TaskThread(QThread):
     finished_task = Signal(int, str, str, str)
@@ -25,6 +28,17 @@ class TaskThread(QThread):
         self.MIR_MISSION_GROUP_MAP = self.main_window.MIR_MISSION_GROUP_MAP
         self.CHARGING_STATION_NAME = self.main_window.CHARGING_STATION_NAME
         self.TARGET_3_RULE = self.main_window.TARGET_3_RULE
+        try:
+            timeout_seconds = int(
+                getattr(
+                    main_window_instance,
+                    "idle_charge_timeout_seconds",
+                    DEFAULT_IDLE_CHARGE_TIMEOUT_SECONDS,
+                )
+            )
+        except (TypeError, ValueError):
+            timeout_seconds = DEFAULT_IDLE_CHARGE_TIMEOUT_SECONDS
+        self.idle_charge_timeout_seconds = max(1, timeout_seconds)
 
     def _set_mir_connection_state(self, connected, context):
         if connected:
@@ -179,14 +193,22 @@ class TaskThread(QThread):
 
             if not priority_tasks:
                 self.is_no_mission = True
+                idle_since = time.monotonic()
+                idle_charge_sent = False
+
                 if self.skip_idle_charge_once:
+                    # Reset 剛結束：先不要立刻回充（可能還在貨架下），改等 idle timeout。
                     self.skip_idle_charge_once = False
                     self.log_message.emit(
-                        "Reset is handling the return to charger. Skipping the idle charge move."
+                        "Reset deferred the idle charge move; "
+                        f"will send after {self.idle_charge_timeout_seconds}s if still idle."
                     )
                 else:
-                    self.log_message.emit("No pending tasks. Sending MiR back to charge station.")
+                    self.log_message.emit(
+                        "No pending tasks. Sending MiR back to charge station."
+                    )
                     self._send_robot_to_charge_station()
+                    idle_charge_sent = True
 
                 while self.is_no_mission and self.is_running:
                     time.sleep(1)
@@ -198,6 +220,18 @@ class TaskThread(QThread):
                     if priority_tasks:
                         self.is_no_mission = False
                         break
+
+                    if (
+                        not idle_charge_sent
+                        and (time.monotonic() - idle_since)
+                        >= self.idle_charge_timeout_seconds
+                    ):
+                        self.log_message.emit(
+                            f"Idle for {self.idle_charge_timeout_seconds}s with no pending tasks. "
+                            "Sending MiR back to charge station."
+                        )
+                        self._send_robot_to_charge_station()
+                        idle_charge_sent = True
 
                 if not self.is_running:
                     break

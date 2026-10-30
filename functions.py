@@ -17,6 +17,8 @@ API_PASSWORD = "distributor"  # 請替換成你的 API 密碼
 DEFAULT_CONFIG = {
     "MIR_IP": "http://10.11.202.251",
     "heartbeat_display_count": 13,
+    # 無 Pending 時，Reset 延遲回充的等待秒數（一般空佇列仍立即回充）。
+    "idle_charge_timeout_seconds": 120,
 }
 REQUEST_TIMEOUT_SECONDS = 3
 MIR_REQUEST_TIMEOUT_SECONDS = REQUEST_TIMEOUT_SECONDS
@@ -62,7 +64,21 @@ def load_heartbeat_display_count():
         count = DEFAULT_CONFIG["heartbeat_display_count"]
 
     return max(0, min(13, count))
-    
+
+
+def load_idle_charge_timeout_seconds():
+    config = load_config()
+    default = DEFAULT_CONFIG["idle_charge_timeout_seconds"]
+
+    try:
+        seconds = int(config.get("idle_charge_timeout_seconds", default))
+    except (TypeError, ValueError):
+        seconds = default
+
+    # 至少 1 秒，避免 0/負值讓迴圈立刻狂送回充。
+    return max(1, seconds)
+
+
 def save_ip(ip):
     config = load_config()
     config["MIR_IP"] = ip

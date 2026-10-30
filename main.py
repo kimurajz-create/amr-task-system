@@ -1664,6 +1664,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 將您已經導入的 functions 模組，作為一個屬性(attribute)賦值給 MainWindow 實例 (self)
         self.functions = functions
 
+        # idle 逾時回充秒數（來自 config.json，改檔不必重包）
+        self.idle_charge_timeout_seconds = functions.load_idle_charge_timeout_seconds()
+
         # 初始化任務執行緒
         self.task_thread = TaskThread(self)
         self.task_thread.log_message.connect(self.update_log_ui)
