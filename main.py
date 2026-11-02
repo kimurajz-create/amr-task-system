@@ -82,6 +82,8 @@ DEFAULT_UI_DEFAULTS = {
     "mission_content": "",
     "auto_start_pending_scheduler": False,
     "exclude_charging_station_from_combobox": False,
+    # start_point：外環手術室當起點；target_point：內環起點多為滅菌室，改看目的地手術室。
+    "dashboard_pie_dimension": "start_point",
 }
 
 # MiR mission_text / alarm 常見英文 → 中文顯示（僅影響 GUI 顯示，不改 API 原文）。
@@ -2124,15 +2126,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     # ====== 每 n 秒查一次 API 狀態記錄下來給手術室桌機軟體確認用======
     def get_performance_dashboard_snapshot(self, start_at=None, end_at=None):
+        pie_dimension = (self.ui_defaults or {}).get(
+            "dashboard_pie_dimension", "start_point"
+        )
         try:
             return build_performance_dashboard_snapshot_from_db(
                 self.task_db_manager,
                 start_at=start_at,
                 end_at=end_at,
+                pie_dimension=pie_dimension,
             )
         except Exception as exc:
             return build_performance_dashboard_snapshot(
-                warning_message=f"任務統計刷新失敗：{exc}"
+                warning_message=f"任務統計刷新失敗：{exc}",
+                pie_dimension=pie_dimension,
             )
 
     def open_performance_dashboard(self):

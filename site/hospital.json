@@ -25,7 +25,9 @@
     "destination": "",
     "mission_content": "載運",
     "auto_start_pending_scheduler": true,
-    "exclude_charging_station_from_combobox": true
+    "exclude_charging_station_from_combobox": true,
+    "_comment_dashboard_pie": "內環起始點多為滅菌室，圓餅改看目的地（手術室）。外環請用 start_point。",
+    "dashboard_pie_dimension": "target_point"
   },
   "selected_map": {
     "_comment": "P03 P1 selected-map schema. Hospital selected-map currently exposes shelf-position points only.",

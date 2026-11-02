@@ -593,6 +593,35 @@ def _build_section_summary(rows, empty_text, prefix):
     return f"{prefix}：{top_row['label']} ({top_row['value']})"
 
 
+PIE_DIMENSION_START = "start_point"
+PIE_DIMENSION_TARGET = "target_point"
+
+
+def resolve_dashboard_pie_dimension(pie_dimension=None):
+    value = str(pie_dimension or PIE_DIMENSION_START).strip().lower()
+    if value in {PIE_DIMENSION_TARGET, "target", "destination", "目的地"}:
+        return PIE_DIMENSION_TARGET
+    return PIE_DIMENSION_START
+
+
+def dashboard_pie_copy(pie_dimension=None):
+    if resolve_dashboard_pie_dimension(pie_dimension) == PIE_DIMENSION_TARGET:
+        return {
+            "dimension": PIE_DIMENSION_TARGET,
+            "title": "目的地使用比例",
+            "column_label": "目的地",
+            "empty_text": "目前沒有目的地資料。",
+            "label_key": "target_point",
+        }
+    return {
+        "dimension": PIE_DIMENSION_START,
+        "title": "起始點使用比例",
+        "column_label": "起始點",
+        "empty_text": "目前沒有起始點資料。",
+        "label_key": "start_point",
+    }
+
+
 def build_performance_dashboard_snapshot(
     task_status_summary=None,
     task_volume_by_mission=None,
@@ -601,8 +630,10 @@ def build_performance_dashboard_snapshot(
     route_hotspots=None,
     warning_message=None,
     start_point_pie=None,
+    pie_dimension=None,
 ):
     summary = task_status_summary or {}
+    pie_copy = dashboard_pie_copy(pie_dimension)
 
     summary_cards = [
         {
@@ -650,10 +681,16 @@ def build_performance_dashboard_snapshot(
         status_level = "ready"
         status_text = "任務量與熱區統計已刷新完成。"
 
+    label_key = pie_copy["label_key"]
     if start_point_pie is None:
-        pie_rows = _normalize_section_rows(start_hotspots, "start_point")
+        source_rows = (
+            target_hotspots
+            if pie_copy["dimension"] == PIE_DIMENSION_TARGET
+            else start_hotspots
+        )
+        pie_rows = _normalize_section_rows(source_rows, label_key)
     elif start_point_pie and "label" not in start_point_pie[0]:
-        pie_rows = _normalize_section_rows(start_point_pie, "start_point")
+        pie_rows = _normalize_section_rows(start_point_pie, label_key)
     else:
         pie_rows = list(start_point_pie)
     pie_rows = _filter_operating_room_pie_rows(pie_rows)
@@ -664,6 +701,7 @@ def build_performance_dashboard_snapshot(
         "summary_cards": summary_cards,
         "sections": sections,
         "start_point_pie": pie_rows,
+        "pie": pie_copy,
     }
 
 
@@ -681,10 +719,13 @@ def build_performance_dashboard_snapshot_from_db(
     hotspot_limit=10,
     start_at=None,
     end_at=None,
+    pie_dimension=None,
 ):
+    pie_copy = dashboard_pie_copy(pie_dimension)
     if task_db_manager is None:
         return build_performance_dashboard_snapshot(
-            warning_message="尚未提供 TaskDBManager，無法讀取任務統計資料。"
+            warning_message="尚未提供 TaskDBManager，無法讀取任務統計資料。",
+            pie_dimension=pie_copy["dimension"],
         )
 
     range_kwargs = _range_kwargs(start_at, end_at)
@@ -693,12 +734,17 @@ def build_performance_dashboard_snapshot_from_db(
     start_hotspots = task_db_manager.get_task_start_hotspots(
         limit=hotspot_limit, **range_kwargs
     )
-    start_point_pie = task_db_manager.get_task_start_hotspots(
-        limit=100, **range_kwargs
-    )
     target_hotspots = task_db_manager.get_task_target_hotspots(
         limit=hotspot_limit, **range_kwargs
     )
+    if pie_copy["dimension"] == PIE_DIMENSION_TARGET:
+        start_point_pie = task_db_manager.get_task_target_hotspots(
+            limit=100, **range_kwargs
+        )
+    else:
+        start_point_pie = task_db_manager.get_task_start_hotspots(
+            limit=100, **range_kwargs
+        )
     route_hotspots = task_db_manager.get_task_route_hotspots(
         limit=hotspot_limit, **range_kwargs
     )
@@ -710,6 +756,7 @@ def build_performance_dashboard_snapshot_from_db(
         target_hotspots=target_hotspots,
         route_hotspots=route_hotspots,
         start_point_pie=start_point_pie,
+        pie_dimension=pie_copy["dimension"],
     )
 
 
@@ -795,7 +842,10 @@ def render_performance_report_html(snapshot, range_label):
         status_text=escape(str(snapshot.get("status_text", ""))),
         cards=card_rows,
         sections="".join(section_html),
-        pie_section=_render_start_point_pie_html(snapshot.get("start_point_pie")),
+        pie_section=_render_start_point_pie_html(
+            snapshot.get("start_point_pie"),
+            pie_copy=_snapshot_pie_copy(snapshot),
+        ),
     )
 
 
@@ -829,9 +879,17 @@ def _pie_slices(rows):
     return slices
 
 
-def _most_used_start_text(slices):
+def _snapshot_pie_copy(snapshot=None):
+    snapshot = snapshot or {}
+    pie = snapshot.get("pie")
+    if isinstance(pie, dict) and pie.get("title"):
+        return pie
+    return dashboard_pie_copy(snapshot.get("pie_dimension"))
+
+
+def _most_used_start_text(slices, empty_text=None):
     if not slices:
-        return "目前沒有起始點資料。"
+        return empty_text or "目前沒有起始點資料。"
     total = sum(value for _label, value in slices)
     label, value = slices[0]
     percent = (value / total * 100) if total else 0
@@ -865,14 +923,15 @@ def paint_start_point_pie(
     legend_offset=0,
     legend_count=None,
     draw_pie=True,
+    empty_text=None,
 ):
-    """在給定矩形畫起始點圓餅圖與圖例。"""
+    """在給定矩形畫圓餅圖與圖例（起始點或目的地）。"""
     painter.setFont(QFont("Microsoft JhengHei", font_size))
     slices = _pie_slices(rows)
     ink = QColor(text_color)
     if not slices:
         painter.setPen(ink)
-        painter.drawText(rect, Qt.AlignCenter, "目前沒有起始點資料。")
+        painter.drawText(rect, Qt.AlignCenter, empty_text or "目前沒有起始點資料。")
         return
 
     total = sum(value for _label, value in slices)
@@ -1151,6 +1210,7 @@ def build_dashboard_export_blocks(snapshot, range_label, width=860, max_block_he
         painter.end()
         blocks.append(card_image)
 
+    pie_copy = _snapshot_pie_copy(snapshot)
     pie_rows = snapshot.get("start_point_pie") or []
     pie_slices = _pie_slices(pie_rows)
     pie_count = max(1, len(pie_slices))
@@ -1166,13 +1226,17 @@ def build_dashboard_export_blocks(snapshot, range_label, width=860, max_block_he
         if draw_pie:
             painter.setPen(QColor(PDF_INK))
             painter.setFont(_pdf_font(20, bold=True))
-            painter.drawText(QRectF(margin, 0, content_width, 32), Qt.AlignLeft | Qt.AlignVCenter, "起始點使用比例")
+            painter.drawText(
+                QRectF(margin, 0, content_width, 32),
+                Qt.AlignLeft | Qt.AlignVCenter,
+                pie_copy["title"],
+            )
             painter.setFont(_pdf_font(16))
             painter.setPen(QColor(PDF_MUTED))
             painter.drawText(
                 QRectF(margin, 36, content_width, 28),
                 Qt.AlignLeft | Qt.AlignVCenter,
-                _most_used_start_text(pie_slices),
+                _most_used_start_text(pie_slices, pie_copy["empty_text"]),
             )
             legend_top = 68
         paint_start_point_pie(
@@ -1185,6 +1249,7 @@ def build_dashboard_export_blocks(snapshot, range_label, width=860, max_block_he
             legend_offset=offset,
             legend_count=count,
             draw_pie=draw_pie,
+            empty_text=pie_copy["empty_text"],
         )
         painter.end()
         blocks.append(pie_image)
@@ -1239,12 +1304,13 @@ def render_start_point_pie_image(rows, width=None, height=None):
     return image
 
 
-def _render_start_point_pie_html(rows):
+def _render_start_point_pie_html(rows, pie_copy=None):
+    pie_copy = pie_copy or dashboard_pie_copy()
     slices = _pie_slices(rows)
     if not slices:
         return (
-            "<div class='section'>起始點使用比例</div>"
-            "<div class='meta'>目前沒有起始點資料。</div>"
+            f"<div class='section'>{escape(pie_copy['title'])}</div>"
+            f"<div class='meta'>{escape(pie_copy['empty_text'])}</div>"
         )
     total = sum(value for _label, value in slices)
     body = "".join(
@@ -1259,10 +1325,10 @@ def _render_start_point_pie_html(rows):
     display_width = 520
     display_height = max(140, int(height * display_width / _width))
     return (
-        "<div class='section'>起始點使用比例</div>"
-        f"<div class='meta'>{escape(_most_used_start_text(slices))}</div>"
+        f"<div class='section'>{escape(pie_copy['title'])}</div>"
+        f"<div class='meta'>{escape(_most_used_start_text(slices, pie_copy['empty_text']))}</div>"
         f"<img src='start-point-pie.png' width='{display_width}' height='{display_height}'/>"
-        "<table><tr><td>起始點</td><td>次數</td><td>比例</td></tr>"
+        f"<table><tr><td>{escape(pie_copy['column_label'])}</td><td>次數</td><td>比例</td></tr>"
         f"{body}</table>"
     )
 
@@ -1290,19 +1356,22 @@ def performance_export_table(snapshot, range_label):
             )
         )
 
+    pie_copy = _snapshot_pie_copy(snapshot)
     pie_rows = snapshot.get("start_point_pie") or []
     slices = _pie_slices(pie_rows)
     rows.append(("blank", ["", "", ""]))
-    rows.append(("section", ["起始點使用比例", "", ""]))
-    rows.append(("meta", [_most_used_start_text(slices), "", ""]))
-    rows.append(("header", ["起始點", "次數", "比例"]))
+    rows.append(("section", [pie_copy["title"], "", ""]))
+    rows.append(
+        ("meta", [_most_used_start_text(slices, pie_copy["empty_text"]), "", ""])
+    )
+    rows.append(("header", [pie_copy["column_label"], "次數", "比例"]))
     if slices:
         total = sum(value for _label, value in slices)
         for label, value in slices:
             percent = value / total * 100 if total else 0
             rows.append(("body", [label, str(value), f"{percent:.1f}%"]))
     else:
-        rows.append(("body", ["目前沒有起始點資料。", "", ""]))
+        rows.append(("body", [pie_copy["empty_text"], "", ""]))
 
     for section in snapshot.get("sections") or []:
         rows.append(("blank", ["", "", ""]))
@@ -1705,8 +1774,8 @@ class PerformanceDashboardWindow(QWidget):
         pie_layout.setContentsMargins(18, 18, 18, 18)
         pie_layout.setSpacing(8)
 
-        pie_title = QLabel("起始點使用比例")
-        pie_title.setObjectName("dashboardSectionTitle")
+        self.pie_title = QLabel("起始點使用比例")
+        self.pie_title.setObjectName("dashboardSectionTitle")
         self.start_point_caption = QLabel("目前沒有起始點資料。")
         self.start_point_caption.setObjectName("dashboardPieCaption")
         self.start_point_caption.setWordWrap(True)
@@ -1714,7 +1783,7 @@ class PerformanceDashboardWindow(QWidget):
             "color: #f4f7fb; font-size: 15px; font-weight: 600;"
         )
         self.start_point_pie = StartPointPieWidget()
-        pie_layout.addWidget(pie_title)
+        pie_layout.addWidget(self.pie_title)
         pie_layout.addWidget(self.start_point_caption)
         pie_layout.addWidget(self.start_point_pie)
 
@@ -2082,10 +2151,15 @@ class PerformanceDashboardWindow(QWidget):
                 summary_text=section.get("summary"),
             )
 
+        pie_copy = _snapshot_pie_copy(snapshot)
         pie_rows = snapshot.get("start_point_pie") or []
+        if hasattr(self, "pie_title"):
+            self.pie_title.setText(pie_copy["title"])
         if hasattr(self, "start_point_pie"):
             self.start_point_pie.set_rows(pie_rows)
-            self.start_point_caption.setText(_most_used_start_text(_pie_slices(pie_rows)))
+            self.start_point_caption.setText(
+                _most_used_start_text(_pie_slices(pie_rows), pie_copy["empty_text"])
+            )
 
     def closeEvent(self, event: QCloseEvent):
         self.hide()

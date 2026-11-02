@@ -204,8 +204,8 @@ class PerformanceDashboardWindowTests(unittest.TestCase):
                 ("summary", None),
                 ("mission", None),
                 ("start", 3),
-                ("start", 100),
                 ("target", 3),
+                ("start", 100),
                 ("route", 3),
             ],
             manager.calls,
@@ -214,9 +214,37 @@ class PerformanceDashboardWindowTests(unittest.TestCase):
             {"label": "Lobby", "value": "5"},
             snapshot["start_point_pie"][0],
         )
+        self.assertEqual("start_point", snapshot["pie"]["dimension"])
         self.assertEqual(
             {"label": "Lobby", "value": "5"},
             snapshot["sections"][1]["rows"][0],
+        )
+
+    def test_snapshot_builder_from_db_can_use_target_point_pie(self):
+        manager = FakeTaskStatisticsManager()
+
+        snapshot = build_performance_dashboard_snapshot_from_db(
+            manager,
+            hotspot_limit=3,
+            pie_dimension="target_point",
+        )
+
+        self.assertEqual(
+            [
+                ("summary", None),
+                ("mission", None),
+                ("start", 3),
+                ("target", 3),
+                ("target", 100),
+                ("route", 3),
+            ],
+            manager.calls,
+        )
+        self.assertEqual("target_point", snapshot["pie"]["dimension"])
+        self.assertEqual("目的地使用比例", snapshot["pie"]["title"])
+        self.assertEqual(
+            {"label": "Lab", "value": "4"},
+            snapshot["start_point_pie"][0],
         )
 
     def test_snapshot_builder_from_db_passes_monitoring_range(self):
