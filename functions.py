@@ -10,6 +10,8 @@ import json
 import os
 
 CONFIG_PATH = "config.json"
+# 標題列對版用；與 docs/changelog-*-ring.md 最新 Released 對齊。
+APP_VERSION = "v1.3.1"
 MIR_IP = ""  # 請替換成你的 MiR AMR IP http://10.11.202.251
 Full_IP = ""
 API_USER = "Distributor"

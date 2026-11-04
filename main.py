@@ -1923,6 +1923,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.appNameLabel = QLabel("外環機器人控制軟體")
         self.appNameLabel.setObjectName("appNameLabel")
 
+        self.appVersionLabel = QLabel(functions.APP_VERSION)
+        self.appVersionLabel.setObjectName("appVersionLabel")
+        self.appVersionLabel.setToolTip(f"軟體版本 {functions.APP_VERSION}")
+
         self.connectionStatusLabel = QLabel("連線狀態")
         self.connectionStatusLabel.setObjectName("connectionStatusLabel")
 
@@ -1948,6 +1952,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         title_layout.addWidget(self.appLogoLabel)
         title_layout.addSpacing(8)
         title_layout.addWidget(self.appNameLabel)
+        title_layout.addSpacing(8)
+        title_layout.addWidget(self.appVersionLabel)
         title_layout.addStretch() # 伸展空間，將控制按鈕推到最右邊
         title_layout.addWidget(self.connectionStatusLabel)
         title_layout.addSpacing(8)
@@ -2016,6 +2022,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             font-size: 14pt;
             font-weight: 500;
             margin-left: 10px;
+        }
+
+        #appVersionLabel {
+            color: #a8b0ba;
+            font-size: 10pt;
+            font-weight: 400;
         }
 
         #connectionStatusLabel {
