@@ -1759,11 +1759,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # 第一次手動載入清單
             self.schedule_task_list_refresh()
             # ⭐ 主控啟動時載入地圖，同步一次 DB（單次初始化同步）
-            self.load_map_positions()
-            #cmb載入任務名字
-            # self.load_mission_positions()
-            self.load_mission_groups_positions()
+            # MiR 逾時／離線時不可讓 App 閃退，改標離線並繼續開窗。
+            try:
+                self.load_map_positions()
+                self.load_mission_groups_positions()
+            except Exception as exc:
+                print(f"[startup] MiR bootstrap failed (continue offline): {exc}")
+                self.api_error = True
             self._apply_ui_defaults()
+            self._update_connection_status_indicator()
 
 
         
@@ -1916,8 +1920,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 logo_pixmap.scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
 
-        self.appNameLabel = QLabel("ACE Solution - MiR")
+        self.appNameLabel = QLabel("外環機器人控制軟體")
         self.appNameLabel.setObjectName("appNameLabel")
+
+        self.connectionStatusLabel = QLabel("連線狀態")
+        self.connectionStatusLabel.setObjectName("connectionStatusLabel")
+
+        self.connectionStatusLight = QLabel()
+        self.connectionStatusLight.setObjectName("connectionStatusLight")
+        self.connectionStatusLight.setFixedSize(14, 14)
+        self.connectionStatusLight.setToolTip("連線狀態")
         
         # 視窗控制按鈕
         self.minimizeButton = self._create_control_button("minimizeButton", "—") 
@@ -1937,9 +1949,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         title_layout.addSpacing(8)
         title_layout.addWidget(self.appNameLabel)
         title_layout.addStretch() # 伸展空間，將控制按鈕推到最右邊
+        title_layout.addWidget(self.connectionStatusLabel)
+        title_layout.addSpacing(8)
+        title_layout.addWidget(self.connectionStatusLight)
+        title_layout.addSpacing(12)
         title_layout.addWidget(self.minimizeButton)
         title_layout.addWidget(self.maximizeButton)
         title_layout.addWidget(self.closeButton)
+        self._update_connection_status_indicator(connected=True)
 
         # **新增呼叫菜單創建**
         self._create_menu()
@@ -1999,6 +2016,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             font-size: 14pt;
             font-weight: 500;
             margin-left: 10px;
+        }
+
+        #connectionStatusLabel {
+            color: #d8dee6;
+            font-size: 12pt;
+            font-weight: 500;
+        }
+
+        #connectionStatusLight {
+            min-width: 14px;
+            max-width: 14px;
+            min-height: 14px;
+            max-height: 14px;
+            border-radius: 7px;
+            border: 1px solid #222;
         }
         
         /* 4. 視窗控制按鈕通用樣式 */
@@ -2162,6 +2194,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.task_db_manager.clear_room_error("MASTER")
 
         self.api_error = False
+        self._update_connection_status_indicator(connected=True)
         self._print_mission_text(status)
 
         # API 成功後，把最新 mission_text 同步到 console 與狀態列。
@@ -2202,6 +2235,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.draw_car_position(*self.last_robot_world_pos)
 
         self._update_status_label(self.current_mir_state_id)
+        self._update_connection_status_indicator()
 
     def _update_status_label_legacy(self, state_id):
         # 將 MiR state_id 轉成人看得懂的狀態文字與顏色。
@@ -2449,6 +2483,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if hasattr(self, "label_car_overlay"):
             self._sync_main_map_overlay_geometry(redraw_overlay=True)
 
+    def _update_connection_status_indicator(self, connected=None):
+        """標題列圓燈：綠=已連線，紅=離線。"""
+        if not hasattr(self, "connectionStatusLight"):
+            return
+        if connected is None:
+            connected = not self._has_mir_state_connection_issue()
+        color = "#2ECC71" if connected else "#E74C3C"
+        tip = "已連線" if connected else "離線"
+        self.connectionStatusLight.setStyleSheet(
+            f"background-color: {color}; border-radius: 7px; border: 1px solid #222;"
+        )
+        self.connectionStatusLight.setToolTip(tip)
+        if hasattr(self, "connectionStatusLabel"):
+            self.connectionStatusLabel.setToolTip(tip)
+
     def api_error_handler(self):
         print("❌ API 異常")
 
@@ -2457,6 +2506,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.task_db_manager.mark_room_error("MASTER", "API_ERROR")
             self.api_error = True
             self._refresh_robot_status_presentation()
+        self._update_connection_status_indicator(connected=False)
 
     def _setup_worker(self, worker, success_cb, error_cb):
         self.active_workers += 1 # ⭐ 記錄目前有幾個 worker 在跑
@@ -2987,6 +3037,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         status_info = snapshot.get("status_info", {})
         status_info_str = json.dumps(status_info, indent=4)
         self.api_error = False
+        self._update_connection_status_indicator(connected=True)
         self.current_mission_text = status_info.get(
             "mission_text",
             self.current_mission_text,
@@ -3014,6 +3065,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         print(f"[MIR INFO] refresh failed: {error_message}")
         self.api_error = True
         self._refresh_robot_status_presentation()
+        self._update_connection_status_indicator(connected=False)
 
     def schedule_task_list_refresh(self):
         self._start_guarded_worker(
@@ -3114,6 +3166,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def _handle_mir_status_reconcile_error(self, error_message):
         print(f"[MIR RECONCILE] refresh failed: {error_message}")
+        self.mir_status_poll_disconnected = True
+        self._update_connection_status_indicator(connected=False)
 
     # 自動詢問當前任務狀態與等待中任務
     def query_mir_info(self):
@@ -3154,6 +3208,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # 自動詢問電池狀態
     def query_battery_status(self):
         battery_level = functions.get_battery_level()
+        if battery_level is None:
+            self.api_error = True
+            self._update_connection_status_indicator(connected=False)
+            return
         # 根據電量設定顏色
         if battery_level <=20:
             color = "red"

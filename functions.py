@@ -22,6 +22,25 @@ DEFAULT_CONFIG = {
 }
 REQUEST_TIMEOUT_SECONDS = 3
 MIR_REQUEST_TIMEOUT_SECONDS = REQUEST_TIMEOUT_SECONDS
+
+
+def mir_get(url, **kwargs):
+    """對 MiR 發 GET；逾時／斷線回傳 None，避免未捕捉例外讓 App 閃退。"""
+    try:
+        return requests.get(
+            url,
+            headers=get_auth_headers(),
+            timeout=MIR_REQUEST_TIMEOUT_SECONDS,
+            **kwargs,
+        )
+    except requests.RequestException as exc:
+        try:
+            print(f"[MiR GET failed] {url}: {exc}")
+        except Exception:
+            pass
+        return None
+
+
 ##################################IP############################################
 # 從設定檔讀取 IP，並且回傳這個 IP
 def load_config():
@@ -104,12 +123,9 @@ def get_auth_headers():
 # 確認MiR API 連線確認狀態 raw 版本且沒用到
 def check_api_status():
     url = f"{MIR_IP}/api/v2.0.0/status"
-    headers = get_auth_headers()
-    response = requests.get(
-        url,
-        headers=headers,
-        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
-    )
+    response = mir_get(url)
+    if response is None:
+        return
     if response.status_code == 200:
         print(f"API 回應成功: {response.status_code},{response.text}")
     else:
@@ -119,17 +135,12 @@ def check_api_status():
 def check_api_status_v2():
     try:
         url = f"{Full_IP}/api/v2.0.0/status"
-        headers = get_auth_headers()
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=MIR_REQUEST_TIMEOUT_SECONDS,
-        )
-        if response.status_code == 200:
+        response = mir_get(url)
+        if response is not None and response.status_code == 200:
             return 0
-        else:
+        if response is not None:
             print(f"API 錯誤: {response.status_code}, {response.text}")
-            return 1
+        return 1
     except Exception as e:
         # print("⚠️ 發生連線錯誤：", e)
         return 1
@@ -139,21 +150,15 @@ def check_api_status_v2():
 def check_api_status_v3():
     try:
         url = f"{MIR_IP}/api/v2.0.0/status"
-        headers = get_auth_headers()
-
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=MIR_REQUEST_TIMEOUT_SECONDS,
-        )
-
+        response = mir_get(url)
+        if response is None:
+            raise Exception("MiR connection timed out or unreachable")
         if response.status_code != 200:
             raise Exception(f"API error: {response.status_code}")
         return response.json()
     except Exception as e:
         print("❌ API exception:", e)
-        raise e   # ⭐ 一定要丟出去
-
+        raise e   # ⭐ 一定要丟出去（給背景 worker 的 error 路徑）
 
 
 
@@ -161,83 +166,76 @@ def check_api_status_v3():
 # 取得MiR所有資料
 def check_MiR_status():
     url = f"{MIR_IP}/api/v2.0.0/status"
-    headers = get_auth_headers()
-    response = requests.get(
-        url,
-        headers=headers,
-        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
-    )
+    response = mir_get(url)
+    if response is None:
+        return None
     if response.status_code == 200:
         #print(f"API 回應成功")
         return response.json()
     else:
         print(f"API 錯誤: {response.status_code}, {response.text}")
+        return None
 
 # 取得MiR state_id
 def get_mission_text():
-    status = check_api_status_v3()
-    return status.get("mission_text")
+    try:
+        status = check_api_status_v3()
+    except Exception:
+        return None
+    return status.get("mission_text") if isinstance(status, dict) else None
 
 def check_MiR_status_state_ID():
     url = f"{MIR_IP}/api/v2.0.0/status"
-    headers = get_auth_headers()
-    response = requests.get(
-        url,
-        headers=headers,
-        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
-    )
+    response = mir_get(url)
+    if response is None:
+        return None
     if response.status_code ==200:
         nums = response.json()
         return nums["state_id"]
     else:
         print(f"API 錯誤: {response.status_code}, {response.text}")
+        return None
 
 # 取得MiR map_id
 def check_MiR_status_maps_ID():
     url = f"{MIR_IP}/api/v2.0.0/status"
-    headers = get_auth_headers()
-    response = requests.get(
-        url,
-        headers=headers,
-        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
-    )
+    response = mir_get(url)
+    if response is None:
+        return None
     if response.status_code ==200:
         strings = response.json()
         return strings["map_id"]
     else:
         print(f"API 錯誤: {response.status_code}, {response.text}")
+        return None
 
 # 取得MiR battery % 
 def get_battery_level():
     url = f"{MIR_IP}/api/v2.0.0/status"
-    headers = get_auth_headers()
-    response = requests.get(
-        url,
-        headers=headers,
-        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
-    )
+    response = mir_get(url)
+    if response is None:
+        return None
     if response.status_code ==200:
         percentage = response.json()
         return percentage["battery_percentage"]
     else:
         print(f"API 錯誤: {response.status_code}, {response.text}")
+        return None
 
 
 # 取得MiR Position
 def check_MiR_status_position():
     url = f"{MIR_IP}/api/v2.0.0/status"
-    headers = get_auth_headers()
-    response = requests.get(
-        url,
-        headers=headers,
-        timeout=MIR_REQUEST_TIMEOUT_SECONDS,
-    )
+    response = mir_get(url)
+    if response is None:
+        return None
     if response.status_code ==200:
         data = response.json()
         positions = data["position"]
         return positions["x"],positions["y"]
     else:
         print(f"API 錯誤: {response.status_code}, {response.text}")
+        return None
 
 # MiR error清除改成Ready
 def clear_MiR_error():
@@ -260,10 +258,12 @@ def clear_MiR_error():
 # 取得當前地圖的position
 def get_curmaps_positions_cmb():
     map_guid = check_MiR_status_maps_ID()
+    if not map_guid:
+        return []
     url = f"{MIR_IP}/api/v2.0.0/maps/{map_guid}/positions"
-    headers = get_auth_headers()
-    # 送出 API 請求
-    response = requests.get(url,headers = headers)
+    response = mir_get(url)
+    if response is None:
+        return []
     if response.status_code == 200:
         positions = response.json()
         names = [position["name"] for position in positions]
@@ -271,6 +271,7 @@ def get_curmaps_positions_cmb():
         return names
     else:
         print(f"API 錯誤: {response.status_code}, {response.text}")
+        return []
         
 
 ##################################Positions############################################
@@ -363,14 +364,16 @@ def get_mission_id_cmb():
 # 取得任務群組所有任務名字，用於放入cmb
 def get_mission_groups_id_cmb():
     url = f"{MIR_IP}/api/v2.0.0/mission_groups/mirconst-guid-0000-0011-missiongroup/missions"
-    headers = get_auth_headers()
-    response = requests.get(url,headers = headers)
+    response = mir_get(url)
+    if response is None:
+        return []
     if response.status_code == 200:
         missions = response.json()
         names = [mission["name"] for mission in missions]
         return names
     else:
         print(f"❌ 無法取得任務列表: {response.text}")
+        return []
 
 
 ##################################Mission_queue############################################
