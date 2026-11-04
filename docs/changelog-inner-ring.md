@@ -12,9 +12,25 @@
 
 ## Released
 
+### v1.3.1 - 2026-11-04
+
+- 狀態：目前內環最新小改版（現場對版／穩定度）
+- 用途：v1.3.0 之後的觸控 UI、Reset 後閒置回充、啟動連線容錯與標題列連線狀態（與外環對齊）
+- 主要變更：
+  - 標題列顯示軟體名稱旁小字版號（`functions.APP_VERSION`）與連線狀態指示燈
+  - MiR 連線逾時／離線時啟動不再閃退，改標離線繼續開窗
+  - Reset 後無 Pending 時，依 `idle_charge_timeout_seconds` 延遲回充
+  - 關鍵操作按鈕／下拉／標籤放大加粗，利於觸控
+  - Dashboard 圓餅圖維持目的地熱點（內環既有差異）
+- 參考 commit：`7a3406c` - `Sync MiR startup fault-tolerance and connection status light from outer-ring, with inner-ring title.`
+- 相關 commit：`cd56dce` `9176355` `1a29aa6`
+- 建議 Git tag：`v1.3.1-inner-ring-ops-harden`
+- 建議交付包檔名：`AMR_Task_System_InnerRing_v1.3.1_現場對版與容錯_20261104`
+- 備註：相對 v1.3.0 為 patch 進版，方便與 2026-10-21 交付包區分
+
 ### v1.3.0 - 2026-10-21
 
-- 狀態：目前內環第四版（重置與 Dashboard 匯出）
+- 狀態：內環第四版（重置與 Dashboard 匯出）
 - 用途：一鍵重置改為 `James_Reset_All` 流程，並補上績效 Dashboard 時間篩選與 PDF／Excel 匯出（與外環對齊）
 - 主要變更：
   - 重置：clear_error → 清空佇列 → I/O 降下頂升柱 → 派送 `James_Reset_All`（急停時可 Pending，任務內含回充）
@@ -24,7 +40,7 @@
 - 相關 commit：`2921778` `87c3977` `045483b`
 - 建議 Git tag：`v1.3.0-inner-ring-reset-dashboard`
 - 建議交付包檔名：`AMR_Task_System_InnerRing_v1.3.0_重置與Dashboard_20261021`
-- 備註：交付資料夾名稱含版本號、主題、日期，方便辨識
+- 備註：已被 v1.3.1 取代為目前最新交付版
 
 ### v1.2.0 - 2026-09-22
 
