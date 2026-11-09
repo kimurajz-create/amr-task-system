@@ -2,11 +2,13 @@ import sys
 import os
 import json
 import ipaddress
+import shutil
 import numpy as np
 import requests
 import random
 import time
 import functions
+from datetime import datetime
 from pathlib import Path
 from task_thread import TaskThread
 from ui_login_window import Ui_Form_LoginWindow
@@ -18,7 +20,7 @@ from PySide6.QtWidgets import (
     QPushButton, QVBoxLayout, QMessageBox, QCompleter,QInputDialog,QComboBox,
     QLabel, QScrollArea, QFrame, QTableWidgetItem,QHeaderView,QHBoxLayout,QSizePolicy,
     QListWidgetItem,QGraphicsView, QGraphicsScene, QGraphicsProxyWidget,QToolBar,QMenu,
-    QWidgetAction,QToolButton,
+    QWidgetAction,QToolButton, QFileDialog,
     QToolTip,
 )
 from PySide6.QtGui import (
@@ -1636,6 +1638,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.is_low_battery_notified = False
         self.notified_task_results = set()
         self.mir_status_poll_disconnected = False
+        # 連線燈邊緣偵測：None=尚未建立基準，之後只在綠↔紅切換時寫 log
+        self._connection_log_connected = None
+        self._connection_disconnect_at = None
         #是否連線
         self.is_online = True
         self.is_test_mode = True
@@ -1934,6 +1939,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.connectionStatusLight.setObjectName("connectionStatusLight")
         self.connectionStatusLight.setFixedSize(14, 14)
         self.connectionStatusLight.setToolTip("連線狀態")
+
+        self.connectionLogButton = QPushButton("連線紀錄")
+        self.connectionLogButton.setObjectName("connectionLogButton")
+        self.connectionLogButton.setFixedHeight(28)
+        self.connectionLogButton.setToolTip("開啟或匯出 MiR 連線斷線紀錄")
+        self.connectionLogButton.clicked.connect(self.on_connection_log_clicked)
         
         # 視窗控制按鈕
         self.minimizeButton = self._create_control_button("minimizeButton", "—") 
@@ -1958,6 +1969,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         title_layout.addWidget(self.connectionStatusLabel)
         title_layout.addSpacing(8)
         title_layout.addWidget(self.connectionStatusLight)
+        title_layout.addSpacing(8)
+        title_layout.addWidget(self.connectionLogButton)
         title_layout.addSpacing(12)
         title_layout.addWidget(self.minimizeButton)
         title_layout.addWidget(self.maximizeButton)
@@ -2043,6 +2056,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             max-height: 14px;
             border-radius: 7px;
             border: 1px solid #222;
+        }
+
+        #connectionLogButton {
+            color: #d8dee6;
+            background-color: #4a4a4a;
+            border: 1px solid #666;
+            border-radius: 4px;
+            padding: 2px 10px;
+            font-size: 10pt;
+            font-weight: 500;
+        }
+
+        #connectionLogButton:hover {
+            background-color: #5a5a5a;
         }
         
         /* 4. 視窗控制按鈕通用樣式 */
@@ -2495,12 +2522,114 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if hasattr(self, "label_car_overlay"):
             self._sync_main_map_overlay_geometry(redraw_overlay=True)
 
+    def _get_connection_log_path(self):
+        """連線斷線紀錄固定寫入同一檔（App 期間多次斷線只是多幾行）。"""
+        if getattr(sys, "frozen", False):
+            base_dir = Path(sys.executable).resolve().parent
+        else:
+            base_dir = Path(__file__).resolve().parent
+        log_dir = base_dir / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        return log_dir / "mir_connection.log"
+
+    def _append_connection_log(self, event, note=""):
+        now = datetime.now()
+        stamp = now.strftime("%Y-%m-%d %H:%M:%S")
+        line = f"{stamp}  {event}"
+        if note:
+            line = f"{line}  {note}"
+        line = f"{line}\n"
+        try:
+            path = self._get_connection_log_path()
+            with path.open("a", encoding="utf-8") as log_file:
+                log_file.write(line)
+            print(f"[connection-log] {line.rstrip()}")
+        except Exception as exc:
+            print(f"[connection-log] write failed: {exc}")
+
+    def _record_connection_status_transition(self, connected):
+        """只在連線狀態邊緣（綠↔紅）寫 log，避免輪詢刷檔。"""
+        previous = getattr(self, "_connection_log_connected", None)
+        if previous is None:
+            self._connection_log_connected = bool(connected)
+            if not connected:
+                self._connection_disconnect_at = datetime.now()
+                self._append_connection_log("DISCONNECT", "note=initial_offline")
+            return
+
+        if previous and not connected:
+            self._connection_disconnect_at = datetime.now()
+            self._append_connection_log("DISCONNECT")
+            self._connection_log_connected = False
+            return
+
+        if (not previous) and connected:
+            duration_sec = None
+            if self._connection_disconnect_at is not None:
+                duration_sec = max(
+                    0,
+                    int((datetime.now() - self._connection_disconnect_at).total_seconds()),
+                )
+            note = (
+                f"duration_sec={duration_sec}"
+                if duration_sec is not None
+                else "duration_sec=unknown"
+            )
+            self._append_connection_log("RECONNECT", note)
+            self._connection_disconnect_at = None
+            self._connection_log_connected = True
+            return
+
+        self._connection_log_connected = bool(connected)
+
+    def on_connection_log_clicked(self):
+        """開啟現有連線紀錄，或匯出副本。"""
+        path = self._get_connection_log_path()
+        if not path.exists():
+            self._append_connection_log("SESSION", "note=log_created_on_open")
+
+        box = QMessageBox(self)
+        box.setWindowTitle("連線紀錄")
+        box.setText(
+            f"紀錄檔：\n{path}\n\n"
+            "同一檔會累積本次 App 期間所有斷線／恢復。"
+        )
+        open_btn = box.addButton("開啟", QMessageBox.AcceptRole)
+        export_btn = box.addButton("匯出", QMessageBox.ActionRole)
+        box.addButton("取消", QMessageBox.RejectRole)
+        box.exec()
+
+        clicked = box.clickedButton()
+        if clicked == open_btn:
+            try:
+                os.startfile(str(path))
+            except Exception as exc:
+                QMessageBox.warning(self, "開啟失敗", f"無法開啟紀錄檔：\n{exc}")
+            return
+
+        if clicked == export_btn:
+            default_name = f"mir_connection_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+            target, _ = QFileDialog.getSaveFileName(
+                self,
+                "匯出連線紀錄",
+                str(Path.home() / default_name),
+                "Log Files (*.log);;All Files (*)",
+            )
+            if not target:
+                return
+            try:
+                shutil.copy2(path, target)
+                QMessageBox.information(self, "匯出完成", f"已匯出到：\n{target}")
+            except Exception as exc:
+                QMessageBox.warning(self, "匯出失敗", f"無法匯出紀錄：\n{exc}")
+
     def _update_connection_status_indicator(self, connected=None):
         """標題列圓燈：綠=已連線，紅=離線。"""
         if not hasattr(self, "connectionStatusLight"):
             return
         if connected is None:
             connected = not self._has_mir_state_connection_issue()
+        connected = bool(connected)
         color = "#2ECC71" if connected else "#E74C3C"
         tip = "已連線" if connected else "離線"
         self.connectionStatusLight.setStyleSheet(
@@ -2509,6 +2638,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.connectionStatusLight.setToolTip(tip)
         if hasattr(self, "connectionStatusLabel"):
             self.connectionStatusLabel.setToolTip(tip)
+        self._record_connection_status_transition(connected)
 
     def api_error_handler(self):
         print("❌ API 異常")

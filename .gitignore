@@ -16,6 +16,9 @@ dist/
 config.json
 users.json
 
+# runtime connection disconnect logs
+logs/
+
 # local docs drafts
 documents/使用者說明書_第1-3章草稿.docx
 documents/使用者說明書_第1-3章草稿.backup-*
