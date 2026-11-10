@@ -738,6 +738,12 @@ QProgressBar::chunk {
 
 QPushButton:hover {
     background-color: #1E70BF;
+}
+
+QPushButton:disabled {
+    color: #9a9a9a;
+    border: 2px solid #666666;
+    background-color: #3a3a3a;
 }</string>
        </property>
        <property name="text">
@@ -787,6 +793,12 @@ QPushButton:hover {
 
 QPushButton:hover {
     background-color: #1E70BF;
+}
+
+QPushButton:disabled {
+    color: #9a9a9a;
+    border: 2px solid #666666;
+    background-color: #3a3a3a;
 }</string>
        </property>
        <property name="text">
@@ -837,6 +849,12 @@ QPushButton:hover {
     font-size: 22px;
     font-weight: 700;
     border: 2px solid white;
+}
+
+QPushButton:disabled {
+    color: #9a9a9a;
+    border: 2px solid #666666;
+    background-color: #3a3a3a;
 }
 
  /*
@@ -890,6 +908,13 @@ QPushButton:hover {
     font-size: 22px;
     font-weight: 700;
 }
+
+QPushButton:disabled {
+    color: #9a9a9a;
+    border: 2px solid #666666;
+    background-color: #3a3a3a;
+}
+
  /*
 QPushButton:hover {
     background-color: #1E70BF;
