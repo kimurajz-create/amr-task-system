@@ -1651,6 +1651,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # 連線燈邊緣偵測：None=尚未建立基準，之後只在綠↔紅切換時寫 log
         self._connection_log_connected = None
         self._connection_disconnect_at = None
+        # 控車按鈕：依連線狀態啟用；斷線 debounce 避免閃斷狂閃
+        self._vehicle_controls_online = True
+        self._pending_vehicle_controls_online = True
+        self._vehicle_controls_debounce = QTimer(self)
+        self._vehicle_controls_debounce.setSingleShot(True)
+        self._vehicle_controls_debounce.timeout.connect(
+            self._commit_vehicle_controls_online
+        )
         #是否連線
         self.is_online = True
         self.is_test_mode = True
@@ -2648,6 +2656,106 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if hasattr(self, "connectionStatusLabel"):
             self.connectionStatusLabel.setToolTip(tip)
         self._record_connection_status_transition(connected)
+        self._schedule_vehicle_controls_online(connected)
+
+    def _is_scheduler_running(self):
+        return bool(
+            hasattr(self, "task_thread")
+            and self.task_thread
+            and self.task_thread.isRunning()
+        )
+
+    def _schedule_vehicle_controls_online(self, online):
+        """連線狀態變更時排程更新控車按鈕；斷線稍等、恢復較快。"""
+        online = bool(online)
+        self._pending_vehicle_controls_online = online
+        if not hasattr(self, "_vehicle_controls_debounce"):
+            self._vehicle_controls_online = online
+            self._apply_vehicle_control_buttons_enabled()
+            return
+        # 與目前已套用狀態相同且沒有等待中的變更，就不重排
+        if (
+            online == getattr(self, "_vehicle_controls_online", True)
+            and not self._vehicle_controls_debounce.isActive()
+        ):
+            return
+        delay_ms = 300 if online else 1500
+        self._vehicle_controls_debounce.start(delay_ms)
+
+    def _commit_vehicle_controls_online(self):
+        self._vehicle_controls_online = bool(
+            getattr(self, "_pending_vehicle_controls_online", True)
+        )
+        self._apply_vehicle_control_buttons_enabled()
+
+    def _set_control_button_enabled(self, button, enabled, offline_tip="離線，無法操作"):
+        if button is None:
+            return
+        button.setEnabled(bool(enabled))
+        if enabled:
+            # 清掉離線提示；保留各按鈕原有用途可由呼叫端再設
+            if button.toolTip() == offline_tip:
+                button.setToolTip("")
+        else:
+            button.setToolTip(offline_tip)
+
+    def _apply_vehicle_control_buttons_enabled(self):
+        """斷線禁用控車類按鈕；恢復後依排程狀態重開。Stop 離線仍可停本機排程。"""
+        online = bool(getattr(self, "_vehicle_controls_online", True))
+        offline_tip = "離線，無法操作"
+        scheduler_running = self._is_scheduler_running()
+
+        always_require_online = (
+            "btn_Reset",
+            "btn_ChargeMission",
+            "btn_IO_Up",
+            "btn_IO_down",
+            "btn_Add_New_Mission",
+            "btn_Emergency_Cut_Line",
+            "btn_StartRelativeMove",
+            "btn_UpdateInfo",
+            "btn_SelectStart",
+            "btn_SelectDestination",
+            "chb_map",
+        )
+        for name in always_require_online:
+            self._set_control_button_enabled(
+                getattr(self, name, None),
+                online,
+                offline_tip=offline_tip,
+            )
+
+        # Play：需在線且排程未跑
+        play_enabled = online and not scheduler_running
+        for play_name in ("btn_StartMission", "btn_StartMission2"):
+            self._set_control_button_enabled(
+                getattr(self, play_name, None),
+                play_enabled,
+                offline_tip=offline_tip,
+            )
+
+        # Stop：離線仍允許停止本機排程（不打 MiR）
+        for stop_name in ("btn_StopMission1", "btn_StopMission2"):
+            stop_btn = getattr(self, stop_name, None)
+            if stop_btn is None:
+                continue
+            stop_btn.setEnabled(scheduler_running)
+            if not scheduler_running and not online:
+                stop_btn.setToolTip(offline_tip)
+            elif stop_btn.toolTip() == offline_tip:
+                stop_btn.setToolTip("")
+
+        # Sent robot to：需在線 + 地圖點擊模式 + 非導航中
+        sent_enabled = (
+            online
+            and bool(getattr(self, "clicked_enabled", False))
+            and not bool(getattr(self, "sent_robot_to_in_progress", False))
+        )
+        self._set_control_button_enabled(
+            getattr(self, "btn_SentRobotTo", None),
+            sent_enabled,
+            offline_tip=offline_tip,
+        )
 
     def api_error_handler(self):
         print("❌ API 異常")
@@ -3340,9 +3448,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.status_timer.start(5000)
 
     def _update_sent_robot_to_button_state(self):
-        self.btn_SentRobotTo.setEnabled(
-            self.clicked_enabled and not self.sent_robot_to_in_progress
-        )
+        self._apply_vehicle_control_buttons_enabled()
         
     # 自動詢問到了沒
     def query_mir_status_ready(self):
@@ -3604,10 +3710,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         這個函式現在只負責啟動任務排程執行緒。
         原來的 while 迴圈邏輯已經移到 self.task_thread.run() 中了。
         """
-        self.btn_StartMission.setDisabled(True)
-        self.btn_StopMission1.setDisabled(False)
-        self.btn_SentRobotTo.setEnabled(False)
-        
         # 判斷執行緒是否已經在運行
         if not self.task_thread.isRunning():
             # 確保旗標為 True，以啟動執行緒中的 while 迴圈
@@ -3621,6 +3723,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # 或是 self.update_log_ui("任務排程已開始執行...")
         else:
             print("任務排程已在運行中，請勿重複啟動。")
+        self._apply_vehicle_control_buttons_enabled()
 
         # 原版while迴圈執行任務暫時沒用到
         '''
@@ -3718,9 +3821,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
     # 按鈕(中斷執行中與等待任務)
     def on_stop_mission_clicked(self):
-        self.btn_StartMission.setDisabled(False)
-        self.btn_StopMission1.setDisabled(True)
-        self._update_sent_robot_to_button_state()
         # 不要馬上停止
         # functions.stop_the_mission()
         # 2. 停止排程執行緒
@@ -3731,6 +3831,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.task_thread.stop() 
             # self.log_message.emit("🛑 收到中斷指令，排程執行緒正在停止...")
         self.task_db_manager._resequence_pending_tasks()
+        self._apply_vehicle_control_buttons_enabled()
             
         
      # 按鈕(執行特定任務) 
@@ -3856,11 +3957,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def toggle_click_mode_map(self,state):
         print("state =", state)
         self.clicked_enabled = (state == 2)
-        if state == 2:
-            self._update_sent_robot_to_button_state()
-        else:
+        if state != 2:
             self.clear_click_marker()
-            self.btn_SentRobotTo.setEnabled(False)
+        self._apply_vehicle_control_buttons_enabled()
         print(self.clicked_enabled)
         print("點擊模式已", "啟用" if self.clicked_enabled else "關閉")
 
