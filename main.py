@@ -2668,19 +2668,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def _schedule_vehicle_controls_online(self, online):
         """連線狀態變更時排程更新控車按鈕；斷線稍等、恢復較快。"""
         online = bool(online)
+        pending = getattr(self, "_pending_vehicle_controls_online", True)
+        applied = getattr(self, "_vehicle_controls_online", True)
         self._pending_vehicle_controls_online = online
         if not hasattr(self, "_vehicle_controls_debounce"):
             self._vehicle_controls_online = online
             self._apply_vehicle_control_buttons_enabled()
             return
-        # 與目前已套用狀態相同且沒有等待中的變更，就不重排
-        if (
-            online == getattr(self, "_vehicle_controls_online", True)
-            and not self._vehicle_controls_debounce.isActive()
-        ):
+
+        timer = self._vehicle_controls_debounce
+        # 已套用且沒有等待中：不重排
+        if online == applied and not timer.isActive():
             return
+        # 已在等待同一個目標狀態：不要重啟計時（否則輪詢會一直把 1.5s 延後）
+        if timer.isActive() and online == pending:
+            return
+
         delay_ms = 300 if online else 1500
-        self._vehicle_controls_debounce.start(delay_ms)
+        timer.start(delay_ms)
 
     def _commit_vehicle_controls_online(self):
         self._vehicle_controls_online = bool(

@@ -339,6 +339,12 @@ class Ui_MainWindow(object):
 "\n"
 "QPushButton:hover {\n"
 "    background-color: #1E70BF;\n"
+"}\n"
+"\n"
+"QPushButton:disabled {\n"
+"    color: #9a9a9a;\n"
+"    border: 2px solid #666666;\n"
+"    background-color: #3a3a3a;\n"
 "}")
         self.btn_ChargeMission.setCheckable(False)
 
@@ -362,6 +368,12 @@ class Ui_MainWindow(object):
 "\n"
 "QPushButton:hover {\n"
 "    background-color: #1E70BF;\n"
+"}\n"
+"\n"
+"QPushButton:disabled {\n"
+"    color: #9a9a9a;\n"
+"    border: 2px solid #666666;\n"
+"    background-color: #3a3a3a;\n"
 "}")
 
         self.horizontalLayout_7.addWidget(self.btn_Reset)
@@ -386,6 +398,11 @@ class Ui_MainWindow(object):
 "    border: 2px solid white;\n"
 "}\n"
 "\n"
+"QPushButton:disabled {\n"
+"    color: #9a9a9a;\n"
+"    border: 2px solid #666666;\n"
+"    background-color: #3a3a3a;\n"
+"}\n"
 " /* \n"
 "QPushButton:hover {\n"
 "    background-color: #1E70BF;\n"
@@ -404,6 +421,12 @@ class Ui_MainWindow(object):
 "    padding: 8px 14px;\n"
 "    font-size: 22px;\n"
 "    font-weight: 700;\n"
+"}\n"
+"\n"
+"QPushButton:disabled {\n"
+"    color: #9a9a9a;\n"
+"    border: 2px solid #666666;\n"
+"    background-color: #3a3a3a;\n"
 "}\n"
 " /* \n"
 "QPushButton:hover {\n"
