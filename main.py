@@ -1753,8 +1753,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             # ----------------------------------------
             self.slow_timer = QTimer(self)
             # 連接需要慢速更新的函式
-            self.slow_timer.timeout.connect(self.query_battery_status)
-            self.slow_timer.timeout.connect(self.update_room_heartbeat_status)  # 房間心跳監控
+            # 電量與房間心跳改在背景查，主畫面只套用結果，斷線時才不會把視窗刷白。
+            self.slow_timer.timeout.connect(self.schedule_battery_refresh)
+            self.slow_timer.timeout.connect(self.schedule_room_heartbeat_refresh)
             
             # self.slow_timer.timeout.connect(self.monitor_or_mir_api_status)
             # 啟動慢速定時器
@@ -3467,9 +3468,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.load_map_positions()
 
 
-    # 自動詢問電池狀態
+    def schedule_battery_refresh(self):
+        self._start_guarded_worker(
+            "battery",
+            self._load_battery_level,
+            self._apply_battery_level,
+            self._handle_battery_refresh_error,
+        )
+
+    def _load_battery_level(self):
+        return functions.get_battery_level()
+
+    def _handle_battery_refresh_error(self, error_message):
+        print(f"[BATTERY] refresh failed: {error_message}")
+        self.api_error = True
+        self._update_connection_status_indicator(connected=False)
+
+    # 自動詢問電池狀態。輪詢由 schedule_battery_refresh 在背景讀取，這裡只更新畫面。
     def query_battery_status(self):
-        battery_level = functions.get_battery_level()
+        try:
+            self._apply_battery_level(self._load_battery_level())
+        except Exception as exc:
+            self._handle_battery_refresh_error(str(exc))
+
+    def _apply_battery_level(self, battery_level):
         if battery_level is None:
             self.api_error = True
             self._update_connection_status_indicator(connected=False)
@@ -3513,7 +3535,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def query_his_data(self):
         his_data = functions.get_error_history_data()
         if his_data:
-            response = requests.post("http://localhost:3000/upload", json=his_data)
+            response = requests.post(
+                "http://localhost:3000/upload",
+                json=his_data,
+                timeout=functions.REQUEST_TIMEOUT_SECONDS,
+            )
             print("伺服器回應：", response.json())
         else:
             # print("沒有錯誤，不需要送出資料") 0923
@@ -3540,6 +3566,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 label.clear()
                 label.hide()
 
+    def schedule_room_heartbeat_refresh(self):
+        self._start_guarded_worker(
+            "room_heartbeat",
+            self._load_room_heartbeat_snapshot,
+            self._apply_room_heartbeat_snapshot,
+            self._handle_room_heartbeat_refresh_error,
+        )
+
+    def _load_room_heartbeat_snapshot(self):
+        rows = self.task_db_manager.load_room_heartbeat_rows()
+        return self.task_db_manager.get_all_rooms_online_status(results=rows)
+
+    def _handle_room_heartbeat_refresh_error(self, error_message):
+        print(f"❌ 更新房間心跳狀態失敗: {error_message}")
+
+    def _apply_room_heartbeat_snapshot(self, all_rooms):
+        self._render_room_heartbeat_labels(all_rooms)
+
     # ================================房間心跳監控================================
     def update_room_heartbeat_status(self):
         """
@@ -3548,8 +3592,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         灰色 (離線): 距離最後心跳 >= 10 秒
         """
         try:
-            # 查詢所有房間的在線狀態
-            all_rooms = self.task_db_manager.get_all_rooms_online_status()
+            self._render_room_heartbeat_labels(self._load_room_heartbeat_snapshot())
+        except Exception as e:
+            self._handle_room_heartbeat_refresh_error(str(e))
+
+    def _render_room_heartbeat_labels(self, all_rooms):
+        try:
             
             # 依照設定檔決定要顯示哪些 heartbeat 標籤
             room_label_map = self.get_heartbeat_room_label_map()

@@ -244,13 +244,13 @@ def clear_MiR_error():
     url = f"{MIR_IP}/api/v2.0.0/status"
     headers = get_auth_headers()
     status_data_clear = {"clear_error": True}
-    response = requests.put(url,json = status_data_clear,headers = headers)
+    response = requests.put(url,json = status_data_clear,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         print("成功清除錯誤")
     else:
         print("重製失敗")
     status_data_state_id = {"state_id":3}
-    response = requests.put(url,json = status_data_state_id,headers = headers)
+    response = requests.put(url,json = status_data_state_id,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         print("成功改變任務狀態 pause->ready")
     else:
@@ -282,7 +282,7 @@ def get_mission_point_uuid(point_name):
     url = f"{MIR_IP}/api/v2.0.0/positions"
     headers = get_auth_headers()
     # 送出 API 請求
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         positions = response.json()
         for position in positions:
@@ -297,7 +297,7 @@ def get_mission_point_uuid_cmb():
     url =f"{MIR_IP}/api/v2.0.0/positions"
     headers = get_auth_headers()
     # 送出 API 請求
-    response = requests.get(url,headers=headers)
+    response = requests.get(url,headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         positions = response.json()
         names = [position["name"] for position in positions]
@@ -316,7 +316,7 @@ def post_position(x,y,z):
         "type_id":0,
         "map_id":map_id
     }
-    response = requests.post(url,json = data,headers = headers)
+    response = requests.post(url,json = data,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 201:
         print(f"post position success")
     else:
@@ -327,7 +327,7 @@ def delete_srt_position():
     srt_guid = get_mission_point_uuid("Sent robot to")
     url =f"{MIR_IP}/api/v2.0.0/positions/{srt_guid}"
     headers = get_auth_headers()
-    response = requests.delete(url,headers=headers)
+    response = requests.delete(url,headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 204:
         print(f"Sent robot to delete success")
     else:
@@ -341,7 +341,7 @@ def delete_srt_position():
 def get_mission_id(mission_name): 
     url = f"{MIR_IP}/api/v2.0.0/missions"
     headers = get_auth_headers()
-    response = requests.get(url,headers = headers)
+    response = requests.get(url,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         missions = response.json()
         for mission in missions:
@@ -355,7 +355,7 @@ def get_mission_id(mission_name):
 def get_mission_id_cmb():
     url = f"{MIR_IP}/api/v2.0.0/missions"
     headers = get_auth_headers()
-    response = requests.get(url,headers = headers)
+    response = requests.get(url,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         missions = response.json()
         names = [mission["name"] for mission in missions]
@@ -395,7 +395,7 @@ def get_mission_queue_max_id():
     except requests.RequestException as exc:
         print(f"❌ 無法取得 mission_queue 列表_01: {exc}")
     return None
-    response = requests.get(url,headers = headers)
+    response = requests.get(url,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         mission_queue_list = response.json() 
         return max(item["id"] for item in mission_queue_list if "id" in item)
@@ -407,7 +407,7 @@ def get_mission_queue_max_id_state():
     max_id = get_mission_queue_max_id()
     url = f"{MIR_IP}/api/v2.0.0/mission_queue/{max_id}"
     headers = get_auth_headers()
-    response = requests.get(url,headers = headers)
+    response = requests.get(url,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         mission_data = response.json() 
         return mission_data['state']
@@ -428,7 +428,7 @@ def get_mission_queue_id_state(mission_queue_id):
     except requests.RequestException as exc:
         print(f"❌ 無法取得 mission_queue 狀態_03: {exc}")
     return None
-    response = requests.get(url,headers = headers)
+    response = requests.get(url,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         mission_data = response.json() 
         return mission_data['state']
@@ -509,7 +509,7 @@ def start_the_mission(ref_mission_id):
         "mission_id": ref_mission_id
     }
     headers = get_auth_headers()
-    response = requests.post(url, json=mission_data, headers=headers)
+    response = requests.post(url, json=mission_data, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 201:
         print(f"成功發送任務指令")
     else:
@@ -523,7 +523,7 @@ def run_relative_move(rela_mission_id,x_m,y_m,ori):
         "parameters":[{"id":"x","value":x_m},{"id":"y","value":y_m},{"id":"ori","value":ori}]
     }
     headers = get_auth_headers()
-    response = requests.post(url, json = mission_data,headers = headers)
+    response = requests.post(url, json = mission_data,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 201:
         print(f"成功發送相對移動任務")
     else:
@@ -533,7 +533,7 @@ def run_relative_move(rela_mission_id,x_m,y_m,ori):
 def stop_the_mission():
     url = f"{MIR_IP}/api/v2.0.0/mission_queue"
     headers = get_auth_headers()
-    response = requests.delete(url,headers = headers)
+    response = requests.delete(url,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 204:
         print(f"成功執行中斷任務")
     else:
@@ -546,7 +546,7 @@ def play_sound(sound_type):
     sound_data = {"type": sound_type}  # 例如 "beep" 或 "speech"
     # 更新 Header，加上 Authorization
     headers = get_auth_headers()
-    response = requests.post(url, json=sound_data, headers=headers)
+    response = requests.post(url, json=sound_data, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 201:
         print(f"成功播放提示音: {sound_type}")
     else:
@@ -626,7 +626,7 @@ def set_lift_position(up: bool):
 
     for cmd in sequence:
         payload = {**cmd, "timeout": 0}
-        response = requests.put(url, json=payload, headers=headers)
+        response = requests.put(url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
         if response.status_code == 200:
             print(f"Port {cmd['port']} 設為 {cmd['on']}")
         else:
@@ -685,7 +685,7 @@ def run_combo_location_multi_var(start, goal, mission, target_3_value=None):
 def get_error_status_msqid():
     url = f"{MIR_IP}/api/v2.0.0/status"
     headers = get_auth_headers()
-    response = requests.get(url, headers = headers)
+    response = requests.get(url, headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         states = response.json()
         if states["state_text"] == "Error":
@@ -702,7 +702,7 @@ def get_error_status_msqid():
 def get_latest_id():
     url = f"{MIR_IP}/api/v2.0.0/mission_queue"
     headers = get_auth_headers()
-    response = requests.get(url,headers = headers)
+    response = requests.get(url,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         data = response.json()
         valid_states = ["Aborted","Done"]
@@ -727,7 +727,7 @@ def get_mission_info(msq_id):
     url = f"{MIR_IP}/api/v2.0.0/mission_queue/{msq_id}"
     #print(url)
     headers = get_auth_headers()
-    response = requests.get(url, headers = headers)
+    response = requests.get(url, headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         data = response.json()
         return data["mission_id"],data["id"],data["message"],data["started"],data["finished"],
@@ -740,7 +740,7 @@ def get_mission_name(ms_id):
     url = f"{MIR_IP}/api/v2.0.0/missions/{ms_id}"
     #print(url)
     headers = get_auth_headers()
-    response = requests.get(url,headers = headers)
+    response = requests.get(url,headers = headers, timeout=REQUEST_TIMEOUT_SECONDS)
     if response.status_code == 200:
         data = response.json()
         return data["name"]

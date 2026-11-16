@@ -100,6 +100,31 @@ class MainWindowPollingWorkerTests(unittest.TestCase):
         self.assertIs(success_cb, fake._apply_mir_info_snapshot)
         self.assertIs(error_cb, fake._handle_mir_info_refresh_error)
 
+    def test_slow_polls_run_on_guarded_background_workers(self):
+        recorded = []
+        fake = types.SimpleNamespace()
+        fake._load_battery_level = lambda: 80
+        fake._apply_battery_level = lambda level: None
+        fake._handle_battery_refresh_error = lambda message: None
+        fake._load_room_heartbeat_snapshot = lambda: []
+        fake._apply_room_heartbeat_snapshot = lambda rooms: None
+        fake._handle_room_heartbeat_refresh_error = lambda message: None
+        fake._start_guarded_worker = lambda job_name, func, success_cb, error_cb: recorded.append(
+            (job_name, func, success_cb, error_cb)
+        ) or True
+
+        MainWindow.schedule_battery_refresh(fake)
+        MainWindow.schedule_room_heartbeat_refresh(fake)
+
+        self.assertEqual(
+            ["battery", "room_heartbeat"],
+            [item[0] for item in recorded],
+        )
+        self.assertIs(fake._load_battery_level, recorded[0][1])
+        self.assertIs(fake._apply_battery_level, recorded[0][2])
+        self.assertIs(fake._load_room_heartbeat_snapshot, recorded[1][1])
+        self.assertIs(fake._apply_room_heartbeat_snapshot, recorded[1][2])
+
 
 class MirApiTimeoutTests(unittest.TestCase):
     def test_check_mir_status_uses_timeout(self):
@@ -133,6 +158,16 @@ class MirApiTimeoutTests(unittest.TestCase):
                 functions.MIR_REQUEST_TIMEOUT_SECONDS,
                 kwargs["timeout"],
             )
+
+    def test_stop_the_mission_uses_timeout(self):
+        with patch("functions.requests.delete", return_value=_FakeResponse("", 204)) as request_delete, patch(
+            "functions.get_auth_headers",
+            return_value={"Authorization": "token"},
+        ):
+            functions.stop_the_mission()
+
+        _, kwargs = request_delete.call_args
+        self.assertEqual(functions.REQUEST_TIMEOUT_SECONDS, kwargs["timeout"])
 
 
 if __name__ == "__main__":

@@ -1,6 +1,10 @@
 import psycopg2
 from datetime import datetime, timedelta
 from psycopg2.extras import execute_values
+# 新連線最多等 3 秒。已建立的查詢仍走原本的連線；心跳輪詢另開短連線，避免拖住主畫面。
+DB_CONNECT_TIMEOUT_SECONDS = 3
+
+
 class TaskDBManager:
     """
     用於管理 MiR 任務佇列 (tasks) 資料表的類別。
@@ -14,10 +18,15 @@ class TaskDBManager:
         self.room_heartbeat_cache = {}  # {'OR01': {'last_ts': timestamp, 'no_update_count': 0}, ...}
 
     # --- 資料庫連線與關閉 ---
+    def _connect_kwargs(self):
+        config = dict(self.db_config)
+        config.setdefault("connect_timeout", DB_CONNECT_TIMEOUT_SECONDS)
+        return config
+
     def connect(self):
         """嘗試連線到 PostgreSQL"""
         try:
-            self.conn = psycopg2.connect(**self.db_config)
+            self.conn = psycopg2.connect(**self._connect_kwargs())
             print("✅ 成功連線到 PostgreSQL 任務資料庫。")
             return True
         except Exception as e:
@@ -723,7 +732,25 @@ class TaskDBManager:
 
     #-------------------------------------房間心跳監控系列---------------------------------------------#
     
-    def get_all_rooms_online_status(self):
+    def load_room_heartbeat_rows(self):
+        """用心跳專用短連線讀房間列。連不上或查詢超過 3 秒就失敗，不占用任務連線。"""
+        query = """
+        SELECT room_id, last_heartbeat, error_status
+        FROM room_heartbeat
+        ORDER BY room_id;
+        """
+        conn = psycopg2.connect(**self._connect_kwargs())
+        try:
+            conn.autocommit = True
+            with conn.cursor() as cur:
+                cur.execute("SET statement_timeout = 3000")
+                cur.execute(query)
+                col_names = [desc[0] for desc in cur.description]
+                return [dict(zip(col_names, row)) for row in cur.fetchall()]
+        finally:
+            conn.close()
+
+    def get_all_rooms_online_status(self, results=None):
         """
         查詢所有房間的在線/離線狀態。
         判定邏輯：檢查心跳時間戳是否持續更新
@@ -745,8 +772,9 @@ class TaskDBManager:
         FROM room_heartbeat
         ORDER BY room_id;
         """
-        results = self._execute_query(query, fetch=True)
-        
+        if results is None:
+            results = self._execute_query(query, fetch=True)
+
         if not results:
             print("⚠️ 沒有找到任何房間的心跳記錄")
             return []
